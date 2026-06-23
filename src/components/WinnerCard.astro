@@ -1,0 +1,52 @@
+---
+interface Props {
+  name: string;
+  category: string;
+  event: string;
+  rank: 1 | 2 | 3 | 4;
+  bgGradient?: string;
+}
+
+const { name, category, event, rank, bgGradient = 'from-violet-100 to-pink-100' } = Astro.props;
+
+const medalColors: Record<number, { bg: string; label: string }> = {
+  1: { bg: '#fbbf24', label: '1st' },
+  2: { bg: '#c0c6d0', label: '2nd' },
+  3: { bg: '#d99659', label: '3rd' },
+  4: { bg: '#cf8a4f', label: '4th' },
+};
+
+const medal = medalColors[rank] ?? medalColors[4];
+---
+
+<div class="flex-shrink-0 w-[180px] bg-white rounded-card-sm shadow-winner-card overflow-hidden">
+  <!-- Photo area with gradient placeholder -->
+  <div class={`relative h-[180px] bg-gradient-to-br ${bgGradient} flex items-center justify-center`}>
+    <!-- Medal ribbon -->
+    <div
+      class="absolute top-3 left-3 w-[34px] h-[34px] rounded-full flex items-center justify-center shadow-[0_4px_10px_rgba(0,0,0,0.18)]"
+      style={`background-color:${medal.bg}`}
+      aria-label={`${medal.label} place`}
+    >
+      <!-- Ribbon / star icon -->
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="white" aria-hidden="true">
+        <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+      </svg>
+    </div>
+    <!-- Pet silhouette placeholder -->
+    <svg width="56" height="56" viewBox="0 0 80 80" fill="none" opacity="0.25" aria-hidden="true">
+      <ellipse cx="40" cy="52" rx="18" ry="14" fill="#7c3aed"/>
+      <ellipse cx="18" cy="37" rx="9" ry="10" fill="#7c3aed"/>
+      <ellipse cx="62" cy="37" rx="9" ry="10" fill="#7c3aed"/>
+      <ellipse cx="28" cy="24" rx="8" ry="9" fill="#a855f7"/>
+      <ellipse cx="52" cy="24" rx="8" ry="9" fill="#a855f7"/>
+    </svg>
+  </div>
+
+  <!-- Card body -->
+  <div class="px-4 pt-3 pb-4">
+    <p class="text-[16px] font-extrabold text-[#1c1626] leading-tight">{name}</p>
+    <p class="text-[13px] font-semibold text-brand mt-0.5">{category}</p>
+    <p class="text-[12px] text-[#9b94a8] mt-1 leading-snug">{event}</p>
+  </div>
+</div>

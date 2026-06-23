@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Hide Hall of Fame scrollbar */
+.ps-rail::-webkit-scrollbar {
+  height: 0;
+  width: 0;
+}
+.ps-rail {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+/* Stop floating decorations when user prefers reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .ps-float {
+    animation: none !important;
+  }
+}
+
+/* Mobile nav slide-in panel */
+#mobile-nav {
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+}
+#mobile-nav.open {
+  transform: translateX(0);
+}
+
+/* Hover lift utility */
+@layer utilities {
+  .hover-lift {
+    @apply transition-all duration-150;
+  }
+  .hover-lift:hover {
+    @apply -translate-y-px;
+  }
+}

@@ -1,0 +1,42 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+const raw = import.meta.env.BASE_URL;
+const base = raw.endsWith('/') ? raw : raw + '/';
+---
+
+<BaseLayout title="Judge Dashboard — PetShow Online">
+  <div class="min-h-[80vh] flex items-center justify-center px-4 py-16" style="background:#d6f5f0/30">
+    <div class="w-full max-w-lg bg-white rounded-card-lg shadow-card-float overflow-hidden">
+      <!-- Colour accent bar (teal) -->
+      <div class="h-2 w-full" style="background:#0d9488"></div>
+
+      <div class="px-10 pt-10 pb-12 text-center">
+        <!-- Icon -->
+        <div class="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style="background:#d6f5f0">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+        </div>
+
+        <h1 class="text-[36px] font-extrabold tracking-[-0.02em] leading-tight mb-2" style="color:#0d9488">Welcome, Judge!</h1>
+        <p class="text-[18px] font-semibold text-[#1c1626] mb-3">Your scoring panel is coming soon.</p>
+        <p class="text-[15px] text-[#6f6880] leading-relaxed mb-10 max-w-sm mx-auto">
+          We're hard at work building the full platform. In the meantime, explore the landing page or try a different role.
+        </p>
+
+        <div class="flex flex-col sm:flex-row gap-3 justify-center">
+          <a href={base}
+            class="inline-flex items-center justify-center gap-2 text-white font-bold rounded-btn px-6 py-3 transition-colors hover:opacity-90"
+            style="background:#0d9488;box-shadow:0 10px 24px rgba(13,148,136,0.3)">
+            Back to Home
+          </a>
+          <a href={`${base}login`}
+            class="inline-flex items-center justify-center gap-2 font-bold rounded-btn px-6 py-3 border-[1.5px] transition-colors"
+            style="color:#0d9488;border-color:#2dd4bf">
+            Log Out
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

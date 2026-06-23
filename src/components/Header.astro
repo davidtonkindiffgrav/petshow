@@ -1,0 +1,123 @@
+---
+import PawLogo from './PawLogo.astro';
+const raw = import.meta.env.BASE_URL;
+const base = raw.endsWith('/') ? raw : raw + '/';
+---
+
+<header class="sticky top-0 z-50 bg-white/[0.92] backdrop-blur-[10px] border-b border-[#efebf5]">
+  <div class="max-w-container mx-auto px-7 py-[14px] flex items-center justify-between gap-6">
+
+    <!-- Logo -->
+    <PawLogo />
+
+    <!-- Desktop nav -->
+    <nav class="hidden min-[900px]:flex items-center gap-[30px]" aria-label="Main navigation">
+      <a href={`${base}#why`}    class="text-[15px] font-semibold text-[#4a4357] hover:text-brand transition-colors">Why PetShow</a>
+      <a href={`${base}#how`}    class="text-[15px] font-semibold text-[#4a4357] hover:text-brand transition-colors">How It Works</a>
+      <a href={`${base}#events`} class="text-[15px] font-semibold text-[#4a4357] hover:text-brand transition-colors">Events</a>
+      <span class="inline-flex items-center gap-1 text-[15px] font-semibold text-[#4a4357] cursor-default select-none">
+        Categories
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+      </span>
+      <a href={`${base}#pricing`} class="text-[15px] font-semibold text-[#4a4357] hover:text-brand transition-colors">Pricing</a>
+      <a href={`${base}#hof`}     class="text-[15px] font-semibold text-[#4a4357] hover:text-brand transition-colors">Hall of Fame</a>
+    </nav>
+
+    <!-- Desktop actions -->
+    <div class="hidden min-[900px]:flex items-center gap-3">
+      <a href={`${base}login`}
+        class="text-[15px] font-bold text-brand border-[1.5px] border-[#e6dcfb] rounded-btn-sm px-[18px] py-[9px] hover:bg-brand-tint transition-colors">
+        Log In
+      </a>
+      <a href={`${base}login`}
+        class="text-[15px] font-bold text-white bg-brand rounded-btn-sm px-5 py-[10px] shadow-hero-btn hover:bg-brand-dark transition-colors">
+        Sign Up
+      </a>
+    </div>
+
+    <!-- Mobile hamburger -->
+    <button
+      id="hamburger-btn"
+      aria-label="Open navigation menu"
+      aria-expanded="false"
+      aria-controls="mobile-nav"
+      class="flex min-[900px]:hidden p-2 rounded-lg text-[#4a4357] hover:bg-brand-tint transition-colors"
+    >
+      <svg id="icon-menu" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+      <svg id="icon-close" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" class="hidden">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<!-- Mobile nav overlay -->
+<div id="nav-overlay" class="fixed inset-0 bg-black/30 z-40 hidden" aria-hidden="true"></div>
+
+<!-- Mobile nav panel -->
+<div
+  id="mobile-nav"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Navigation menu"
+  class="fixed inset-y-0 right-0 z-50 w-72 bg-white shadow-2xl flex flex-col"
+>
+  <div class="flex items-center justify-between px-6 py-4 border-b border-[#efebf5]">
+    <PawLogo size={32} wordmarkSize={20} subtitleSize={8} />
+    <button id="nav-close" aria-label="Close navigation menu" class="p-2 rounded-lg text-[#4a4357] hover:bg-brand-tint transition-colors">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+
+  <nav class="flex flex-col px-4 py-4 gap-1 flex-1 overflow-y-auto" aria-label="Mobile navigation">
+    <a href={`${base}#why`}     class="py-4 px-3 text-base font-semibold text-[#4a4357] rounded-lg hover:bg-brand-tint hover:text-brand transition-colors">Why PetShow</a>
+    <a href={`${base}#how`}     class="py-4 px-3 text-base font-semibold text-[#4a4357] rounded-lg hover:bg-brand-tint hover:text-brand transition-colors">How It Works</a>
+    <a href={`${base}#events`}  class="py-4 px-3 text-base font-semibold text-[#4a4357] rounded-lg hover:bg-brand-tint hover:text-brand transition-colors">Events</a>
+    <a href={`${base}#categories`} class="py-4 px-3 text-base font-semibold text-[#4a4357] rounded-lg hover:bg-brand-tint hover:text-brand transition-colors">Categories</a>
+    <a href={`${base}#pricing`} class="py-4 px-3 text-base font-semibold text-[#4a4357] rounded-lg hover:bg-brand-tint hover:text-brand transition-colors">Pricing</a>
+    <a href={`${base}#hof`}     class="py-4 px-3 text-base font-semibold text-[#4a4357] rounded-lg hover:bg-brand-tint hover:text-brand transition-colors">Hall of Fame</a>
+  </nav>
+
+  <div class="flex flex-col gap-3 px-4 pb-8 pt-2 border-t border-[#efebf5]">
+    <a href={`${base}login`} class="w-full text-center font-bold text-brand border-[1.5px] border-[#e6dcfb] rounded-btn py-3 hover:bg-brand-tint transition-colors">Log In</a>
+    <a href={`${base}login`} class="w-full text-center font-bold text-white bg-brand rounded-btn py-3 shadow-hero-btn hover:bg-brand-dark transition-colors">Sign Up</a>
+  </div>
+</div>
+
+<script>
+  const btn     = document.getElementById('hamburger-btn');
+  const nav     = document.getElementById('mobile-nav');
+  const overlay = document.getElementById('nav-overlay');
+  const closeBtn = document.getElementById('nav-close');
+  const iconMenu  = document.getElementById('icon-menu');
+  const iconClose = document.getElementById('icon-close');
+
+  function openNav() {
+    nav?.classList.add('open');
+    overlay?.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    btn?.setAttribute('aria-expanded', 'true');
+    iconMenu?.classList.add('hidden');
+    iconClose?.classList.remove('hidden');
+  }
+
+  function closeNav() {
+    nav?.classList.remove('open');
+    overlay?.classList.add('hidden');
+    document.body.style.overflow = '';
+    btn?.setAttribute('aria-expanded', 'false');
+    iconMenu?.classList.remove('hidden');
+    iconClose?.classList.add('hidden');
+  }
+
+  btn?.addEventListener('click', openNav);
+  closeBtn?.addEventListener('click', closeNav);
+  overlay?.addEventListener('click', closeNav);
+
+  // Close nav when a link inside it is clicked
+  nav?.querySelectorAll('a').forEach(link => link.addEventListener('click', closeNav));
+</script>

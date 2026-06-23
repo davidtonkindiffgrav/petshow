@@ -1,0 +1,44 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+const raw = import.meta.env.BASE_URL;
+const base = raw.endsWith('/') ? raw : raw + '/';
+---
+
+<BaseLayout title="Organiser Dashboard — PetShow Online">
+  <div class="min-h-[80vh] flex items-center justify-center bg-brand-tint/30 px-4 py-16">
+    <div class="w-full max-w-lg bg-white rounded-card-lg shadow-card-float overflow-hidden">
+      <!-- Colour accent bar -->
+      <div class="h-2 bg-brand w-full"></div>
+
+      <div class="px-10 pt-10 pb-12 text-center">
+        <!-- Paw icon -->
+        <div class="w-20 h-20 rounded-full bg-brand-tint flex items-center justify-center mx-auto mb-6">
+          <svg width="44" height="44" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+            <ellipse cx="24" cy="31" rx="11" ry="9" fill="#7c3aed"/>
+            <ellipse cx="11" cy="23" rx="5.5" ry="6" fill="#7c3aed"/>
+            <ellipse cx="37" cy="23" rx="5.5" ry="6" fill="#7c3aed"/>
+            <ellipse cx="17" cy="14" rx="5" ry="5.5" fill="#a855f7"/>
+            <ellipse cx="31" cy="14" rx="5" ry="5.5" fill="#a855f7"/>
+          </svg>
+        </div>
+
+        <h1 class="text-[36px] font-extrabold text-brand tracking-[-0.02em] leading-tight mb-2">Welcome, Organiser!</h1>
+        <p class="text-[18px] font-semibold text-[#1c1626] mb-3">Your dashboard is coming soon.</p>
+        <p class="text-[15px] text-[#6f6880] leading-relaxed mb-10 max-w-sm mx-auto">
+          We're hard at work building the full platform. In the meantime, explore the landing page or try a different role.
+        </p>
+
+        <div class="flex flex-col sm:flex-row gap-3 justify-center">
+          <a href={base}
+            class="inline-flex items-center justify-center gap-2 bg-brand text-white font-bold rounded-btn px-6 py-3 shadow-btn-primary hover:bg-brand-dark transition-colors">
+            Back to Home
+          </a>
+          <a href={`${base}login`}
+            class="inline-flex items-center justify-center gap-2 text-brand border-[1.5px] border-[#e6dcfb] font-bold rounded-btn px-6 py-3 hover:bg-brand-tint transition-colors">
+            Log Out
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

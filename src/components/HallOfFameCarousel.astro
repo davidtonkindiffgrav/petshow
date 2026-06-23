@@ -1,0 +1,93 @@
+---
+import WinnerCard from './WinnerCard.astro';
+const raw = import.meta.env.BASE_URL;
+const base = raw.endsWith('/') ? raw : raw + '/';
+---
+
+<section id="hof" class="max-w-container mx-auto px-4 min-[600px]:px-7 mt-7">
+  <div class="bg-hof rounded-card-lg overflow-hidden">
+    <div class="grid grid-cols-1 min-[900px]:grid-cols-[280px_1fr] gap-6 pt-8 min-[900px]:pt-[38px] pb-8 min-[900px]:pb-[38px] px-5 min-[900px]:pl-[40px] min-[900px]:pr-0">
+
+      <!-- Left panel -->
+      <div class="min-[900px]:pr-4 pb-2 min-[900px]:pb-0">
+        <h2 class="text-[32px] font-extrabold text-[#1c1626] leading-tight">Hall of Fame</h2>
+        <!-- Purple underline -->
+        <div class="w-14 h-1 bg-brand rounded-full mt-2 mb-4"></div>
+        <p class="text-[15px] text-[#6f6880] leading-relaxed mb-6">
+          Celebrating amazing pets and the people who love them.
+        </p>
+        <a
+          href="#"
+          class="inline-flex items-center gap-2 text-[14px] font-bold text-brand bg-white border-[1.5px] border-[#e6dcfb] rounded-[12px] px-5 py-[11px] hover:bg-brand-tint transition-colors"
+        >
+          <!-- Paw icon -->
+          <svg width="15" height="15" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+            <ellipse cx="24" cy="31" rx="11" ry="9" fill="#7c3aed"/>
+            <ellipse cx="11" cy="23" rx="5.5" ry="6" fill="#7c3aed"/>
+            <ellipse cx="37" cy="23" rx="5.5" ry="6" fill="#7c3aed"/>
+            <ellipse cx="17" cy="14" rx="5" ry="5.5" fill="#a855f7"/>
+            <ellipse cx="31" cy="14" rx="5" ry="5.5" fill="#a855f7"/>
+          </svg>
+          View All Winners
+        </a>
+      </div>
+
+      <!-- Right: scrollable rail wrapper -->
+      <div class="relative">
+        <!-- Scroll rail -->
+        <div
+          id="hof-rail"
+          class="ps-rail flex gap-[18px] overflow-x-auto scroll-smooth pb-3 pt-1.5 pl-1.5 pr-[56px]"
+        >
+          <WinnerCard name="Buddy"  category="Best Dressed"      event="Spring Paws Show 2024"     rank={1} bgGradient="from-violet-100 to-pink-100"  />
+          <WinnerCard name="Luna"   category="Waggiest Tail"     event="Paws for a Cause 2024"     rank={2} bgGradient="from-blue-100 to-violet-100"  />
+          <WinnerCard name="Charlie" category="Cutest Pup"       event="Love Rescues Event 2024"   rank={3} bgGradient="from-amber-100 to-pink-100"   />
+          <WinnerCard name="Cooper" category="Best Personality"  event="Community Paws 2024"       rank={4} bgGradient="from-pink-100 to-violet-100"  />
+        </div>
+
+        <!-- Prev button -->
+        <button
+          id="hof-prev"
+          aria-label="Scroll to previous winners"
+          class="absolute left-1 min-[900px]:left-[-16px] top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white border border-[#efe9f7] shadow-next-btn flex items-center justify-center opacity-0 pointer-events-none transition-opacity z-10"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+        </button>
+
+        <!-- Next button -->
+        <button
+          id="hof-next"
+          aria-label="Scroll to next winners"
+          class="absolute right-[14px] top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white border border-[#efe9f7] shadow-next-btn flex items-center justify-center transition-opacity z-10"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  const rail    = document.getElementById('hof-rail');
+  const nextBtn = document.getElementById('hof-next');
+  const prevBtn = document.getElementById('hof-prev');
+
+  function updateButtons() {
+    if (!rail) return;
+    const atStart = rail.scrollLeft <= 4;
+    const atEnd   = rail.scrollLeft + rail.clientWidth >= rail.scrollWidth - 4;
+    prevBtn?.classList.toggle('opacity-0', atStart);
+    prevBtn?.classList.toggle('pointer-events-none', atStart);
+    nextBtn?.classList.toggle('opacity-0', atEnd);
+    nextBtn?.classList.toggle('pointer-events-none', atEnd);
+  }
+
+  nextBtn?.addEventListener('click', () => rail?.scrollBy({ left: 320, behavior: 'smooth' }));
+  prevBtn?.addEventListener('click', () => rail?.scrollBy({ left: -320, behavior: 'smooth' }));
+  rail?.addEventListener('scroll', updateButtons, { passive: true });
+  updateButtons();
+</script>
