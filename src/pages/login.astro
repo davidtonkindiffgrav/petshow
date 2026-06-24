@@ -50,7 +50,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
       <!-- Hint text -->
       <p id="login-hint" class="text-[12px] text-[#9b94a8] text-center mb-5 leading-relaxed">
-        Participant: <code class="bg-gray-100 px-1 rounded">participant@petshow.com</code> / <code class="bg-gray-100 px-1 rounded">participant123</code>
+        Log in with your PetShow account.
       </p>
 
       <!-- Login form -->
@@ -97,24 +97,16 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
 </BaseLayout>
 
-<script define:vars={{ base }}>
-  // Temporary mock credentials — replace with real auth before launch
-  const CREDENTIALS = {
-    organiser:   { email: 'organiser@petshow.com',   password: 'organiser123'   },
-    judge:       { email: 'judge@petshow.com',       password: 'judge123'       },
-    participant: { email: 'participant@petshow.com', password: 'participant123' },
-  };
+<script>
+  import { supabase } from '../lib/supabase.js';
+
+  const raw = import.meta.env.BASE_URL;
+  const base = raw.endsWith('/') ? raw : raw + '/';
 
   const REDIRECTS = {
     organiser:   base + 'organiser',
     judge:       base + 'judge',
     participant: base + 'participant',
-  };
-
-  const HINTS = {
-    organiser:   'organiser@petshow.com / organiser123',
-    judge:       'judge@petshow.com / judge123',
-    participant: 'participant@petshow.com / participant123',
   };
 
   let selectedRole = 'participant';
@@ -135,33 +127,33 @@ const base = raw.endsWith('/') ? raw : raw + '/';
         c.classList.toggle('bg-white', !active);
         c.setAttribute('aria-pressed', active ? 'true' : 'false');
       });
-
-      // Update hint
-      const hint = document.getElementById('login-hint');
-      const cred = CREDENTIALS[selectedRole];
-      if (hint && cred) {
-        hint.innerHTML = `<code class="bg-gray-100 px-1 rounded">${cred.email}</code> / <code class="bg-gray-100 px-1 rounded">${cred.password}</code>`;
-      }
-
-      // Clear error
-      const err = document.getElementById('login-error');
-      err?.classList.add('hidden');
+      document.getElementById('login-error')?.classList.add('hidden');
     });
   });
 
   // Form submission
-  document.getElementById('login-form')?.addEventListener('submit', e => {
+  document.getElementById('login-form')?.addEventListener('submit', async e => {
     e.preventDefault();
     const email    = document.getElementById('username').value.trim().toLowerCase();
     const password = document.getElementById('password').value;
-    const cred     = CREDENTIALS[selectedRole];
     const errEl    = document.getElementById('login-error');
+    const btn      = e.target.querySelector('button[type="submit"]');
 
-    if (cred && email === cred.email && password === cred.password) {
-      window.location.href = REDIRECTS[selectedRole];
-    } else {
-      errEl.textContent = 'Invalid email or password. Check the hint above and try again.';
+    btn.disabled = true;
+    btn.textContent = 'Logging in…';
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      errEl.textContent = error.message;
       errEl.classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Log In';
+      return;
     }
+
+    // Role comes from user metadata, falling back to whatever the UI selector shows
+    const role = data.user.user_metadata?.role || selectedRole;
+    window.location.href = REDIRECTS[role] || base;
   });
 </script>

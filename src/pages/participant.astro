@@ -30,13 +30,28 @@ const base = raw.endsWith('/') ? raw : raw + '/';
             style="background:#f0518a;box-shadow:0 10px 24px rgba(240,81,138,0.3)">
             Back to Home
           </a>
-          <a href={`${base}login`}
+          <button
+            id="sign-out"
             class="inline-flex items-center justify-center gap-2 font-bold rounded-btn px-6 py-3 border-[1.5px] transition-colors"
             style="color:#f0518a;border-color:#f0a4d0">
             Log Out
-          </a>
+          </button>
         </div>
       </div>
     </div>
   </div>
 </BaseLayout>
+
+<script>
+  import { supabase } from '../lib/supabase.js';
+  const raw = import.meta.env.BASE_URL;
+  const base = raw.endsWith('/') ? raw : raw + '/';
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) window.location.replace(base + 'login');
+
+  document.getElementById('sign-out')?.addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.href = base + 'login';
+  });
+</script>
