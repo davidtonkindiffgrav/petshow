@@ -223,6 +223,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       email,
       password,
       options: {
+        emailRedirectTo: 'https://dptonkin.github.io/petshow/login',
         data: {
           display_name: displayName || email.split('@')[0],
           role: selectedRole,
