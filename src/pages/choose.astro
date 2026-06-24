@@ -1,0 +1,124 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="What are you doing today? — PetShow Online">
+  <div class="min-h-[80vh] flex flex-col items-center justify-center px-4 py-16 bg-brand-tint/30">
+
+    <!-- Loading -->
+    <div id="ps-loading" class="flex flex-col items-center gap-3">
+      <div class="w-10 h-10 rounded-full border-4 border-brand border-t-transparent animate-spin"></div>
+      <p class="text-[14px] text-[#9b94a8]">Loading…</p>
+    </div>
+
+    <!-- Content -->
+    <div id="ps-content" class="hidden w-full max-w-3xl text-center">
+
+      <!-- Logo -->
+      <div class="flex justify-center mb-8">
+        <div class="inline-flex items-center gap-2.5">
+          <svg width="38" height="38" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+            <ellipse cx="24" cy="31" rx="11" ry="9" fill="#7c3aed"/>
+            <ellipse cx="11" cy="23" rx="5.5" ry="6" fill="#7c3aed"/>
+            <ellipse cx="37" cy="23" rx="5.5" ry="6" fill="#7c3aed"/>
+            <ellipse cx="17" cy="14" rx="5" ry="5.5" fill="#a855f7"/>
+            <ellipse cx="31" cy="14" rx="5" ry="5.5" fill="#a855f7"/>
+          </svg>
+          <div class="flex flex-col leading-none">
+            <span class="text-[22px] font-extrabold tracking-[-0.02em] text-[#1c1626]">PetShow</span>
+            <span class="text-[9px] font-bold text-[#9b94a8] tracking-[0.32em] uppercase">ONLINE</span>
+          </div>
+        </div>
+      </div>
+
+      <h1 class="text-[30px] min-[600px]:text-[38px] font-extrabold text-[#1c1626] tracking-[-0.02em] mb-2">
+        Hi <span id="ps-name">there</span>!
+      </h1>
+      <p class="text-[16px] min-[600px]:text-[18px] text-[#6f6880] mb-10">What are you doing today?</p>
+
+      <div id="ps-cards" class="flex flex-wrap justify-center gap-5"></div>
+
+      <!-- Sign out -->
+      <button id="ps-signout" class="mt-12 text-[13px] text-[#9b94a8] hover:text-[#6f6880] transition-colors">
+        Sign out
+      </button>
+    </div>
+
+  </div>
+</BaseLayout>
+
+<script>
+  import { getAuth } from '../lib/auth.js';
+  import { supabase } from '../lib/supabase.js';
+
+  const ROLES = {
+    organiser: {
+      label: 'Run a Show',
+      description: 'Manage entries, categories, judging and fundraising',
+      color: '#7c3aed',
+      bg: '#f1eafe',
+      icon: `<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>`,
+    },
+    judge: {
+      label: 'Judge a Show',
+      description: 'Score entries fairly and anonymously',
+      color: '#0d9488',
+      bg: '#d6f5f0',
+      icon: `<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+      </svg>`,
+    },
+    participant: {
+      label: 'Enter a Show',
+      description: 'Submit your pet and compete for glory',
+      color: '#f0518a',
+      bg: '#ffe4ee',
+      icon: `<svg width="30" height="30" viewBox="0 0 24 24" fill="#f0518a" aria-hidden="true">
+        <path d="M12 21C12 21 3.5 15.5 3.5 9A4.5 4.5 0 0 1 12 6.1 4.5 4.5 0 0 1 20.5 9C20.5 15.5 12 21 12 21z"/>
+      </svg>`,
+    },
+  };
+
+  const { session, profile, base } = await getAuth();
+
+  if (!session) {
+    window.location.replace(base + 'login');
+  } else {
+    const roles = profile?.roles || ['participant'];
+
+    if (roles.length === 1) {
+      window.location.replace(base + roles[0]);
+    } else {
+      document.getElementById('ps-loading').classList.add('hidden');
+      document.getElementById('ps-content').classList.remove('hidden');
+
+      const name = profile?.display_name || session.user.email?.split('@')[0] || 'there';
+      document.getElementById('ps-name').textContent = name;
+
+      const container = document.getElementById('ps-cards');
+      roles.forEach(role => {
+        const r = ROLES[role];
+        if (!r) return;
+        const a = document.createElement('a');
+        a.href = base + role;
+        a.style.color = r.color;
+        a.className = 'group flex flex-col items-center w-[200px] bg-white rounded-card-lg border-2 border-transparent p-8 transition-all shadow-winner-card hover:shadow-card-float hover:-translate-y-1 hover:border-current';
+        a.innerHTML = `
+          <div class="w-16 h-16 rounded-full flex items-center justify-center mb-5 transition-transform group-hover:scale-110" style="background:${r.bg}">
+            ${r.icon}
+          </div>
+          <h2 class="text-[17px] font-extrabold mb-1.5 text-[#1c1626]">${r.label}</h2>
+          <p class="text-[13px] text-[#6f6880] leading-snug text-center">${r.description}</p>
+        `;
+        container.appendChild(a);
+      });
+
+      document.getElementById('ps-signout')?.addEventListener('click', async () => {
+        await supabase.auth.signOut();
+        window.location.href = base + 'login';
+      });
+    }
+  }
+</script>

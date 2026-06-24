@@ -33,9 +33,13 @@ const base = raw.endsWith('/') ? raw : raw + '/';
             class="inline-flex items-center justify-center gap-2 bg-brand text-white font-bold rounded-btn px-6 py-3 shadow-btn-primary hover:bg-brand-dark transition-colors">
             Back to Home
           </a>
+          <a id="switch-mode" href={`${base}choose`}
+            class="hidden items-center justify-center gap-2 text-brand border-[1.5px] border-[#e6dcfb] font-bold rounded-btn px-6 py-3 hover:bg-brand-tint transition-colors">
+            Switch Mode
+          </a>
           <button
             id="sign-out"
-            class="inline-flex items-center justify-center gap-2 text-brand border-[1.5px] border-[#e6dcfb] font-bold rounded-btn px-6 py-3 hover:bg-brand-tint transition-colors">
+            class="inline-flex items-center justify-center gap-2 text-[#9b94a8] border-[1.5px] border-[#efebf5] font-bold rounded-btn px-6 py-3 hover:bg-gray-50 transition-colors">
             Log Out
           </button>
         </div>
@@ -45,15 +49,21 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 </BaseLayout>
 
 <script>
+  import { getAuth } from '../lib/auth.js';
   import { supabase } from '../lib/supabase.js';
-  const raw = import.meta.env.BASE_URL;
-  const base = raw.endsWith('/') ? raw : raw + '/';
 
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) window.location.replace(base + 'login');
-
-  document.getElementById('sign-out')?.addEventListener('click', async () => {
-    await supabase.auth.signOut();
-    window.location.href = base + 'login';
-  });
+  const { session, profile, base } = await getAuth();
+  if (!session) {
+    window.location.replace(base + 'login');
+  } else {
+    if (profile?.roles?.length > 1) {
+      const btn = document.getElementById('switch-mode');
+      btn?.classList.remove('hidden');
+      btn?.classList.add('inline-flex');
+    }
+    document.getElementById('sign-out')?.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = base + 'login';
+    });
+  }
 </script>

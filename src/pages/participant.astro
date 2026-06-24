@@ -30,10 +30,14 @@ const base = raw.endsWith('/') ? raw : raw + '/';
             style="background:#f0518a;box-shadow:0 10px 24px rgba(240,81,138,0.3)">
             Back to Home
           </a>
+          <a id="switch-mode" href={`${base}choose`}
+            class="hidden items-center justify-center gap-2 font-bold rounded-btn px-6 py-3 border-[1.5px] transition-colors"
+            style="color:#f0518a;border-color:#f0a4d0">
+            Switch Mode
+          </a>
           <button
             id="sign-out"
-            class="inline-flex items-center justify-center gap-2 font-bold rounded-btn px-6 py-3 border-[1.5px] transition-colors"
-            style="color:#f0518a;border-color:#f0a4d0">
+            class="inline-flex items-center justify-center gap-2 text-[#9b94a8] border-[1.5px] border-[#efebf5] font-bold rounded-btn px-6 py-3 hover:bg-gray-50 transition-colors">
             Log Out
           </button>
         </div>
@@ -43,15 +47,21 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 </BaseLayout>
 
 <script>
+  import { getAuth } from '../lib/auth.js';
   import { supabase } from '../lib/supabase.js';
-  const raw = import.meta.env.BASE_URL;
-  const base = raw.endsWith('/') ? raw : raw + '/';
 
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) window.location.replace(base + 'login');
-
-  document.getElementById('sign-out')?.addEventListener('click', async () => {
-    await supabase.auth.signOut();
-    window.location.href = base + 'login';
-  });
+  const { session, profile, base } = await getAuth();
+  if (!session) {
+    window.location.replace(base + 'login');
+  } else {
+    if (profile?.roles?.length > 1) {
+      const btn = document.getElementById('switch-mode');
+      btn?.classList.remove('hidden');
+      btn?.classList.add('inline-flex');
+    }
+    document.getElementById('sign-out')?.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = base + 'login';
+    });
+  }
 </script>

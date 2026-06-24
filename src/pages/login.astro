@@ -27,31 +27,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       </div>
 
       <h1 class="text-[26px] font-extrabold text-[#1c1626] text-center mb-1">Welcome back</h1>
-      <p class="text-[15px] text-[#6f6880] text-center mb-8">Select your role and log in below.</p>
-
-      <!-- Role selector -->
-      <div class="grid grid-cols-3 gap-3 mb-7" role="group" aria-label="Select your role">
-        {[
-          { id: 'organiser',   label: 'Organiser',   emoji: '🎪' },
-          { id: 'judge',       label: 'Judge',       emoji: '⭐' },
-          { id: 'participant', label: 'Participant',  emoji: '🐾' },
-        ].map(({ id, label, emoji }) => (
-          <button
-            type="button"
-            data-role={id}
-            class={`role-card border-2 rounded-card-sm p-3 text-center cursor-pointer transition-all select-none ${id === 'participant' ? 'border-brand bg-brand-tint text-brand ring-2 ring-brand' : 'border-[#e6dcfb] text-[#4a4357] bg-white hover:bg-brand-tint hover:border-brand'}`}
-            aria-pressed={id === 'participant' ? 'true' : 'false'}
-          >
-            <div class="text-2xl mb-1">{emoji}</div>
-            <div class="text-[13px] font-bold">{label}</div>
-          </button>
-        ))}
-      </div>
-
-      <!-- Hint text -->
-      <p id="login-hint" class="text-[12px] text-[#9b94a8] text-center mb-5 leading-relaxed">
-        Log in with your PetShow account.
-      </p>
+      <p class="text-[15px] text-[#6f6880] text-center mb-8">Enter your email and password to continue.</p>
 
       <!-- Login form -->
       <form id="login-form" novalidate>
@@ -103,35 +79,6 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   const raw = import.meta.env.BASE_URL;
   const base = raw.endsWith('/') ? raw : raw + '/';
 
-  const REDIRECTS = {
-    organiser:   base + 'organiser',
-    judge:       base + 'judge',
-    participant: base + 'participant',
-  };
-
-  let selectedRole = 'participant';
-
-  // Role card selection
-  document.querySelectorAll('.role-card').forEach(card => {
-    card.addEventListener('click', () => {
-      selectedRole = card.dataset.role;
-      document.querySelectorAll('.role-card').forEach(c => {
-        const active = c.dataset.role === selectedRole;
-        c.classList.toggle('border-brand', active);
-        c.classList.toggle('bg-brand-tint', active);
-        c.classList.toggle('text-brand', active);
-        c.classList.toggle('ring-2', active);
-        c.classList.toggle('ring-brand', active);
-        c.classList.toggle('border-[#e6dcfb]', !active);
-        c.classList.toggle('text-[#4a4357]', !active);
-        c.classList.toggle('bg-white', !active);
-        c.setAttribute('aria-pressed', active ? 'true' : 'false');
-      });
-      document.getElementById('login-error')?.classList.add('hidden');
-    });
-  });
-
-  // Form submission
   document.getElementById('login-form')?.addEventListener('submit', async e => {
     e.preventDefault();
     const email    = document.getElementById('username').value.trim().toLowerCase();
@@ -152,8 +99,13 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       return;
     }
 
-    // Role comes from user metadata, falling back to whatever the UI selector shows
-    const role = data.user.user_metadata?.role || selectedRole;
-    window.location.href = REDIRECTS[role] || base;
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('roles')
+      .eq('id', data.user.id)
+      .single();
+
+    const roles = profile?.roles || ['participant'];
+    window.location.href = roles.length === 1 ? base + roles[0] : base + 'choose';
   });
 </script>
