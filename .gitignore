@@ -21,3 +21,6 @@ pnpm-debug.log*
 
 # Astro
 .astro/
+
+# Claude Code local settings
+.claude/
