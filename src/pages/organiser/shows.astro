@@ -54,6 +54,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   import { getAuth } from '../../lib/auth.js';
   import { supabase } from '../../lib/supabase.js';
 
+  const SHOW_TYPE_LABELS   = { beauty_contest: 'Beauty Contest', fun_stakes: 'Fun Stakes', memorial: 'Memorial Show', other: 'Other' };
+  const BREED_SCOPE_LABELS = { all: 'All Breeds', breed_specific: 'Breed Specific', group_specific: 'Group Specific' };
+  const CURRENCY_SYMBOLS   = { GBP: '£', USD: '$', EUR: '€', AUD: 'A$', CAD: 'C$', NZD: 'NZ$', ZAR: 'R', SGD: 'S$' };
+
   const { session, profile, base } = await getAuth();
 
   if (!session) {
@@ -113,9 +117,6 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     return { label: 'Closed', color: '#6b7280', bg: '#f9fafb' };
   }
 
-  const SHOW_TYPE_LABELS  = { beauty_contest: 'Beauty Contest', fun_stakes: 'Fun Stakes', memorial: 'Memorial Show', other: 'Other' };
-  const BREED_SCOPE_LABELS = { all: 'All Breeds', breed_specific: 'Breed Specific', group_specific: 'Group Specific' };
-  const CURRENCY_SYMBOLS  = { GBP: '£', USD: '$', EUR: '€', AUD: 'A$', CAD: 'C$', NZD: 'NZ$', ZAR: 'R', SGD: 'S$' };
 
   function dot(state) {
     return state === 'ok' ? '#22c55e' : state === 'pending' ? '#fbbf24' : '#c4bed0';
