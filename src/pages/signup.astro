@@ -54,6 +54,35 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
       </div>
 
+      <!-- Organiser sub-type (revealed when Organiser role is selected) -->
+      <div id="organiser-subtype" style="display:none" class="mb-7 p-4 rounded-[14px] border border-brand/10 bg-brand-tint/40">
+        <p class="text-[12.5px] font-semibold text-[#4a4357] mb-2.5">Are you signing up as…</p>
+        <div class="grid grid-cols-2 gap-2 mb-3">
+          <button type="button" id="subtype-individual" class="subtype-btn flex flex-col items-center gap-1.5 rounded-[11px] border-2 border-brand bg-white px-3 py-3 text-[12px] font-bold text-[#1c1626] transition-all" data-subtype="individual" style="box-shadow:0 0 0 3px rgba(124,58,237,0.18)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
+            Individual
+          </button>
+          <button type="button" id="subtype-club" class="subtype-btn flex flex-col items-center gap-1.5 rounded-[11px] border-2 border-[#e6dcfb] bg-white px-3 py-3 text-[12px] font-bold text-[#1c1626] transition-all" data-subtype="club">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            Club / Org
+          </button>
+        </div>
+        <div id="club-name-field" style="display:none">
+          <label for="club-name" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Club / Organisation name</label>
+          <input
+            type="text"
+            id="club-name"
+            placeholder="e.g. Sunny Paws Dog Club"
+            class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors"
+          />
+        </div>
+      </div>
+
       <!-- Form -->
       <form id="signup-form" novalidate>
 
@@ -159,6 +188,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
   // Role selection
   let selectedRole = 'participant';
+  let selectedSubtype = 'individual';
 
   const STYLES = {
     participant: { border: '#f0518a', bg: '#fff8fb', ring: 'rgba(240,81,138,0.18)' },
@@ -179,12 +209,33 @@ const base = raw.endsWith('/') ? raw : raw + '/';
         btn.style.boxShadow   = 'none';
       }
     });
+    const subtypeEl = document.getElementById('organiser-subtype');
+    if (subtypeEl) subtypeEl.style.display = role === 'organiser' ? 'block' : 'none';
+  }
+
+  function setSubtype(subtype) {
+    selectedSubtype = subtype;
+    document.querySelectorAll('.subtype-btn').forEach(btn => {
+      if (btn.dataset.subtype === subtype) {
+        btn.style.borderColor = '#7c3aed';
+        btn.style.boxShadow   = '0 0 0 3px rgba(124,58,237,0.18)';
+      } else {
+        btn.style.borderColor = '#e6dcfb';
+        btn.style.boxShadow   = 'none';
+      }
+    });
+    const clubField = document.getElementById('club-name-field');
+    if (clubField) clubField.style.display = subtype === 'club' ? 'block' : 'none';
   }
 
   setRole('participant');
 
   document.querySelectorAll('.role-btn').forEach(btn => {
     btn.addEventListener('click', () => setRole(btn.dataset.role));
+  });
+
+  document.querySelectorAll('.subtype-btn').forEach(btn => {
+    btn.addEventListener('click', () => setSubtype(btn.dataset.subtype));
   });
 
   // Form submit
@@ -216,8 +267,22 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       return;
     }
 
+    // Extra validation for club organiser
+    if (selectedRole === 'organiser' && selectedSubtype === 'club') {
+      const clubName = (document.getElementById('club-name')).value.trim();
+      if (!clubName) {
+        errEl.textContent = 'Please enter your club or organisation name.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+    }
+
     btn.disabled = true;
     btn.textContent = 'Creating account…';
+
+    const clubName = selectedRole === 'organiser' && selectedSubtype === 'club'
+      ? (document.getElementById('club-name')).value.trim()
+      : undefined;
 
     const { error } = await supabase.auth.signUp({
       email,
@@ -227,6 +292,10 @@ const base = raw.endsWith('/') ? raw : raw + '/';
         data: {
           display_name: displayName || email.split('@')[0],
           role: selectedRole,
+          ...(selectedRole === 'organiser' && {
+            organiser_type: selectedSubtype,
+            ...(clubName && { organisation_name: clubName }),
+          }),
         },
       },
     });

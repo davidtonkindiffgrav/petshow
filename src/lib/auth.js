@@ -9,7 +9,7 @@ export async function getAuth() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('roles, display_name')
+    .select('roles, display_name, organiser_type, organisation_id')
     .eq('id', session.user.id)
     .single()
 

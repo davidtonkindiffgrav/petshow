@@ -1,69 +1,101 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
-const raw = import.meta.env.BASE_URL;
-const base = raw.endsWith('/') ? raw : raw + '/';
+import DashboardLayout from '../layouts/DashboardLayout.astro';
 ---
 
-<BaseLayout title="Organiser Dashboard — PetShow Online">
-  <div class="min-h-[80vh] flex items-center justify-center bg-brand-tint/30 px-4 py-16">
-    <div class="w-full max-w-lg bg-white rounded-card-lg shadow-card-float overflow-hidden">
-      <!-- Colour accent bar -->
-      <div class="h-2 bg-brand w-full"></div>
+<DashboardLayout title="Dashboard" activePage="dashboard">
 
-      <div class="px-10 pt-10 pb-12 text-center">
-        <!-- Paw icon -->
-        <div class="w-20 h-20 rounded-full bg-brand-tint flex items-center justify-center mx-auto mb-6">
-          <svg width="44" height="44" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-            <ellipse cx="24" cy="31" rx="11" ry="9" fill="#7c3aed"/>
-            <ellipse cx="11" cy="23" rx="5.5" ry="6" fill="#7c3aed"/>
-            <ellipse cx="37" cy="23" rx="5.5" ry="6" fill="#7c3aed"/>
-            <ellipse cx="17" cy="14" rx="5" ry="5.5" fill="#a855f7"/>
-            <ellipse cx="31" cy="14" rx="5" ry="5.5" fill="#a855f7"/>
-          </svg>
-        </div>
+  <button slot="actions" id="new-show-btn" style="display:none" class="inline-flex items-center gap-2 bg-brand text-white text-[13.5px] font-bold px-4 py-2.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+    New Show
+  </button>
 
-        <h1 class="text-[36px] font-extrabold text-brand tracking-[-0.02em] leading-tight mb-2">Welcome, Organiser!</h1>
-        <p class="text-[18px] font-semibold text-[#1c1626] mb-3">Your dashboard is coming soon.</p>
-        <p class="text-[15px] text-[#6f6880] leading-relaxed mb-10 max-w-sm mx-auto">
-          We're hard at work building the full platform. In the meantime, explore the landing page or try a different role.
-        </p>
+  <!-- Loading -->
+  <div id="state-loading" class="flex items-center justify-center h-64">
+    <div class="w-8 h-8 border-[3px] border-brand/20 border-t-brand rounded-full animate-spin"></div>
+  </div>
 
-        <div class="flex flex-col sm:flex-row gap-3 justify-center">
-          <a href={base}
-            class="inline-flex items-center justify-center gap-2 bg-brand text-white font-bold rounded-btn px-6 py-3 shadow-btn-primary hover:bg-brand-dark transition-colors">
-            Back to Home
-          </a>
-          <a id="switch-mode" href={`${base}choose`}
-            class="hidden items-center justify-center gap-2 text-brand border-[1.5px] border-[#e6dcfb] font-bold rounded-btn px-6 py-3 hover:bg-brand-tint transition-colors">
-            Switch Mode
-          </a>
-          <button
-            id="sign-out"
-            class="inline-flex items-center justify-center gap-2 text-[#9b94a8] border-[1.5px] border-[#efebf5] font-bold rounded-btn px-6 py-3 hover:bg-gray-50 transition-colors">
-            Log Out
-          </button>
-        </div>
+  <!-- Empty state -->
+  <div id="state-empty" style="display:none" class="flex items-center justify-center min-h-[70vh]">
+    <div class="text-center max-w-[420px]">
+      <div class="w-24 h-24 rounded-full bg-brand-tint flex items-center justify-center mx-auto mb-7">
+        <svg width="52" height="52" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+          <ellipse cx="24" cy="31" rx="11" ry="9" fill="#7c3aed"/>
+          <ellipse cx="11" cy="23" rx="5.5" ry="6" fill="#7c3aed"/>
+          <ellipse cx="37" cy="23" rx="5.5" ry="6" fill="#7c3aed"/>
+          <ellipse cx="17" cy="14" rx="5" ry="5.5" fill="#a855f7"/>
+          <ellipse cx="31" cy="14" rx="5" ry="5.5" fill="#a855f7"/>
+        </svg>
       </div>
+      <h2 class="text-[28px] font-extrabold text-[#1c1626] tracking-[-0.02em] leading-tight mb-3">
+        Let's get your first show set up!
+      </h2>
+      <p class="text-[15px] text-[#6f6880] leading-relaxed mb-8">
+        Once you create a show, your dashboard will come to life — entries, judges, results and more will all appear here.
+      </p>
+      <button id="create-show-btn" class="inline-flex items-center gap-2 bg-brand text-white text-[15px] font-bold px-7 py-3.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Create a Show
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+        </svg>
+      </button>
     </div>
   </div>
-</BaseLayout>
+
+  <!-- Populated state — placeholder until full dashboard view is built -->
+  <div id="state-populated" style="display:none">
+    <p class="text-[14px] text-[#9b94a8]">Your shows will appear here.</p>
+  </div>
+
+</DashboardLayout>
 
 <script>
   import { getAuth } from '../lib/auth.js';
   import { supabase } from '../lib/supabase.js';
 
   const { session, profile, base } = await getAuth();
+
   if (!session) {
     window.location.replace(base + 'login');
   } else {
-    if (profile?.roles?.length > 1) {
-      const btn = document.getElementById('switch-mode');
-      btn?.classList.remove('hidden');
-      btn?.classList.add('inline-flex');
-    }
-    document.getElementById('sign-out')?.addEventListener('click', async () => {
+    // Fill in sidebar user info
+    const name = profile?.display_name || session.user.email?.split('@')[0] || 'Organiser';
+    const avatarEl   = document.getElementById('sidebar-avatar');
+    const nameEl     = document.getElementById('sidebar-username');
+    const badgeEl    = document.getElementById('sidebar-role-badge');
+    if (avatarEl)  avatarEl.textContent  = name.charAt(0).toUpperCase();
+    if (nameEl)    nameEl.textContent    = name;
+    if (badgeEl)   badgeEl.textContent   = profile?.organiser_type === 'club' ? 'Club Organiser' : 'Organiser';
+
+    document.getElementById('sidebar-signout')?.addEventListener('click', async () => {
       await supabase.auth.signOut();
       window.location.href = base + 'login';
     });
+
+    // Query shows count — fall back to empty state if table doesn't exist yet
+    const { count, error } = await supabase
+      .from('shows')
+      .select('*', { count: 'exact', head: true })
+      .eq('created_by', session.user.id);
+
+    const loadingEl    = document.getElementById('state-loading');
+    const emptyEl      = document.getElementById('state-empty');
+    const populatedEl  = document.getElementById('state-populated');
+    const newShowBtn   = document.getElementById('new-show-btn');
+    if (loadingEl) loadingEl.style.display = 'none';
+
+    if (error || !count) {
+      if (emptyEl) emptyEl.style.display = 'flex';
+      document.getElementById('create-show-btn')?.addEventListener('click', () => {
+        window.location.href = base + 'organiser/new-show';
+      });
+    } else {
+      if (populatedEl) populatedEl.style.display = 'block';
+      if (newShowBtn)  newShowBtn.style.display   = 'inline-flex';
+    }
   }
 </script>
