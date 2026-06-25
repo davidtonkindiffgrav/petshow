@@ -95,7 +95,12 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
       });
     } else {
       if (populatedEl) populatedEl.style.display = 'block';
-      if (newShowBtn)  newShowBtn.style.display   = 'inline-flex';
+      if (newShowBtn) {
+        newShowBtn.style.display = 'inline-flex';
+        newShowBtn.addEventListener('click', () => {
+          window.location.href = base + 'organiser/new-show';
+        });
+      }
     }
   }
 </script>

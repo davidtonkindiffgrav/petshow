@@ -376,6 +376,21 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       <h2 class="text-[21px] font-extrabold text-[#1c1626] tracking-[-0.02em] mb-1">Fundraising & Entry Fees</h2>
       <p class="text-[14px] text-[#6f6880] mb-7">Will you be raising money through this show?</p>
 
+      <div class="flex items-center gap-4 mb-7">
+        <label for="s8-currency" class="text-[13px] font-semibold text-[#4a4357] shrink-0">Currency</label>
+        <select id="s8-currency"
+          class="border border-[#e6dcfb] rounded-[11px] px-4 py-2.5 text-[14px] font-semibold text-[#1c1626] bg-white focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors">
+          <option value="GBP">GBP — £ British Pound</option>
+          <option value="USD">USD — $ US Dollar</option>
+          <option value="EUR">EUR — € Euro</option>
+          <option value="AUD">AUD — A$ Australian Dollar</option>
+          <option value="CAD">CAD — C$ Canadian Dollar</option>
+          <option value="NZD">NZD — NZ$ New Zealand Dollar</option>
+          <option value="ZAR">ZAR — R South African Rand</option>
+          <option value="SGD">SGD — S$ Singapore Dollar</option>
+        </select>
+      </div>
+
       <div class="grid grid-cols-3 gap-3 mb-6" id="fundraising-choice">
         <button type="button" data-value="yes" class="yna flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white p-4 transition-all cursor-pointer">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -403,7 +418,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         <div>
           <label for="s8-goal" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Fundraising Goal <span class="text-[#9b94a8] font-normal">(optional)</span></label>
           <div class="relative">
-            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-[15px] text-[#9b94a8] font-semibold">£</span>
+            <span id="s8-symbol-goal" class="absolute left-4 top-1/2 -translate-y-1/2 text-[15px] text-[#9b94a8] font-semibold">£</span>
             <input type="number" id="s8-goal" min="0" placeholder="0.00"
               class="w-full border border-[#e6dcfb] rounded-[11px] pl-8 pr-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
           </div>
@@ -432,9 +447,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
       <div class="border-t border-[#efebf5] pt-6">
         <label for="s8-entry-fee" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Entry Fee per Entry</label>
-        <p class="text-[12px] text-[#9b94a8] mb-2">Set to £0 for a free show.</p>
+        <p id="s8-fee-hint" class="text-[12px] text-[#9b94a8] mb-2">Set to £0 for a free show.</p>
         <div class="relative max-w-[200px]">
-          <span class="absolute left-4 top-1/2 -translate-y-1/2 text-[15px] text-[#9b94a8] font-semibold">£</span>
+          <span id="s8-symbol-fee" class="absolute left-4 top-1/2 -translate-y-1/2 text-[15px] text-[#9b94a8] font-semibold">£</span>
           <input type="number" id="s8-entry-fee" min="0" step="0.50" value="0"
             class="w-full border border-[#e6dcfb] rounded-[11px] pl-8 pr-4 py-3 text-[15px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
         </div>
@@ -546,10 +561,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     prizes: [],
     is_fundraising: null, donation_type: null, fundraising_goal: '',
     show_fundraising_publicly: null, donation_receipts: null,
-    entry_fee: 0,
+    currency: 'GBP', entry_fee: 0,
     classes: [],
     wizard_step: 1,
   };
+
+  const CURRENCY_SYMBOLS = { GBP: '£', USD: '$', EUR: '€', AUD: 'A$', CAD: 'C$', NZD: 'NZ$', ZAR: 'R', SGD: 'S$' };
 
   let currentStep = 1;
   let session, profile, base;
@@ -840,6 +857,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         show.donation_receipts          = document.getElementById('s8-receipts-toggle').dataset.on === 'true';
         show.show_fundraising_publicly  = document.getElementById('s8-public-toggle').dataset.on === 'true';
       }
+      show.currency  = document.getElementById('s8-currency').value || 'GBP';
       show.entry_fee = parseFloat(document.getElementById('s8-entry-fee').value) || 0;
     }
   }
@@ -859,7 +877,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       prize_source: show.prize_source, is_fundraising: show.is_fundraising,
       donation_type: show.donation_type, fundraising_goal: show.fundraising_goal || null,
       show_fundraising_publicly: show.show_fundraising_publicly, donation_receipts: show.donation_receipts,
-      entry_fee: show.entry_fee, status: 'draft',
+      currency: show.currency, entry_fee: show.entry_fee, status: 'draft',
       wizard_step: completedStep + 1,
     };
 
@@ -1121,7 +1139,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         </div>
         <div class="px-5">
           ${reviewRow('Fundraising', show.is_fundraising === true ? (show.donation_type || 'Yes') : show.is_fundraising === false ? 'No fundraising' : null, 8)}
-          ${reviewRow('Entry Fee', show.entry_fee === 0 ? 'Free' : `£${show.entry_fee}`, 8)}
+          ${reviewRow('Currency', show.currency || 'GBP', 8)}
+          ${reviewRow('Entry Fee', show.entry_fee === 0 ? 'Free' : `${CURRENCY_SYMBOLS[show.currency] || show.currency}${show.entry_fee}`, 8)}
         </div>
       </div>`;
   }
@@ -1152,7 +1171,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       has_physical_prizes: data.has_physical_prizes, prize_source: data.prize_source,
       is_fundraising: data.is_fundraising, donation_type: data.donation_type,
       fundraising_goal: data.fundraising_goal || '', donation_receipts: data.donation_receipts,
-      show_fundraising_publicly: data.show_fundraising_publicly, entry_fee: data.entry_fee || 0,
+      show_fundraising_publicly: data.show_fundraising_publicly,
+      currency: data.currency || 'GBP', entry_fee: data.entry_fee || 0,
     });
     // Populate Step 1 fields
     document.getElementById('s1-title').value         = show.title;
@@ -1176,6 +1196,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (show.has_sponsor) document.getElementById('s5-sponsor-form').style.display = 'block';
     if (show.is_judged !== null) setYNA('judging-choice', show.is_judged === true ? 'yes' : show.is_judged === false ? 'no' : 'later');
     if (show.is_judged) document.getElementById('s6-judge-form').style.display = 'block';
+    // Restore currency
+    if (show.currency) {
+      document.getElementById('s8-currency').value = show.currency;
+      applyCurrencySymbol(show.currency);
+    }
     // Load categories
     const { data: cats } = await supabase.from('show_categories').select('name').eq('show_id', show.id);
     if (cats) show.classes = cats.map(c => ({ name: c.name, enabled: true, custom: false }));
@@ -1279,6 +1304,17 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     });
     // Auto-enable receipts for registered charity
     if (show.org_type === 'registered_charity') setToggle('s8-receipts-toggle', true);
+    // Currency selector
+    document.getElementById('s8-currency').addEventListener('change', e => {
+      applyCurrencySymbol(e.target.value);
+    });
+  }
+
+  function applyCurrencySymbol(code) {
+    const sym = CURRENCY_SYMBOLS[code] || code;
+    document.getElementById('s8-symbol-goal').textContent = sym;
+    document.getElementById('s8-symbol-fee').textContent  = sym;
+    document.getElementById('s8-fee-hint').textContent    = `Set to ${sym}0 for a free show.`;
   }
 
   function setupEventListeners() {
