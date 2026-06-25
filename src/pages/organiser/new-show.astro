@@ -632,6 +632,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (n === 10) buildReview();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+  // Exposed globally so inline onclick="goToStep(n)" in the review step works
+  window.goToStep = goToStep;
 
   function updateProgress() {
     document.getElementById('prog-num').textContent = String(currentStep);
