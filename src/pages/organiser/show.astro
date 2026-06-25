@@ -37,447 +37,454 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     <p id="page-error" style="display:none"
       class="text-[13px] text-red-500 bg-red-50 border border-red-100 rounded-[11px] px-4 py-3 mb-5"></p>
 
-    <!-- Section cards grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start" id="sections-grid">
-
-      <!-- ── Card 1: Show Basics ─────────────────────────────────────────────── -->
-      <div class="section-card bg-white rounded-card border border-[#e6dcfb] overflow-hidden" id="card-basics">
-        <div class="card-header flex items-center justify-between px-5 py-4" id="hdr-basics"></div>
-        <div class="edit-panel border-t border-[#efebf5]" style="display:none" id="panel-basics">
-          <div class="p-5 space-y-4">
-            <div>
-              <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Show Name <span class="text-red-400">*</span></label>
-              <input type="text" id="mgmt-title" placeholder="e.g. Spring Paws Charity Show 2025"
-                class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Entries Open</label>
-                <input type="date" id="mgmt-entry-open"
-                  class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
-              </div>
-              <div>
-                <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Entries Close <span class="text-red-400">*</span></label>
-                <input type="date" id="mgmt-entry-close"
-                  class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
-              </div>
-            </div>
-            <div>
-              <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Show Date <span class="text-red-400">*</span></label>
-              <input type="date" id="mgmt-show-date"
-                class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
-            </div>
-            <div>
-              <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Host Organisation / Club</label>
-              <input type="text" id="mgmt-host-org" placeholder="Your club or organisation name"
-                class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
-            </div>
-            <div>
-              <p class="text-[13px] font-semibold text-[#4a4357] mb-2">Type of Organisation <span class="text-red-400">*</span></p>
-              <div class="grid grid-cols-3 gap-2" id="mgmt-org-type-cards">
-                <button type="button" data-value="non_profit" class="sel-card flex flex-col items-center gap-1.5 rounded-[12px] border-2 border-[#e6dcfb] bg-white px-2 py-3 text-center transition-all cursor-pointer">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21C12 21 3.5 15.5 3.5 9A4.5 4.5 0 0 1 12 6.1 4.5 4.5 0 0 1 20.5 9C20.5 15.5 12 21 12 21z"/></svg>
-                  <span class="text-[10.5px] font-bold text-[#1c1626] leading-tight">Non-Profit<br>Fundraiser</span>
-                </button>
-                <button type="button" data-value="registered_charity" class="sel-card flex flex-col items-center gap-1.5 rounded-[12px] border-2 border-[#e6dcfb] bg-white px-2 py-3 text-center transition-all cursor-pointer">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                  <span class="text-[10.5px] font-bold text-[#1c1626] leading-tight">Registered<br>Charity</span>
-                </button>
-                <button type="button" data-value="commercial" class="sel-card flex flex-col items-center gap-1.5 rounded-[12px] border-2 border-[#e6dcfb] bg-white px-2 py-3 text-center transition-all cursor-pointer">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
-                  <span class="text-[10.5px] font-bold text-[#1c1626] leading-tight">Commercial<br>Organisation</span>
-                </button>
-              </div>
-            </div>
-            <div id="mgmt-charity-field" style="display:none">
-              <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Charity Number <span class="text-[#9b94a8] font-normal">(optional)</span></label>
-              <input type="text" id="mgmt-charity-number" placeholder="e.g. 1234567"
-                class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Contact Email <span class="text-red-400">*</span></label>
-                <input type="email" id="mgmt-contact-email"
-                  class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
-              </div>
-              <div>
-                <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Contact Phone <span class="text-[#9b94a8] font-normal">(optional)</span></label>
-                <input type="tel" id="mgmt-contact-phone" placeholder="+44 7700 000000"
-                  class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
-              </div>
-            </div>
-            <p class="panel-error text-[12px] text-red-500" style="display:none"></p>
-            <div class="flex justify-end gap-3 pt-1">
-              <button class="cancel-btn text-[13px] font-semibold text-[#9b94a8] hover:text-[#1c1626] px-3 py-2 transition-colors">Cancel</button>
-              <button class="save-btn bg-brand text-white text-[13px] font-bold px-5 py-2.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Save changes</button>
-            </div>
-          </div>
-        </div>
+    <!-- Section cards grid — headers only, no inline panels -->
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" id="sections-grid">
+      <div class="section-card bg-white rounded-card border border-[#e6dcfb]" id="card-basics">
+        <div class="card-header flex items-center justify-between px-5 py-4 min-h-[72px]" id="hdr-basics"></div>
       </div>
-
-      <!-- ── Card 2: Show Type ────────────────────────────────────────────────── -->
-      <div class="section-card bg-white rounded-card border border-[#e6dcfb] overflow-hidden" id="card-showtype">
-        <div class="card-header flex items-center justify-between px-5 py-4" id="hdr-showtype"></div>
-        <div class="edit-panel border-t border-[#efebf5]" style="display:none" id="panel-showtype">
-          <div class="p-5 space-y-5">
-            <div>
-              <p class="text-[13px] font-semibold text-[#4a4357] mb-2.5">Type of Show <span class="text-red-400">*</span></p>
-              <div class="grid grid-cols-2 gap-2" id="mgmt-show-type-cards">
-                <button type="button" data-value="beauty_contest" class="sel-card flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#e6dcfb] bg-white p-3 text-center transition-all cursor-pointer">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                  <span class="text-[12px] font-bold text-[#1c1626]">Beauty Contest</span>
-                </button>
-                <button type="button" data-value="fun_stakes" class="sel-card flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#e6dcfb] bg-white p-3 text-center transition-all cursor-pointer">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-                  <span class="text-[12px] font-bold text-[#1c1626]">Fun Stakes</span>
-                </button>
-                <button type="button" data-value="memorial" class="sel-card flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#e6dcfb] bg-white p-3 text-center transition-all cursor-pointer">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21C12 21 3.5 15.5 3.5 9A4.5 4.5 0 0 1 12 6.1 4.5 4.5 0 0 1 20.5 9C20.5 15.5 12 21 12 21z"/></svg>
-                  <span class="text-[12px] font-bold text-[#1c1626]">Memorial Show</span>
-                </button>
-                <button type="button" data-value="other" disabled class="flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#efebf5] bg-[#fafafa] p-3 text-center opacity-50 cursor-not-allowed relative">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                  <span class="text-[12px] font-bold text-[#9b94a8]">Other <span class="text-[10px] font-normal">(soon)</span></span>
-                </button>
-              </div>
-            </div>
-            <div>
-              <p class="text-[13px] font-semibold text-[#4a4357] mb-2">Animal Type <span class="text-red-400">*</span></p>
-              <div class="grid grid-cols-4 gap-2" id="mgmt-animal-type-cards">
-                <button type="button" data-value="dog" class="sel-card flex flex-col items-center gap-1 rounded-[11px] border-2 border-[#e6dcfb] bg-white px-2 py-2.5 text-center transition-all cursor-pointer">
-                  <span class="text-[20px]">🐕</span>
-                  <span class="text-[11px] font-bold text-[#1c1626]">Dog</span>
-                </button>
-                {['Cat 🐱','Rabbit 🐰','Guinea Pig 🐹','Bird 🐦'].map(a => (
-                  <button type="button" disabled class="flex flex-col items-center gap-1 rounded-[11px] border-2 border-[#efebf5] bg-[#fafafa] px-2 py-2.5 text-center opacity-40 cursor-not-allowed">
-                    <span class="text-[20px]">{a.split(' ')[1] || '🐾'}</span>
-                    <span class="text-[11px] font-bold text-[#9b94a8]">{a.split(' ')[0]}</span>
-                  </button>
-                ))}
-              </div>
-              <p class="text-[11px] text-[#9b94a8] mt-1.5">More animal types coming soon.</p>
-            </div>
-            <p class="panel-error text-[12px] text-red-500" style="display:none"></p>
-            <div class="flex justify-end gap-3 pt-1">
-              <button class="cancel-btn text-[13px] font-semibold text-[#9b94a8] hover:text-[#1c1626] px-3 py-2 transition-colors">Cancel</button>
-              <button class="save-btn bg-brand text-white text-[13px] font-bold px-5 py-2.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Save changes</button>
-            </div>
-          </div>
-        </div>
+      <div class="section-card bg-white rounded-card border border-[#e6dcfb]" id="card-showtype">
+        <div class="card-header flex items-center justify-between px-5 py-4 min-h-[72px]" id="hdr-showtype"></div>
       </div>
-
-      <!-- ── Card 3: Breed & Eligibility ─────────────────────────────────────── -->
-      <div class="section-card bg-white rounded-card border border-[#e6dcfb] overflow-hidden" id="card-breed">
-        <div class="card-header flex items-center justify-between px-5 py-4" id="hdr-breed"></div>
-        <div class="edit-panel border-t border-[#efebf5]" style="display:none" id="panel-breed">
-          <div class="p-5 space-y-4">
-            <div>
-              <p class="text-[13px] font-semibold text-[#4a4357] mb-2.5">Breed Scope <span class="text-red-400">*</span></p>
-              <div class="grid grid-cols-3 gap-2" id="mgmt-breed-scope-cards">
-                <button type="button" data-value="all" class="sel-card flex flex-col items-center gap-1.5 rounded-[12px] border-2 border-[#e6dcfb] bg-white p-3 text-center transition-all cursor-pointer">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                  <span class="text-[11px] font-bold text-[#1c1626]">All Breeds</span>
-                </button>
-                <button type="button" data-value="breed_specific" class="sel-card flex flex-col items-center gap-1.5 rounded-[12px] border-2 border-[#e6dcfb] bg-white p-3 text-center transition-all cursor-pointer">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
-                  <span class="text-[11px] font-bold text-[#1c1626]">Breed Specific</span>
-                </button>
-                <button type="button" data-value="group_specific" class="sel-card flex flex-col items-center gap-1.5 rounded-[12px] border-2 border-[#e6dcfb] bg-white p-3 text-center transition-all cursor-pointer">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                  <span class="text-[11px] font-bold text-[#1c1626]">Group Specific</span>
-                </button>
-              </div>
-            </div>
-            <div id="mgmt-breed-field" style="display:none">
-              <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Breed Name</label>
-              <input type="text" id="mgmt-breed" placeholder="e.g. Golden Retriever"
-                class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
-              <p class="text-[11px] text-[#9b94a8] mt-1">Breed dropdowns coming soon.</p>
-            </div>
-            <div id="mgmt-group-field" style="display:none">
-              <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Group Name</label>
-              <input type="text" id="mgmt-group" placeholder="e.g. Gundog Group"
-                class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
-            </div>
-            <p class="panel-error text-[12px] text-red-500" style="display:none"></p>
-            <div class="flex justify-end gap-3 pt-1">
-              <button class="cancel-btn text-[13px] font-semibold text-[#9b94a8] hover:text-[#1c1626] px-3 py-2 transition-colors">Cancel</button>
-              <button class="save-btn bg-brand text-white text-[13px] font-bold px-5 py-2.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Save changes</button>
-            </div>
-          </div>
-        </div>
+      <div class="section-card bg-white rounded-card border border-[#e6dcfb]" id="card-breed">
+        <div class="card-header flex items-center justify-between px-5 py-4 min-h-[72px]" id="hdr-breed"></div>
       </div>
-
-      <!-- ── Card 4: Classes ─────────────────────────────────────────────────── -->
-      <div class="section-card bg-white rounded-card border border-[#e6dcfb] overflow-hidden" id="card-classes">
-        <div class="card-header flex items-center justify-between px-5 py-4" id="hdr-classes"></div>
-        <div class="edit-panel border-t border-[#efebf5]" style="display:none" id="panel-classes">
-          <div class="p-5">
-            <p class="text-[13px] font-semibold text-[#4a4357] mb-3">Competition Classes</p>
-            <div id="mgmt-class-list" class="space-y-2 mb-3"></div>
-            <button type="button" id="mgmt-add-class"
-              class="flex items-center gap-1.5 text-[13px] font-semibold text-brand hover:text-brand-dark transition-colors">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Add Class
-            </button>
-            <p class="panel-error text-[12px] text-red-500 mt-2" style="display:none"></p>
-            <div class="flex justify-end gap-3 mt-5">
-              <button class="cancel-btn text-[13px] font-semibold text-[#9b94a8] hover:text-[#1c1626] px-3 py-2 transition-colors">Cancel</button>
-              <button class="save-btn bg-brand text-white text-[13px] font-bold px-5 py-2.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Save changes</button>
-            </div>
-          </div>
-        </div>
+      <div class="section-card bg-white rounded-card border border-[#e6dcfb]" id="card-classes">
+        <div class="card-header flex items-center justify-between px-5 py-4 min-h-[72px]" id="hdr-classes"></div>
       </div>
-
-      <!-- ── Card 5: Sponsorship ──────────────────────────────────────────────── -->
-      <div class="section-card bg-white rounded-card border border-[#e6dcfb] overflow-hidden" id="card-sponsorship">
-        <div class="card-header flex items-center justify-between px-5 py-4" id="hdr-sponsorship"></div>
-        <div class="edit-panel border-t border-[#efebf5]" style="display:none" id="panel-sponsorship">
-          <div class="p-5">
-            <div class="grid grid-cols-2 gap-3 mb-5" id="mgmt-sponsor-yn">
-              <button type="button" data-value="yes" class="yn flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#e6dcfb] bg-white p-3 transition-all cursor-pointer">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-                <span class="text-[12px] font-bold text-[#1c1626]">Yes, I have a sponsor</span>
-              </button>
-              <button type="button" data-value="no" class="yn flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#e6dcfb] bg-white p-3 transition-all cursor-pointer">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                <span class="text-[12px] font-bold text-[#1c1626]">No sponsor</span>
-              </button>
-            </div>
-            <div id="mgmt-sponsor-form" style="display:none" class="space-y-3 mb-2">
-              <div>
-                <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Sponsor Name <span class="text-red-400">*</span></label>
-                <input type="text" id="mgmt-sponsor-name" placeholder="e.g. Pawsome Pet Supplies"
-                  class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
-              </div>
-              <div>
-                <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Sponsor Website <span class="text-[#9b94a8] font-normal">(optional)</span></label>
-                <input type="url" id="mgmt-sponsor-website" placeholder="https://example.com"
-                  class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
-              </div>
-              <div class="rounded-[11px] border border-dashed border-[#e6dcfb] bg-[#faf7ff] px-4 py-3">
-                <p class="text-[12px] text-[#9b94a8]">Logo upload coming soon.</p>
-              </div>
-            </div>
-            <p class="panel-error text-[12px] text-red-500 mt-1" style="display:none"></p>
-            <div class="flex justify-end gap-3 mt-4">
-              <button class="cancel-btn text-[13px] font-semibold text-[#9b94a8] hover:text-[#1c1626] px-3 py-2 transition-colors">Cancel</button>
-              <button class="save-btn bg-brand text-white text-[13px] font-bold px-5 py-2.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Save changes</button>
-            </div>
-          </div>
-        </div>
+      <div class="section-card bg-white rounded-card border border-[#e6dcfb]" id="card-sponsorship">
+        <div class="card-header flex items-center justify-between px-5 py-4 min-h-[72px]" id="hdr-sponsorship"></div>
       </div>
-
-      <!-- ── Card 6: Judging ──────────────────────────────────────────────────── -->
-      <div class="section-card bg-white rounded-card border border-[#e6dcfb] overflow-hidden" id="card-judging">
-        <div class="card-header flex items-center justify-between px-5 py-4" id="hdr-judging"></div>
-        <div class="edit-panel border-t border-[#efebf5]" style="display:none" id="panel-judging">
-          <div class="p-5">
-            <div class="grid grid-cols-2 gap-3 mb-5" id="mgmt-judging-yn">
-              <button type="button" data-value="yes" class="yn flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#e6dcfb] bg-white p-3 transition-all cursor-pointer">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                <span class="text-[12px] font-bold text-[#1c1626]">Expert Judges</span>
-              </button>
-              <button type="button" data-value="no" class="yn flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#e6dcfb] bg-white p-3 transition-all cursor-pointer">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                <span class="text-[12px] font-bold text-[#1c1626]">Public Voting</span>
-              </button>
-            </div>
-            <div id="mgmt-judge-form" style="display:none" class="space-y-4 mb-2">
-              <div class="flex items-center gap-4">
-                <p class="text-[13px] font-semibold text-[#4a4357]">Number of Judges</p>
-                <div class="flex items-center gap-2">
-                  <button type="button" id="mgmt-judge-minus" class="w-7 h-7 rounded-full border border-[#e6dcfb] flex items-center justify-center text-brand hover:bg-brand-tint transition-colors text-lg leading-none">−</button>
-                  <span id="mgmt-judge-count" class="text-[15px] font-extrabold text-[#1c1626] w-5 text-center">1</span>
-                  <button type="button" id="mgmt-judge-plus" class="w-7 h-7 rounded-full border border-[#e6dcfb] flex items-center justify-center text-brand hover:bg-brand-tint transition-colors text-lg leading-none">+</button>
-                </div>
-              </div>
-              <div id="mgmt-judge-panels" class="space-y-3"></div>
-              <p class="text-[11.5px] text-[#9b94a8]">Judges will receive an invitation email when you publish the show.</p>
-            </div>
-            <p class="panel-error text-[12px] text-red-500 mt-1" style="display:none"></p>
-            <div class="flex justify-end gap-3 mt-4">
-              <button class="cancel-btn text-[13px] font-semibold text-[#9b94a8] hover:text-[#1c1626] px-3 py-2 transition-colors">Cancel</button>
-              <button class="save-btn bg-brand text-white text-[13px] font-bold px-5 py-2.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Save changes</button>
-            </div>
-          </div>
-        </div>
+      <div class="section-card bg-white rounded-card border border-[#e6dcfb]" id="card-judging">
+        <div class="card-header flex items-center justify-between px-5 py-4 min-h-[72px]" id="hdr-judging"></div>
       </div>
-
-      <!-- ── Card 7: Awards & Prizes ──────────────────────────────────────────── -->
-      <div class="section-card bg-white rounded-card border border-[#e6dcfb] overflow-hidden" id="card-awards">
-        <div class="card-header flex items-center justify-between px-5 py-4" id="hdr-awards"></div>
-        <div class="edit-panel border-t border-[#efebf5]" style="display:none" id="panel-awards">
-          <div class="p-5">
-            <div class="grid grid-cols-2 gap-3 mb-5" id="mgmt-awards-yn">
-              <button type="button" data-value="yes" class="yn flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#e6dcfb] bg-white p-3 transition-all cursor-pointer">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-                <span class="text-[12px] font-bold text-[#1c1626]">Yes, awards &amp; prizes</span>
-              </button>
-              <button type="button" data-value="no" class="yn flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#e6dcfb] bg-white p-3 transition-all cursor-pointer">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                <span class="text-[12px] font-bold text-[#1c1626]">No awards</span>
-              </button>
-            </div>
-            <div id="mgmt-awards-form" style="display:none" class="space-y-4 mb-2">
-              <div class="flex items-center justify-between p-3 border border-[#efebf5] rounded-[11px]">
-                <div>
-                  <p class="text-[13px] font-bold text-[#1c1626]">Digital Certificates</p>
-                  <p class="text-[11.5px] text-[#9b94a8]">Downloadable certificate for winners</p>
-                </div>
-                <button type="button" id="mgmt-certs-toggle" data-on="false"
-                  class="w-11 h-6 rounded-full bg-[#efebf5] transition-colors relative flex items-center px-0.5 shrink-0">
-                  <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
-                </button>
-              </div>
-              <div class="flex items-center justify-between p-3 border border-[#efebf5] rounded-[11px]">
-                <div>
-                  <p class="text-[13px] font-bold text-[#1c1626]">Physical Prizes</p>
-                  <p class="text-[11.5px] text-[#9b94a8]">Trophies, vouchers, gift packs, etc.</p>
-                </div>
-                <button type="button" id="mgmt-physical-toggle" data-on="false"
-                  class="w-11 h-6 rounded-full bg-[#efebf5] transition-colors relative flex items-center px-0.5 shrink-0">
-                  <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
-                </button>
-              </div>
-              <div id="mgmt-physical-form" style="display:none" class="pl-4 border-l-2 border-brand/20 space-y-3">
-                <p class="text-[12.5px] font-semibold text-[#4a4357]">Prize Source</p>
-                <div class="grid grid-cols-3 gap-2" id="mgmt-prize-source-cards">
-                  <button type="button" data-value="sponsor" class="sel-card rounded-[10px] border-2 border-[#e6dcfb] bg-white py-2 text-[11.5px] font-bold text-[#1c1626] transition-all cursor-pointer">Sponsor</button>
-                  <button type="button" data-value="organisation" class="sel-card rounded-[10px] border-2 border-[#e6dcfb] bg-white py-2 text-[11.5px] font-bold text-[#1c1626] transition-all cursor-pointer">Organisation</button>
-                  <button type="button" data-value="mixed" class="sel-card rounded-[10px] border-2 border-[#e6dcfb] bg-white py-2 text-[11.5px] font-bold text-[#1c1626] transition-all cursor-pointer">Mixed</button>
-                </div>
-                <div>
-                  <p class="text-[12.5px] font-semibold text-[#4a4357] mb-2">Prize Descriptions</p>
-                  <div id="mgmt-prize-list" class="space-y-2 mb-2"></div>
-                  <button type="button" id="mgmt-add-prize"
-                    class="flex items-center gap-1.5 text-[12px] font-semibold text-brand hover:text-brand-dark transition-colors">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    Add Prize
-                  </button>
-                </div>
-              </div>
-            </div>
-            <p class="panel-error text-[12px] text-red-500 mt-1" style="display:none"></p>
-            <div class="flex justify-end gap-3 mt-4">
-              <button class="cancel-btn text-[13px] font-semibold text-[#9b94a8] hover:text-[#1c1626] px-3 py-2 transition-colors">Cancel</button>
-              <button class="save-btn bg-brand text-white text-[13px] font-bold px-5 py-2.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Save changes</button>
-            </div>
-          </div>
-        </div>
+      <div class="section-card bg-white rounded-card border border-[#e6dcfb]" id="card-awards">
+        <div class="card-header flex items-center justify-between px-5 py-4 min-h-[72px]" id="hdr-awards"></div>
       </div>
-
-      <!-- ── Card 8: Fundraising & Entry Fees ──────────────────────────────────── -->
-      <div class="section-card bg-white rounded-card border border-[#e6dcfb] overflow-hidden" id="card-fundraising">
-        <div class="card-header flex items-center justify-between px-5 py-4" id="hdr-fundraising"></div>
-        <div class="edit-panel border-t border-[#efebf5]" style="display:none" id="panel-fundraising">
-          <div class="p-5">
-            <div class="flex items-center gap-3 mb-5">
-              <label for="mgmt-currency" class="text-[13px] font-semibold text-[#4a4357] shrink-0">Currency</label>
-              <select id="mgmt-currency"
-                class="border border-[#e6dcfb] rounded-[11px] px-3 py-2 text-[13px] font-semibold text-[#1c1626] bg-white focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors">
-                <option value="GBP">GBP — £ British Pound</option>
-                <option value="USD">USD — $ US Dollar</option>
-                <option value="EUR">EUR — € Euro</option>
-                <option value="AUD">AUD — A$ Australian Dollar</option>
-                <option value="CAD">CAD — C$ Canadian Dollar</option>
-                <option value="NZD">NZD — NZ$ New Zealand Dollar</option>
-                <option value="ZAR">ZAR — R South African Rand</option>
-                <option value="SGD">SGD — S$ Singapore Dollar</option>
-              </select>
-            </div>
-            <div class="grid grid-cols-2 gap-3 mb-5" id="mgmt-fundraising-yn">
-              <button type="button" data-value="yes" class="yn flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#e6dcfb] bg-white p-3 transition-all cursor-pointer">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-                <span class="text-[12px] font-bold text-[#1c1626]">Fundraising active</span>
-              </button>
-              <button type="button" data-value="no" class="yn flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#e6dcfb] bg-white p-3 transition-all cursor-pointer">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                <span class="text-[12px] font-bold text-[#1c1626]">No fundraising</span>
-              </button>
-            </div>
-            <div id="mgmt-fundraising-form" style="display:none" class="space-y-4 mb-4">
-              <div>
-                <p class="text-[13px] font-semibold text-[#4a4357] mb-2">Donation Options</p>
-                <div class="grid grid-cols-3 gap-2" id="mgmt-donation-type-cards">
-                  <button type="button" data-value="optional" class="sel-card rounded-[10px] border-2 border-[#e6dcfb] bg-white py-2 text-[12px] font-bold text-[#1c1626] transition-all cursor-pointer">Optional</button>
-                  <button type="button" data-value="required" class="sel-card rounded-[10px] border-2 border-[#e6dcfb] bg-white py-2 text-[12px] font-bold text-[#1c1626] transition-all cursor-pointer">Required</button>
-                  <button type="button" data-value="only" class="sel-card rounded-[10px] border-2 border-[#e6dcfb] bg-white py-2 text-[12px] font-bold text-[#1c1626] transition-all cursor-pointer">Donations Only</button>
-                </div>
-              </div>
-              <div>
-                <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Fundraising Goal <span class="text-[#9b94a8] font-normal">(optional)</span></label>
-                <div class="relative max-w-[200px]">
-                  <span id="mgmt-sym-goal" class="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-[#9b94a8] font-semibold">£</span>
-                  <input type="number" id="mgmt-fund-goal" min="0" placeholder="0.00"
-                    class="w-full border border-[#e6dcfb] rounded-[11px] pl-7 pr-4 py-2.5 text-[14px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
-                </div>
-              </div>
-              <div class="flex items-center justify-between p-3 border border-[#efebf5] rounded-[11px]">
-                <div>
-                  <p class="text-[13px] font-bold text-[#1c1626]">Donation Receipts</p>
-                  <p class="text-[11.5px] text-[#9b94a8]">Auto-available for Registered Charities</p>
-                </div>
-                <button type="button" id="mgmt-receipts-toggle" data-on="false"
-                  class="w-11 h-6 rounded-full bg-[#efebf5] transition-colors relative flex items-center px-0.5 shrink-0">
-                  <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
-                </button>
-              </div>
-              <div class="flex items-center justify-between p-3 border border-[#efebf5] rounded-[11px]">
-                <div>
-                  <p class="text-[13px] font-bold text-[#1c1626]">Display Progress Publicly</p>
-                  <p class="text-[11.5px] text-[#9b94a8]">Show a progress bar on the public page</p>
-                </div>
-                <button type="button" id="mgmt-public-toggle" data-on="false"
-                  class="w-11 h-6 rounded-full bg-[#efebf5] transition-colors relative flex items-center px-0.5 shrink-0">
-                  <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
-                </button>
-              </div>
-            </div>
-            <div class="border-t border-[#efebf5] pt-4">
-              <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Entry Fee per Entry</label>
-              <p id="mgmt-fee-hint" class="text-[12px] text-[#9b94a8] mb-2">Set to £0 for a free show.</p>
-              <div class="relative max-w-[180px]">
-                <span id="mgmt-sym-fee" class="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-[#9b94a8] font-semibold">£</span>
-                <input type="number" id="mgmt-entry-fee" min="0" step="0.50" value="0"
-                  class="w-full border border-[#e6dcfb] rounded-[11px] pl-7 pr-4 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
-              </div>
-            </div>
-            <p class="panel-error text-[12px] text-red-500 mt-2" style="display:none"></p>
-            <div class="flex justify-end gap-3 mt-4">
-              <button class="cancel-btn text-[13px] font-semibold text-[#9b94a8] hover:text-[#1c1626] px-3 py-2 transition-colors">Cancel</button>
-              <button class="save-btn bg-brand text-white text-[13px] font-bold px-5 py-2.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Save changes</button>
-            </div>
-          </div>
-        </div>
+      <div class="section-card bg-white rounded-card border border-[#e6dcfb]" id="card-fundraising">
+        <div class="card-header flex items-center justify-between px-5 py-4 min-h-[72px]" id="hdr-fundraising"></div>
       </div>
-
-      <!-- ── Card 9: Branding ────────────────────────────────────────────────── -->
-      <div class="section-card bg-white rounded-card border border-[#e6dcfb] overflow-hidden" id="card-branding">
-        <div class="card-header flex items-center justify-between px-5 py-4" id="hdr-branding"></div>
-        <div class="edit-panel border-t border-[#efebf5]" style="display:none" id="panel-branding">
-          <div class="p-5">
-            <div class="bg-brand-tint/50 border border-brand/10 rounded-[12px] p-4 mb-2">
-              <p class="text-[13px] font-semibold text-[#1c1626] mb-1">Logo & banner upload coming soon</p>
-              <p class="text-[12.5px] text-[#6f6880]">You'll be able to add your show's branding here once file uploads are available.</p>
-            </div>
-            <div class="flex gap-3">
-              <div class="flex-1 h-20 rounded-[11px] border-2 border-dashed border-[#e6dcfb] bg-[#faf7ff] flex items-center justify-center opacity-50">
-                <p class="text-[11px] text-[#9b94a8] font-semibold">Show Logo</p>
-              </div>
-              <div class="flex-1 h-20 rounded-[11px] border-2 border-dashed border-[#e6dcfb] bg-[#faf7ff] flex items-center justify-center opacity-50">
-                <p class="text-[11px] text-[#9b94a8] font-semibold">Show Banner</p>
-              </div>
-            </div>
-            <div class="flex justify-end mt-4">
-              <button class="cancel-btn text-[13px] font-semibold text-[#9b94a8] hover:text-[#1c1626] px-3 py-2 transition-colors">Close</button>
-            </div>
-          </div>
-        </div>
+      <div class="section-card bg-white rounded-card border border-[#e6dcfb]" id="card-branding">
+        <div class="card-header flex items-center justify-between px-5 py-4 min-h-[72px]" id="hdr-branding"></div>
       </div>
-
     </div>
   </div>
+
+  <!-- ── Backdrop ──────────────────────────────────────────────────────────────── -->
+  <div id="drawer-backdrop"
+    class="fixed inset-0 bg-black/30 z-40 transition-opacity duration-300 opacity-0 pointer-events-none"></div>
+
+  <!-- ── Side drawer ────────────────────────────────────────────────────────────── -->
+  <div id="edit-drawer"
+    class="fixed top-0 right-0 h-full w-full max-w-[500px] bg-white shadow-2xl z-50 flex flex-col transition-transform duration-300 ease-in-out"
+    style="transform:translateX(100%)">
+
+    <!-- Drawer header -->
+    <div class="flex items-center justify-between px-6 py-4 border-b border-[#efebf5] shrink-0 bg-white">
+      <div>
+        <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider mb-0.5">Editing</p>
+        <h3 id="drawer-title" class="text-[17px] font-extrabold text-[#1c1626]">—</h3>
+      </div>
+      <button id="drawer-close"
+        class="w-8 h-8 rounded-full bg-[#f5f3fa] flex items-center justify-center text-[#6f6880] hover:bg-brand/10 hover:text-brand transition-colors">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Drawer body — scrollable, panels shown/hidden by JS -->
+    <div class="flex-1 overflow-y-auto">
+
+      <!-- Panel: Show Basics -->
+      <div id="panel-basics" style="display:none" class="p-6 space-y-4">
+        <div>
+          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Show Name <span class="text-red-400">*</span></label>
+          <input type="text" id="mgmt-title" placeholder="e.g. Spring Paws Charity Show 2025"
+            class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Entries Open</label>
+            <input type="date" id="mgmt-entry-open"
+              class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+          </div>
+          <div>
+            <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Entries Close <span class="text-red-400">*</span></label>
+            <input type="date" id="mgmt-entry-close"
+              class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Show Date <span class="text-red-400">*</span></label>
+          <input type="date" id="mgmt-show-date"
+            class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        </div>
+        <div>
+          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Host Organisation / Club</label>
+          <input type="text" id="mgmt-host-org" placeholder="Your club or organisation name"
+            class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        </div>
+        <div>
+          <p class="text-[13px] font-semibold text-[#4a4357] mb-2">Type of Organisation <span class="text-red-400">*</span></p>
+          <div class="grid grid-cols-3 gap-2" id="mgmt-org-type-cards">
+            <button type="button" data-value="non_profit" class="sel-card flex flex-col items-center gap-1.5 rounded-[12px] border-2 border-[#e6dcfb] bg-white px-2 py-3 text-center transition-all cursor-pointer">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21C12 21 3.5 15.5 3.5 9A4.5 4.5 0 0 1 12 6.1 4.5 4.5 0 0 1 20.5 9C20.5 15.5 12 21 12 21z"/></svg>
+              <span class="text-[10.5px] font-bold text-[#1c1626] leading-tight">Non-Profit<br>Fundraiser</span>
+            </button>
+            <button type="button" data-value="registered_charity" class="sel-card flex flex-col items-center gap-1.5 rounded-[12px] border-2 border-[#e6dcfb] bg-white px-2 py-3 text-center transition-all cursor-pointer">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <span class="text-[10.5px] font-bold text-[#1c1626] leading-tight">Registered<br>Charity</span>
+            </button>
+            <button type="button" data-value="commercial" class="sel-card flex flex-col items-center gap-1.5 rounded-[12px] border-2 border-[#e6dcfb] bg-white px-2 py-3 text-center transition-all cursor-pointer">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+              <span class="text-[10.5px] font-bold text-[#1c1626] leading-tight">Commercial<br>Organisation</span>
+            </button>
+          </div>
+        </div>
+        <div id="mgmt-charity-field" style="display:none">
+          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Charity Number <span class="text-[#9b94a8] font-normal">(optional)</span></label>
+          <input type="text" id="mgmt-charity-number" placeholder="e.g. 1234567"
+            class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Contact Email <span class="text-red-400">*</span></label>
+            <input type="email" id="mgmt-contact-email"
+              class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+          </div>
+          <div>
+            <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Contact Phone <span class="text-[#9b94a8] font-normal">(optional)</span></label>
+            <input type="tel" id="mgmt-contact-phone" placeholder="+44 7700 000000"
+              class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+          </div>
+        </div>
+        <p class="panel-error text-[12px] text-red-500" style="display:none"></p>
+        <div class="drawer-actions flex justify-end gap-3 pt-2 pb-2">
+          <button class="cancel-btn text-[13px] font-semibold text-[#9b94a8] hover:text-[#1c1626] px-3 py-2 transition-colors">Cancel</button>
+          <button class="save-btn bg-brand text-white text-[13px] font-bold px-5 py-2.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Save changes</button>
+        </div>
+      </div>
+
+      <!-- Panel: Show Type -->
+      <div id="panel-showtype" style="display:none" class="p-6 space-y-5">
+        <div>
+          <p class="text-[13px] font-semibold text-[#4a4357] mb-2.5">Type of Show <span class="text-red-400">*</span></p>
+          <div class="grid grid-cols-2 gap-2" id="mgmt-show-type-cards">
+            <button type="button" data-value="beauty_contest" class="sel-card flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#e6dcfb] bg-white p-3 text-center transition-all cursor-pointer">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <span class="text-[12px] font-bold text-[#1c1626]">Beauty Contest</span>
+            </button>
+            <button type="button" data-value="fun_stakes" class="sel-card flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#e6dcfb] bg-white p-3 text-center transition-all cursor-pointer">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+              <span class="text-[12px] font-bold text-[#1c1626]">Fun Stakes</span>
+            </button>
+            <button type="button" data-value="memorial" class="sel-card flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#e6dcfb] bg-white p-3 text-center transition-all cursor-pointer">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21C12 21 3.5 15.5 3.5 9A4.5 4.5 0 0 1 12 6.1 4.5 4.5 0 0 1 20.5 9C20.5 15.5 12 21 12 21z"/></svg>
+              <span class="text-[12px] font-bold text-[#1c1626]">Memorial Show</span>
+            </button>
+            <button type="button" data-value="other" disabled class="flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#efebf5] bg-[#fafafa] p-3 text-center opacity-50 cursor-not-allowed">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span class="text-[12px] font-bold text-[#9b94a8]">Other <span class="text-[10px] font-normal">(soon)</span></span>
+            </button>
+          </div>
+        </div>
+        <div>
+          <p class="text-[13px] font-semibold text-[#4a4357] mb-2">Animal Type <span class="text-red-400">*</span></p>
+          <div class="grid grid-cols-4 gap-2" id="mgmt-animal-type-cards">
+            <button type="button" data-value="dog" class="sel-card flex flex-col items-center gap-1 rounded-[11px] border-2 border-[#e6dcfb] bg-white px-2 py-2.5 text-center transition-all cursor-pointer">
+              <span class="text-[20px]">🐕</span>
+              <span class="text-[11px] font-bold text-[#1c1626]">Dog</span>
+            </button>
+            {['Cat 🐱','Rabbit 🐰','Guinea Pig 🐹','Bird 🐦'].map(a => (
+              <button type="button" disabled class="flex flex-col items-center gap-1 rounded-[11px] border-2 border-[#efebf5] bg-[#fafafa] px-2 py-2.5 text-center opacity-40 cursor-not-allowed">
+                <span class="text-[20px]">{a.split(' ').at(-1)}</span>
+                <span class="text-[11px] font-bold text-[#9b94a8]">{a.split(' ')[0]}</span>
+              </button>
+            ))}
+          </div>
+          <p class="text-[11px] text-[#9b94a8] mt-1.5">More animal types coming soon.</p>
+        </div>
+        <p class="panel-error text-[12px] text-red-500" style="display:none"></p>
+        <div class="drawer-actions flex justify-end gap-3 pt-2 pb-2">
+          <button class="cancel-btn text-[13px] font-semibold text-[#9b94a8] hover:text-[#1c1626] px-3 py-2 transition-colors">Cancel</button>
+          <button class="save-btn bg-brand text-white text-[13px] font-bold px-5 py-2.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Save changes</button>
+        </div>
+      </div>
+
+      <!-- Panel: Breed & Eligibility -->
+      <div id="panel-breed" style="display:none" class="p-6 space-y-4">
+        <div>
+          <p class="text-[13px] font-semibold text-[#4a4357] mb-2.5">Breed Scope <span class="text-red-400">*</span></p>
+          <div class="grid grid-cols-3 gap-2" id="mgmt-breed-scope-cards">
+            <button type="button" data-value="all" class="sel-card flex flex-col items-center gap-1.5 rounded-[12px] border-2 border-[#e6dcfb] bg-white p-3 text-center transition-all cursor-pointer">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+              <span class="text-[11px] font-bold text-[#1c1626]">All Breeds</span>
+            </button>
+            <button type="button" data-value="breed_specific" class="sel-card flex flex-col items-center gap-1.5 rounded-[12px] border-2 border-[#e6dcfb] bg-white p-3 text-center transition-all cursor-pointer">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+              <span class="text-[11px] font-bold text-[#1c1626]">Breed Specific</span>
+            </button>
+            <button type="button" data-value="group_specific" class="sel-card flex flex-col items-center gap-1.5 rounded-[12px] border-2 border-[#e6dcfb] bg-white p-3 text-center transition-all cursor-pointer">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <span class="text-[11px] font-bold text-[#1c1626]">Group Specific</span>
+            </button>
+          </div>
+        </div>
+        <div id="mgmt-breed-field" style="display:none">
+          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Breed Name</label>
+          <input type="text" id="mgmt-breed" placeholder="e.g. Golden Retriever"
+            class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+          <p class="text-[11px] text-[#9b94a8] mt-1">Breed dropdowns coming soon.</p>
+        </div>
+        <div id="mgmt-group-field" style="display:none">
+          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Group Name</label>
+          <input type="text" id="mgmt-group" placeholder="e.g. Gundog Group"
+            class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        </div>
+        <p class="panel-error text-[12px] text-red-500" style="display:none"></p>
+        <div class="drawer-actions flex justify-end gap-3 pt-2 pb-2">
+          <button class="cancel-btn text-[13px] font-semibold text-[#9b94a8] hover:text-[#1c1626] px-3 py-2 transition-colors">Cancel</button>
+          <button class="save-btn bg-brand text-white text-[13px] font-bold px-5 py-2.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Save changes</button>
+        </div>
+      </div>
+
+      <!-- Panel: Classes -->
+      <div id="panel-classes" style="display:none" class="p-6">
+        <p class="text-[13px] font-semibold text-[#4a4357] mb-3">Competition Classes</p>
+        <div id="mgmt-class-list" class="space-y-2 mb-3"></div>
+        <button type="button" id="mgmt-add-class"
+          class="flex items-center gap-1.5 text-[13px] font-semibold text-brand hover:text-brand-dark transition-colors">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Class
+        </button>
+        <p class="panel-error text-[12px] text-red-500 mt-2" style="display:none"></p>
+        <div class="drawer-actions flex justify-end gap-3 mt-6 pb-2">
+          <button class="cancel-btn text-[13px] font-semibold text-[#9b94a8] hover:text-[#1c1626] px-3 py-2 transition-colors">Cancel</button>
+          <button class="save-btn bg-brand text-white text-[13px] font-bold px-5 py-2.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Save changes</button>
+        </div>
+      </div>
+
+      <!-- Panel: Sponsorship -->
+      <div id="panel-sponsorship" style="display:none" class="p-6">
+        <div class="grid grid-cols-2 gap-3 mb-5" id="mgmt-sponsor-yn">
+          <button type="button" data-value="yes" class="yn flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#e6dcfb] bg-white p-3 transition-all cursor-pointer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span class="text-[12px] font-bold text-[#1c1626]">Yes, I have a sponsor</span>
+          </button>
+          <button type="button" data-value="no" class="yn flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#e6dcfb] bg-white p-3 transition-all cursor-pointer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <span class="text-[12px] font-bold text-[#1c1626]">No sponsor</span>
+          </button>
+        </div>
+        <div id="mgmt-sponsor-form" style="display:none" class="space-y-3 mb-4">
+          <div>
+            <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Sponsor Name <span class="text-red-400">*</span></label>
+            <input type="text" id="mgmt-sponsor-name" placeholder="e.g. Pawsome Pet Supplies"
+              class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+          </div>
+          <div>
+            <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Sponsor Website <span class="text-[#9b94a8] font-normal">(optional)</span></label>
+            <input type="url" id="mgmt-sponsor-website" placeholder="https://example.com"
+              class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+          </div>
+          <div class="rounded-[11px] border border-dashed border-[#e6dcfb] bg-[#faf7ff] px-4 py-3">
+            <p class="text-[12px] text-[#9b94a8]">Logo upload coming soon.</p>
+          </div>
+        </div>
+        <p class="panel-error text-[12px] text-red-500 mt-1" style="display:none"></p>
+        <div class="drawer-actions flex justify-end gap-3 pb-2">
+          <button class="cancel-btn text-[13px] font-semibold text-[#9b94a8] hover:text-[#1c1626] px-3 py-2 transition-colors">Cancel</button>
+          <button class="save-btn bg-brand text-white text-[13px] font-bold px-5 py-2.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Save changes</button>
+        </div>
+      </div>
+
+      <!-- Panel: Judging -->
+      <div id="panel-judging" style="display:none" class="p-6">
+        <div class="grid grid-cols-2 gap-3 mb-5" id="mgmt-judging-yn">
+          <button type="button" data-value="yes" class="yn flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#e6dcfb] bg-white p-3 transition-all cursor-pointer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <span class="text-[12px] font-bold text-[#1c1626]">Expert Judges</span>
+          </button>
+          <button type="button" data-value="no" class="yn flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#e6dcfb] bg-white p-3 transition-all cursor-pointer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span class="text-[12px] font-bold text-[#1c1626]">Public Voting</span>
+          </button>
+        </div>
+        <div id="mgmt-judge-form" style="display:none" class="space-y-4 mb-4">
+          <div class="flex items-center gap-4">
+            <p class="text-[13px] font-semibold text-[#4a4357]">Number of Judges</p>
+            <div class="flex items-center gap-2">
+              <button type="button" id="mgmt-judge-minus" class="w-7 h-7 rounded-full border border-[#e6dcfb] flex items-center justify-center text-brand hover:bg-brand-tint transition-colors text-lg leading-none">−</button>
+              <span id="mgmt-judge-count" class="text-[15px] font-extrabold text-[#1c1626] w-5 text-center">1</span>
+              <button type="button" id="mgmt-judge-plus" class="w-7 h-7 rounded-full border border-[#e6dcfb] flex items-center justify-center text-brand hover:bg-brand-tint transition-colors text-lg leading-none">+</button>
+            </div>
+          </div>
+          <div id="mgmt-judge-panels" class="space-y-3"></div>
+          <p class="text-[11.5px] text-[#9b94a8]">Judges will receive an invitation email when you publish the show.</p>
+        </div>
+        <p class="panel-error text-[12px] text-red-500 mt-1" style="display:none"></p>
+        <div class="drawer-actions flex justify-end gap-3 pb-2">
+          <button class="cancel-btn text-[13px] font-semibold text-[#9b94a8] hover:text-[#1c1626] px-3 py-2 transition-colors">Cancel</button>
+          <button class="save-btn bg-brand text-white text-[13px] font-bold px-5 py-2.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Save changes</button>
+        </div>
+      </div>
+
+      <!-- Panel: Awards & Prizes -->
+      <div id="panel-awards" style="display:none" class="p-6">
+        <div class="grid grid-cols-2 gap-3 mb-5" id="mgmt-awards-yn">
+          <button type="button" data-value="yes" class="yn flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#e6dcfb] bg-white p-3 transition-all cursor-pointer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span class="text-[12px] font-bold text-[#1c1626]">Yes, awards &amp; prizes</span>
+          </button>
+          <button type="button" data-value="no" class="yn flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#e6dcfb] bg-white p-3 transition-all cursor-pointer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <span class="text-[12px] font-bold text-[#1c1626]">No awards</span>
+          </button>
+        </div>
+        <div id="mgmt-awards-form" style="display:none" class="space-y-4 mb-4">
+          <div class="flex items-center justify-between p-3 border border-[#efebf5] rounded-[11px]">
+            <div>
+              <p class="text-[13px] font-bold text-[#1c1626]">Digital Certificates</p>
+              <p class="text-[11.5px] text-[#9b94a8]">Downloadable certificate for winners</p>
+            </div>
+            <button type="button" id="mgmt-certs-toggle" data-on="false"
+              class="w-11 h-6 rounded-full bg-[#efebf5] transition-colors relative flex items-center px-0.5 shrink-0">
+              <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
+            </button>
+          </div>
+          <div class="flex items-center justify-between p-3 border border-[#efebf5] rounded-[11px]">
+            <div>
+              <p class="text-[13px] font-bold text-[#1c1626]">Physical Prizes</p>
+              <p class="text-[11.5px] text-[#9b94a8]">Trophies, vouchers, gift packs, etc.</p>
+            </div>
+            <button type="button" id="mgmt-physical-toggle" data-on="false"
+              class="w-11 h-6 rounded-full bg-[#efebf5] transition-colors relative flex items-center px-0.5 shrink-0">
+              <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
+            </button>
+          </div>
+          <div id="mgmt-physical-form" style="display:none" class="pl-4 border-l-2 border-brand/20 space-y-3">
+            <p class="text-[12.5px] font-semibold text-[#4a4357]">Prize Source</p>
+            <div class="grid grid-cols-3 gap-2" id="mgmt-prize-source-cards">
+              <button type="button" data-value="sponsor" class="sel-card rounded-[10px] border-2 border-[#e6dcfb] bg-white py-2 text-[11.5px] font-bold text-[#1c1626] transition-all cursor-pointer">Sponsor</button>
+              <button type="button" data-value="organisation" class="sel-card rounded-[10px] border-2 border-[#e6dcfb] bg-white py-2 text-[11.5px] font-bold text-[#1c1626] transition-all cursor-pointer">Organisation</button>
+              <button type="button" data-value="mixed" class="sel-card rounded-[10px] border-2 border-[#e6dcfb] bg-white py-2 text-[11.5px] font-bold text-[#1c1626] transition-all cursor-pointer">Mixed</button>
+            </div>
+            <div>
+              <p class="text-[12.5px] font-semibold text-[#4a4357] mb-2">Prize Descriptions</p>
+              <div id="mgmt-prize-list" class="space-y-2 mb-2"></div>
+              <button type="button" id="mgmt-add-prize"
+                class="flex items-center gap-1.5 text-[12px] font-semibold text-brand hover:text-brand-dark transition-colors">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add Prize
+              </button>
+            </div>
+          </div>
+        </div>
+        <p class="panel-error text-[12px] text-red-500 mt-1" style="display:none"></p>
+        <div class="drawer-actions flex justify-end gap-3 pb-2">
+          <button class="cancel-btn text-[13px] font-semibold text-[#9b94a8] hover:text-[#1c1626] px-3 py-2 transition-colors">Cancel</button>
+          <button class="save-btn bg-brand text-white text-[13px] font-bold px-5 py-2.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Save changes</button>
+        </div>
+      </div>
+
+      <!-- Panel: Fundraising & Entry Fees -->
+      <div id="panel-fundraising" style="display:none" class="p-6">
+        <div class="flex items-center gap-3 mb-5">
+          <label for="mgmt-currency" class="text-[13px] font-semibold text-[#4a4357] shrink-0">Currency</label>
+          <select id="mgmt-currency"
+            class="border border-[#e6dcfb] rounded-[11px] px-3 py-2 text-[13px] font-semibold text-[#1c1626] bg-white focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors">
+            <option value="GBP">GBP — £ British Pound</option>
+            <option value="USD">USD — $ US Dollar</option>
+            <option value="EUR">EUR — € Euro</option>
+            <option value="AUD">AUD — A$ Australian Dollar</option>
+            <option value="CAD">CAD — C$ Canadian Dollar</option>
+            <option value="NZD">NZD — NZ$ New Zealand Dollar</option>
+            <option value="ZAR">ZAR — R South African Rand</option>
+            <option value="SGD">SGD — S$ Singapore Dollar</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-3 mb-5" id="mgmt-fundraising-yn">
+          <button type="button" data-value="yes" class="yn flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#e6dcfb] bg-white p-3 transition-all cursor-pointer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span class="text-[12px] font-bold text-[#1c1626]">Fundraising active</span>
+          </button>
+          <button type="button" data-value="no" class="yn flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#e6dcfb] bg-white p-3 transition-all cursor-pointer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <span class="text-[12px] font-bold text-[#1c1626]">No fundraising</span>
+          </button>
+        </div>
+        <div id="mgmt-fundraising-form" style="display:none" class="space-y-4 mb-4">
+          <div>
+            <p class="text-[13px] font-semibold text-[#4a4357] mb-2">Donation Options</p>
+            <div class="grid grid-cols-3 gap-2" id="mgmt-donation-type-cards">
+              <button type="button" data-value="optional" class="sel-card rounded-[10px] border-2 border-[#e6dcfb] bg-white py-2 text-[12px] font-bold text-[#1c1626] transition-all cursor-pointer">Optional</button>
+              <button type="button" data-value="required" class="sel-card rounded-[10px] border-2 border-[#e6dcfb] bg-white py-2 text-[12px] font-bold text-[#1c1626] transition-all cursor-pointer">Required</button>
+              <button type="button" data-value="only" class="sel-card rounded-[10px] border-2 border-[#e6dcfb] bg-white py-2 text-[12px] font-bold text-[#1c1626] transition-all cursor-pointer">Donations Only</button>
+            </div>
+          </div>
+          <div>
+            <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Fundraising Goal <span class="text-[#9b94a8] font-normal">(optional)</span></label>
+            <div class="relative max-w-[200px]">
+              <span id="mgmt-sym-goal" class="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-[#9b94a8] font-semibold">£</span>
+              <input type="number" id="mgmt-fund-goal" min="0" placeholder="0.00"
+                class="w-full border border-[#e6dcfb] rounded-[11px] pl-7 pr-4 py-2.5 text-[14px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+            </div>
+          </div>
+          <div class="flex items-center justify-between p-3 border border-[#efebf5] rounded-[11px]">
+            <div>
+              <p class="text-[13px] font-bold text-[#1c1626]">Donation Receipts</p>
+              <p class="text-[11.5px] text-[#9b94a8]">Auto-available for Registered Charities</p>
+            </div>
+            <button type="button" id="mgmt-receipts-toggle" data-on="false"
+              class="w-11 h-6 rounded-full bg-[#efebf5] transition-colors relative flex items-center px-0.5 shrink-0">
+              <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
+            </button>
+          </div>
+          <div class="flex items-center justify-between p-3 border border-[#efebf5] rounded-[11px]">
+            <div>
+              <p class="text-[13px] font-bold text-[#1c1626]">Display Progress Publicly</p>
+              <p class="text-[11.5px] text-[#9b94a8]">Show a progress bar on the public page</p>
+            </div>
+            <button type="button" id="mgmt-public-toggle" data-on="false"
+              class="w-11 h-6 rounded-full bg-[#efebf5] transition-colors relative flex items-center px-0.5 shrink-0">
+              <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
+            </button>
+          </div>
+        </div>
+        <div class="border-t border-[#efebf5] pt-4 mb-4">
+          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Entry Fee per Entry</label>
+          <p id="mgmt-fee-hint" class="text-[12px] text-[#9b94a8] mb-2">Set to £0 for a free show.</p>
+          <div class="relative max-w-[180px]">
+            <span id="mgmt-sym-fee" class="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-[#9b94a8] font-semibold">£</span>
+            <input type="number" id="mgmt-entry-fee" min="0" step="0.50" value="0"
+              class="w-full border border-[#e6dcfb] rounded-[11px] pl-7 pr-4 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+          </div>
+        </div>
+        <p class="panel-error text-[12px] text-red-500 mt-2" style="display:none"></p>
+        <div class="drawer-actions flex justify-end gap-3 pb-2">
+          <button class="cancel-btn text-[13px] font-semibold text-[#9b94a8] hover:text-[#1c1626] px-3 py-2 transition-colors">Cancel</button>
+          <button class="save-btn bg-brand text-white text-[13px] font-bold px-5 py-2.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Save changes</button>
+        </div>
+      </div>
+
+      <!-- Panel: Branding -->
+      <div id="panel-branding" style="display:none" class="p-6">
+        <div class="bg-brand-tint/50 border border-brand/10 rounded-[12px] p-4 mb-4">
+          <p class="text-[13px] font-semibold text-[#1c1626] mb-1">Logo &amp; banner upload coming soon</p>
+          <p class="text-[12.5px] text-[#6f6880]">You'll be able to add your show's branding once file uploads are available.</p>
+        </div>
+        <div class="flex gap-3">
+          <div class="flex-1 h-24 rounded-[11px] border-2 border-dashed border-[#e6dcfb] bg-[#faf7ff] flex items-center justify-center opacity-50">
+            <p class="text-[11px] text-[#9b94a8] font-semibold">Show Logo</p>
+          </div>
+          <div class="flex-1 h-24 rounded-[11px] border-2 border-dashed border-[#e6dcfb] bg-[#faf7ff] flex items-center justify-center opacity-50">
+            <p class="text-[11px] text-[#9b94a8] font-semibold">Show Banner</p>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end drawer body -->
+  </div><!-- end drawer -->
 
 </DashboardLayout>
 
@@ -486,7 +493,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   import { supabase } from '../../lib/supabase.js';
 
   // ── State ────────────────────────────────────────────────────────────────────
-  let show = null;
+  let show       = null;
   let categories = [];
   let judges     = [];
   let sponsors   = [];
@@ -499,6 +506,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   const BREED_SCOPE_LABELS = { all: 'All Breeds', breed_specific: 'Breed Specific', group_specific: 'Group Specific' };
   const ORG_TYPE_LABELS   = { non_profit: 'Non-Profit', registered_charity: 'Registered Charity', commercial: 'Commercial' };
   const CURRENCY_SYMBOLS  = { GBP: '£', USD: '$', EUR: '€', AUD: 'A$', CAD: 'C$', NZD: 'NZ$', ZAR: 'R', SGD: 'S$' };
+  const SECTION_TITLES    = {
+    basics: 'Show Basics', showtype: 'Show Type', breed: 'Breed & Eligibility',
+    classes: 'Classes', sponsorship: 'Sponsorship', judging: 'Judging',
+    awards: 'Awards & Prizes', fundraising: 'Fundraising & Fees', branding: 'Branding',
+  };
 
   // ── Init ─────────────────────────────────────────────────────────────────────
   (async () => {
@@ -533,10 +545,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (!showRes.data) { window.location.replace(mgmtBase + 'organiser/shows'); return; }
 
     show       = showRes.data;
-    categories = catsRes.data    || [];
-    judges     = judgesRes.data  || [];
+    categories = catsRes.data     || [];
+    judges     = judgesRes.data   || [];
     sponsors   = sponsorsRes.data || [];
-    prizes     = prizesRes.data  || [];
+    prizes     = prizesRes.data   || [];
     judgeCount = judges.length || show.judge_count || 1;
 
     document.getElementById('page-loading').style.display = 'none';
@@ -548,20 +560,52 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     wireAllHandlers();
   })();
 
+  // ── Drawer open / close ───────────────────────────────────────────────────────
+  function openDrawer(id) {
+    document.querySelectorAll('#edit-drawer [id^="panel-"]').forEach(p => { p.style.display = 'none'; });
+    const panel = document.getElementById(`panel-${id}`);
+    if (panel) panel.style.display = 'block';
+    document.getElementById('drawer-title').textContent = SECTION_TITLES[id] || id;
+
+    const drawer   = document.getElementById('edit-drawer');
+    const backdrop = document.getElementById('drawer-backdrop');
+    drawer.style.transform   = 'translateX(0)';
+    backdrop.style.opacity   = '1';
+    backdrop.style.pointerEvents = 'auto';
+
+    // Scroll drawer body to top
+    drawer.querySelector('.flex-1.overflow-y-auto').scrollTop = 0;
+
+    // Highlight the active card
+    document.querySelectorAll('.section-card').forEach(c => c.classList.remove('ring-2', 'ring-brand'));
+    document.getElementById(`card-${id}`)?.classList.add('ring-2', 'ring-brand');
+  }
+
+  function closeDrawer() {
+    const drawer   = document.getElementById('edit-drawer');
+    const backdrop = document.getElementById('drawer-backdrop');
+    drawer.style.transform   = 'translateX(100%)';
+    backdrop.style.opacity   = '0';
+    backdrop.style.pointerEvents = 'none';
+    document.querySelectorAll('.section-card').forEach(c => c.classList.remove('ring-2', 'ring-brand'));
+  }
+
   // ── Page header ──────────────────────────────────────────────────────────────
   function renderPageHeader() {
     document.getElementById('show-title-display').textContent = show.title || 'Untitled Show';
     document.title = `${show.title || 'Show'} — PetShow Online`;
 
-    const st = showStatus();
+    const st    = showStatus();
     const badge = document.getElementById('show-status-badge');
-    badge.textContent = st.label;
+    badge.textContent     = st.label;
     badge.style.background = st.bg;
-    badge.style.color = st.color;
+    badge.style.color      = st.color;
 
-    const sym = CURRENCY_SYMBOLS[show.currency] || '£';
+    const sym     = CURRENCY_SYMBOLS[show.currency] || '£';
     const feeText = show.entry_fee > 0 ? ` · ${sym}${show.entry_fee} entry fee` : ' · Free entry';
-    const dateText = show.show_date ? new Date(show.show_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Date not set';
+    const dateText = show.show_date
+      ? new Date(show.show_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+      : 'Date not set';
     document.getElementById('show-meta').textContent = `${dateText} · ${categories.length} class${categories.length !== 1 ? 'es' : ''}${feeText}`;
 
     const publishBtn = document.getElementById('btn-publish');
@@ -601,7 +645,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   }
 
   // ── Card header rendering ────────────────────────────────────────────────────
-  function setHeader(id, dotColor, title, summary, actionLabel, secondary) {
+  function setHeader(id, dotColor, title, summary, actionLabel) {
     const el = document.getElementById(`hdr-${id}`);
     if (!el) return;
     el.innerHTML = `
@@ -612,65 +656,43 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           <p class="text-[12px] text-[#9b94a8] truncate">${summary}</p>
         </div>
       </div>
-      <div class="flex items-center gap-3 shrink-0">
-        ${secondary ? `<span class="text-[11.5px] text-[#9b94a8]">${secondary}</span>` : ''}
-        <button class="action-btn text-[13px] font-bold text-brand hover:underline" data-panel="${id}">${actionLabel}</button>
-      </div>`;
+      <button class="action-btn text-[13px] font-bold text-brand hover:underline shrink-0 ml-3" data-panel="${id}">${actionLabel}</button>`;
   }
 
   function renderAllHeaders() {
-    // Basics: always green
-    const orgLabel = show.org_type ? ORG_TYPE_LABELS[show.org_type] || show.org_type : 'Org type not set';
     setHeader('basics', '#22c55e', 'Show Basics', show.title || 'Untitled', 'Edit');
 
-    // Show Type
     if (show.show_type) setHeader('showtype', '#22c55e', 'Show Type', SHOW_TYPE_LABELS[show.show_type] || show.show_type, 'Edit');
     else setHeader('showtype', '#fbbf24', 'Show Type', 'Not configured', 'Set Up');
 
-    // Breed
     const breedSummary = show.breed_scope
       ? (BREED_SCOPE_LABELS[show.breed_scope] + (show.breed_filter ? ` — ${show.breed_filter}` : show.group_filter ? ` — ${show.group_filter}` : ''))
       : null;
     if (breedSummary) setHeader('breed', '#22c55e', 'Breed & Eligibility', breedSummary, 'Edit');
     else setHeader('breed', '#fbbf24', 'Breed & Eligibility', 'Not configured', 'Set Up');
 
-    // Classes
     if (categories.length > 0) setHeader('classes', '#22c55e', 'Classes', `${categories.length} class${categories.length !== 1 ? 'es' : ''} configured`, 'Edit');
     else setHeader('classes', '#fbbf24', 'Classes', 'No classes added yet', 'Set Up');
 
-    // Sponsorship
-    if (show.has_sponsor === true) {
-      const sName = sponsors[0]?.name || 'Sponsor added';
-      setHeader('sponsorship', '#22c55e', 'Sponsorship', sName, 'Edit');
-    } else if (show.has_sponsor === false) {
-      setHeader('sponsorship', '#c4bed0', 'Sponsorship', 'No sponsor for this show', 'Enable');
-    } else {
-      setHeader('sponsorship', '#fbbf24', 'Sponsorship', 'Not configured', 'Set Up');
-    }
+    if (show.has_sponsor === true) setHeader('sponsorship', '#22c55e', 'Sponsorship', sponsors[0]?.name || 'Sponsor added', 'Edit');
+    else if (show.has_sponsor === false) setHeader('sponsorship', '#c4bed0', 'Sponsorship', 'No sponsor for this show', 'Enable');
+    else setHeader('sponsorship', '#fbbf24', 'Sponsorship', 'Not configured', 'Set Up');
 
-    // Judging
-    if (show.is_judged === true) {
-      setHeader('judging', '#22c55e', 'Judging', `Expert judges · ${judgeCount} judge${judgeCount !== 1 ? 's' : ''}`, 'Edit');
-    } else if (show.is_judged === false) {
-      setHeader('judging', '#c4bed0', 'Judging', 'Public voting', 'Edit');
-    } else {
-      setHeader('judging', '#fbbf24', 'Judging', 'Not configured', 'Set Up');
-    }
+    if (show.is_judged === true) setHeader('judging', '#22c55e', 'Judging', `Expert judges · ${judgeCount} judge${judgeCount !== 1 ? 's' : ''}`, 'Edit');
+    else if (show.is_judged === false) setHeader('judging', '#c4bed0', 'Judging', 'Public voting', 'Edit');
+    else setHeader('judging', '#fbbf24', 'Judging', 'Not configured', 'Set Up');
 
-    // Awards
-    const hasCerts    = show.has_digital_certs === true;
-    const hasPhysical = show.has_physical_prizes === true;
-    const noneSet     = show.has_digital_certs === false && show.has_physical_prizes === false;
+    const hasCerts = show.has_digital_certs === true, hasPhysical = show.has_physical_prizes === true;
+    const noAwards = show.has_digital_certs === false && show.has_physical_prizes === false;
     if (hasCerts || hasPhysical) {
       const parts = [hasCerts ? 'Digital certs' : null, hasPhysical ? 'Physical prizes' : null].filter(Boolean);
       setHeader('awards', '#22c55e', 'Awards & Prizes', parts.join(' · '), 'Edit');
-    } else if (noneSet) {
+    } else if (noAwards) {
       setHeader('awards', '#c4bed0', 'Awards & Prizes', 'No awards for this show', 'Enable');
     } else {
       setHeader('awards', '#fbbf24', 'Awards & Prizes', 'Not configured', 'Set Up');
     }
 
-    // Fundraising
     const sym = CURRENCY_SYMBOLS[show.currency] || '£';
     if (show.is_fundraising === true) {
       const goalText = show.fundraising_goal ? ` · Goal: ${sym}${show.fundraising_goal}` : '';
@@ -681,40 +703,34 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       setHeader('fundraising', '#fbbf24', 'Fundraising & Fees', 'Not configured', 'Set Up');
     }
 
-    // Branding
     setHeader('branding', '#fbbf24', 'Branding', 'Upload coming soon', 'Preview');
   }
 
   // ── Populate forms ───────────────────────────────────────────────────────────
   function populateAllForms() {
-    // Basics
-    document.getElementById('mgmt-title').value         = show.title || '';
-    document.getElementById('mgmt-entry-open').value    = show.entry_open_date || '';
-    document.getElementById('mgmt-entry-close').value   = show.entry_close_date || '';
-    document.getElementById('mgmt-show-date').value     = show.show_date || '';
-    document.getElementById('mgmt-host-org').value      = show.host_org || '';
-    document.getElementById('mgmt-contact-email').value = show.contact_email || '';
-    document.getElementById('mgmt-contact-phone').value = show.contact_phone || '';
+    document.getElementById('mgmt-title').value          = show.title || '';
+    document.getElementById('mgmt-entry-open').value     = show.entry_open_date || '';
+    document.getElementById('mgmt-entry-close').value    = show.entry_close_date || '';
+    document.getElementById('mgmt-show-date').value      = show.show_date || '';
+    document.getElementById('mgmt-host-org').value       = show.host_org || '';
+    document.getElementById('mgmt-contact-email').value  = show.contact_email || '';
+    document.getElementById('mgmt-contact-phone').value  = show.contact_phone || '';
     document.getElementById('mgmt-charity-number').value = show.charity_number || '';
     if (show.org_type) {
       selectCard(document.getElementById('mgmt-org-type-cards'), show.org_type);
       document.getElementById('mgmt-charity-field').style.display = show.org_type === 'registered_charity' ? 'block' : 'none';
     }
 
-    // Show type
     if (show.show_type) selectCard(document.getElementById('mgmt-show-type-cards'), show.show_type);
     selectCard(document.getElementById('mgmt-animal-type-cards'), show.animal_type || 'dog');
 
-    // Breed
     if (show.breed_scope) selectCard(document.getElementById('mgmt-breed-scope-cards'), show.breed_scope);
     document.getElementById('mgmt-breed').value = show.breed_filter || '';
     document.getElementById('mgmt-group').value = show.group_filter || '';
     updateBreedFields();
 
-    // Classes
     rebuildClassList();
 
-    // Sponsorship
     if (show.has_sponsor === true) {
       setYN('mgmt-sponsor-yn', 'yes');
       document.getElementById('mgmt-sponsor-form').style.display = 'block';
@@ -724,7 +740,6 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       setYN('mgmt-sponsor-yn', 'no');
     }
 
-    // Judging
     if (show.is_judged === true) {
       setYN('mgmt-judging-yn', 'yes');
       document.getElementById('mgmt-judge-form').style.display = 'block';
@@ -734,7 +749,6 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       setYN('mgmt-judging-yn', 'no');
     }
 
-    // Awards
     const anyAwards = show.has_digital_certs === true || show.has_physical_prizes === true;
     const noAwards  = show.has_digital_certs === false && show.has_physical_prizes === false;
     if (anyAwards || noAwards) {
@@ -751,7 +765,6 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       }
     }
 
-    // Fundraising
     document.getElementById('mgmt-currency').value = show.currency || 'GBP';
     applyCurrencySymbol(show.currency || 'GBP');
     if (show.is_fundraising === true) {
@@ -769,22 +782,21 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
   // ── Wire up all handlers ─────────────────────────────────────────────────────
   function wireAllHandlers() {
-    // Action buttons (event delegation on card headers)
+    // Open drawer via card action buttons
     document.getElementById('sections-grid').addEventListener('click', e => {
       const btn = e.target.closest('.action-btn');
-      if (!btn) return;
-      openPanel(btn.dataset.panel);
+      if (btn) openDrawer(btn.dataset.panel);
     });
 
-    // Cancel buttons
-    document.querySelectorAll('.cancel-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const panel = btn.closest('.edit-panel');
-        if (panel) panel.style.display = 'none';
-      });
+    // Close drawer — X button, backdrop, Escape key, cancel buttons
+    document.getElementById('drawer-close').addEventListener('click', closeDrawer);
+    document.getElementById('drawer-backdrop').addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+    document.getElementById('edit-drawer').addEventListener('click', e => {
+      if (e.target.closest('.cancel-btn')) closeDrawer();
     });
 
-    // Save buttons (each section has its own save handler)
+    // Save buttons
     document.querySelector('#panel-basics .save-btn').addEventListener('click', saveBasics);
     document.querySelector('#panel-showtype .save-btn').addEventListener('click', saveShowType);
     document.querySelector('#panel-breed .save-btn').addEventListener('click', saveBreed);
@@ -794,7 +806,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.querySelector('#panel-awards .save-btn').addEventListener('click', saveAwards);
     document.querySelector('#panel-fundraising .save-btn').addEventListener('click', saveFundraising);
 
-    // Org type cards
+    // Org type
     document.getElementById('mgmt-org-type-cards').querySelectorAll('[data-value]').forEach(btn => {
       btn.addEventListener('click', () => {
         selectCard(document.getElementById('mgmt-org-type-cards'), btn.dataset.value);
@@ -802,17 +814,15 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       });
     });
 
-    // Show type cards
+    // Show type & animal type
     document.getElementById('mgmt-show-type-cards').querySelectorAll('[data-value]').forEach(btn => {
       btn.addEventListener('click', () => selectCard(document.getElementById('mgmt-show-type-cards'), btn.dataset.value));
     });
-
-    // Animal type cards
     document.getElementById('mgmt-animal-type-cards').querySelectorAll('[data-value]').forEach(btn => {
       btn.addEventListener('click', () => selectCard(document.getElementById('mgmt-animal-type-cards'), btn.dataset.value));
     });
 
-    // Breed scope cards
+    // Breed scope
     document.getElementById('mgmt-breed-scope-cards').querySelectorAll('[data-value]').forEach(btn => {
       btn.addEventListener('click', () => {
         selectCard(document.getElementById('mgmt-breed-scope-cards'), btn.dataset.value);
@@ -820,15 +830,15 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       });
     });
 
-    // Add class button
+    // Classes
     document.getElementById('mgmt-add-class').addEventListener('click', () => addClassRow(''));
 
-    // Sponsorship YN
+    // Sponsorship
     setupYN('mgmt-sponsor-yn', val => {
       document.getElementById('mgmt-sponsor-form').style.display = val === 'yes' ? 'block' : 'none';
     });
 
-    // Judging YN + judge count
+    // Judging
     setupYN('mgmt-judging-yn', val => {
       document.getElementById('mgmt-judge-form').style.display = val === 'yes' ? 'block' : 'none';
     });
@@ -839,7 +849,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       if (judgeCount < 7) { judgeCount++; document.getElementById('mgmt-judge-count').textContent = String(judgeCount); rebuildJudgePanels(); }
     });
 
-    // Awards YN + toggles
+    // Awards
     setupYN('mgmt-awards-yn', val => {
       document.getElementById('mgmt-awards-form').style.display = val === 'yes' ? 'block' : 'none';
     });
@@ -852,32 +862,23 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     });
     document.getElementById('mgmt-add-prize').addEventListener('click', () => addPrizeRow(''));
 
-    // Donation type cards
-    document.getElementById('mgmt-donation-type-cards').querySelectorAll('[data-value]').forEach(btn => {
-      btn.addEventListener('click', () => selectCard(document.getElementById('mgmt-donation-type-cards'), btn.dataset.value));
-    });
-
-    // Fundraising YN + toggles + currency
+    // Fundraising
     setupYN('mgmt-fundraising-yn', val => {
       document.getElementById('mgmt-fundraising-form').style.display = val === 'yes' ? 'block' : 'none';
     });
     setupToggle('mgmt-receipts-toggle', () => {});
     setupToggle('mgmt-public-toggle', () => {});
+    document.getElementById('mgmt-donation-type-cards').querySelectorAll('[data-value]').forEach(btn => {
+      btn.addEventListener('click', () => selectCard(document.getElementById('mgmt-donation-type-cards'), btn.dataset.value));
+    });
     document.getElementById('mgmt-currency').addEventListener('change', e => applyCurrencySymbol(e.target.value));
-  }
-
-  function openPanel(id) {
-    document.querySelectorAll('.edit-panel').forEach(p => { p.style.display = 'none'; });
-    const panel = document.getElementById(`panel-${id}`);
-    if (panel) panel.style.display = 'block';
-    panel?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
   // ── Save handlers ─────────────────────────────────────────────────────────────
   async function saveSection(panelId, payload, postSave) {
     const panel   = document.getElementById(`panel-${panelId}`);
-    const saveBtn = panel.querySelector('.save-btn');
-    const errEl   = panel.querySelector('.panel-error');
+    const saveBtn = panel?.querySelector('.save-btn');
+    const errEl   = panel?.querySelector('.panel-error');
     if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
     const orig = saveBtn?.textContent;
     if (saveBtn) { saveBtn.textContent = 'Saving…'; saveBtn.disabled = true; }
@@ -890,12 +891,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     Object.assign(show, payload);
     if (postSave) await postSave();
     renderAllHeaders();
-    if (panel) panel.style.display = 'none';
+    closeDrawer();
   }
 
   async function saveBasics() {
-    const title = document.getElementById('mgmt-title').value.trim();
-    const email = document.getElementById('mgmt-contact-email').value.trim();
+    const title   = document.getElementById('mgmt-title').value.trim();
+    const email   = document.getElementById('mgmt-contact-email').value.trim();
     const orgType = getSelectedCard('mgmt-org-type-cards');
     if (!title) return showPanelError('basics', 'Please enter a show name.');
     if (!email || !email.includes('@')) return showPanelError('basics', 'Please enter a valid contact email.');
@@ -906,9 +907,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       charity_number: orgType === 'registered_charity' ? document.getElementById('mgmt-charity-number').value.trim() || null : null,
       contact_email: email,
       contact_phone: document.getElementById('mgmt-contact-phone').value.trim() || null,
-      entry_open_date: document.getElementById('mgmt-entry-open').value || null,
+      entry_open_date:  document.getElementById('mgmt-entry-open').value  || null,
       entry_close_date: document.getElementById('mgmt-entry-close').value || null,
-      show_date: document.getElementById('mgmt-show-date').value || null,
+      show_date:        document.getElementById('mgmt-show-date').value   || null,
     });
     document.getElementById('show-title-display').textContent = title || 'Untitled Show';
   }
@@ -924,25 +925,19 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const scope = getSelectedCard('mgmt-breed-scope-cards');
     if (!scope) return showPanelError('breed', 'Please select a breed scope.');
     await saveSection('breed', {
-      breed_scope: scope,
-      breed_filter: scope === 'breed_specific' ? document.getElementById('mgmt-breed').value.trim() || null : null,
-      group_filter: scope === 'group_specific' ? document.getElementById('mgmt-group').value.trim() || null : null,
+      breed_scope:   scope,
+      breed_filter:  scope === 'breed_specific'  ? document.getElementById('mgmt-breed').value.trim() || null : null,
+      group_filter:  scope === 'group_specific'  ? document.getElementById('mgmt-group').value.trim() || null : null,
     });
   }
 
   async function saveClasses() {
-    const rows = document.querySelectorAll('#mgmt-class-list .class-row');
-    const names = [];
-    rows.forEach(row => {
-      const input = row.querySelector('input');
-      if (input && input.value.trim()) names.push(input.value.trim());
-    });
+    const names = Array.from(document.querySelectorAll('#mgmt-class-list .class-row input'))
+      .map(i => i.value.trim()).filter(Boolean);
     if (names.length === 0) return showPanelError('classes', 'Please add at least one class.');
     await saveSection('classes', {}, async () => {
       await supabase.from('show_categories').delete().eq('show_id', showId);
-      if (names.length > 0) {
-        await supabase.from('show_categories').insert(names.map(n => ({ show_id: showId, name: n })));
-      }
+      await supabase.from('show_categories').insert(names.map(n => ({ show_id: showId, name: n })));
       const { data } = await supabase.from('show_categories').select('*').eq('show_id', showId);
       categories = data || [];
     });
@@ -956,8 +951,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       if (!name) return showPanelError('sponsorship', 'Please enter a sponsor name.');
       await saveSection('sponsorship', { has_sponsor: true }, async () => {
         await supabase.from('show_sponsors').delete().eq('show_id', showId);
-        const website = document.getElementById('mgmt-sponsor-website').value.trim() || null;
-        await supabase.from('show_sponsors').insert([{ show_id: showId, name, website }]);
+        await supabase.from('show_sponsors').insert([{ show_id: showId, name, website: document.getElementById('mgmt-sponsor-website').value.trim() || null }]);
         const { data } = await supabase.from('show_sponsors').select('*').eq('show_id', showId);
         sponsors = data || [];
       });
@@ -973,8 +967,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const val = getYNValue('mgmt-judging-yn');
     if (!val) return showPanelError('judging', 'Please make a selection.');
     if (val === 'yes') {
-      const panels = document.querySelectorAll('#mgmt-judge-panels .judge-panel');
-      const newJudges = Array.from(panels).map(p => ({
+      const newJudges = Array.from(document.querySelectorAll('#mgmt-judge-panels .judge-panel')).map(p => ({
         show_id: showId,
         first_name: p.querySelector('.j-first').value.trim(),
         last_name:  p.querySelector('.j-last').value.trim(),
@@ -983,9 +976,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       }));
       await saveSection('judging', { is_judged: true, judge_count: judgeCount }, async () => {
         await supabase.from('show_judges').delete().eq('show_id', showId);
-        if (newJudges.some(j => j.first_name)) {
-          await supabase.from('show_judges').insert(newJudges.filter(j => j.first_name));
-        }
+        if (newJudges.some(j => j.first_name)) await supabase.from('show_judges').insert(newJudges.filter(j => j.first_name));
         const { data } = await supabase.from('show_judges').select('*').eq('show_id', showId);
         judges = data || [];
         judgeCount = judges.length || judgeCount;
@@ -1002,18 +993,15 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const val = getYNValue('mgmt-awards-yn');
     if (!val) return showPanelError('awards', 'Please make a selection.');
     if (val === 'yes') {
-      const hasCerts    = document.getElementById('mgmt-certs-toggle').dataset.on === 'true';
+      const hasCerts    = document.getElementById('mgmt-certs-toggle').dataset.on    === 'true';
       const hasPhysical = document.getElementById('mgmt-physical-toggle').dataset.on === 'true';
-      const prizeSource = hasPhysical ? getSelectedCard('mgmt-prize-source-cards') : null;
-      const prizeDescs  = Array.from(document.querySelectorAll('#mgmt-prize-list input'))
-        .map(i => i.value.trim()).filter(Boolean);
+      const prizeDescs  = Array.from(document.querySelectorAll('#mgmt-prize-list input')).map(i => i.value.trim()).filter(Boolean);
       await saveSection('awards', {
-        has_digital_certs: hasCerts, has_physical_prizes: hasPhysical, prize_source: prizeSource,
+        has_digital_certs: hasCerts, has_physical_prizes: hasPhysical,
+        prize_source: hasPhysical ? getSelectedCard('mgmt-prize-source-cards') : null,
       }, async () => {
         await supabase.from('show_prizes').delete().eq('show_id', showId);
-        if (prizeDescs.length > 0) {
-          await supabase.from('show_prizes').insert(prizeDescs.map(d => ({ show_id: showId, description: d })));
-        }
+        if (prizeDescs.length) await supabase.from('show_prizes').insert(prizeDescs.map(d => ({ show_id: showId, description: d })));
         const { data } = await supabase.from('show_prizes').select('description').eq('show_id', showId);
         prizes = data || [];
       });
@@ -1023,11 +1011,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   }
 
   async function saveFundraising() {
-    const val = getYNValue('mgmt-fundraising-yn');
+    const val      = getYNValue('mgmt-fundraising-yn');
     if (!val) return showPanelError('fundraising', 'Please make a selection.');
-    const currency  = document.getElementById('mgmt-currency').value || 'GBP';
-    const entryFee  = parseFloat(document.getElementById('mgmt-entry-fee').value) || 0;
-    const payload = { currency, entry_fee: entryFee };
+    const currency = document.getElementById('mgmt-currency').value || 'GBP';
+    const entryFee = parseFloat(document.getElementById('mgmt-entry-fee').value) || 0;
+    const payload  = { currency, entry_fee: entryFee };
     if (val === 'yes') {
       Object.assign(payload, {
         is_fundraising: true,
@@ -1056,15 +1044,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   function updateBreedFields() {
     const scope = getSelectedCard('mgmt-breed-scope-cards');
     document.getElementById('mgmt-breed-field').style.display = scope === 'breed_specific' ? 'block' : 'none';
-    document.getElementById('mgmt-group-field').style.display = scope === 'group_specific' ? 'block' : 'none';
+    document.getElementById('mgmt-group-field').style.display = scope === 'group_specific'  ? 'block' : 'none';
   }
 
   function rebuildClassList() {
     const container = document.getElementById('mgmt-class-list');
     container.innerHTML = '';
-    if (categories.length > 0) {
-      categories.forEach(c => addClassRow(c.name));
-    }
+    categories.forEach(c => addClassRow(c.name));
   }
 
   function addClassRow(name) {
@@ -1086,17 +1072,17 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     container.innerHTML = '';
     for (let i = 0; i < judgeCount; i++) {
       const j = judges[i] || { first_name: '', last_name: '', email: '', phone: '' };
-      const panel = document.createElement('div');
-      panel.className = 'judge-panel border border-[#efebf5] rounded-[12px] p-4 space-y-3';
-      panel.innerHTML = `
+      const p = document.createElement('div');
+      p.className = 'judge-panel border border-[#efebf5] rounded-[12px] p-4 space-y-3';
+      p.innerHTML = `
         <p class="text-[12px] font-bold text-[#6f6880] uppercase tracking-wide">Judge ${i + 1}</p>
         <div class="grid grid-cols-2 gap-3">
-          <input type="text" class="j-first border border-[#e6dcfb] rounded-[10px] px-3 py-2 text-[13px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" placeholder="First name" value="${escAttr(j.first_name)}" />
-          <input type="text" class="j-last border border-[#e6dcfb] rounded-[10px] px-3 py-2 text-[13px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" placeholder="Last name" value="${escAttr(j.last_name)}" />
+          <input type="text" class="j-first border border-[#e6dcfb] rounded-[10px] px-3 py-2 text-[13px] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" placeholder="First name" value="${escAttr(j.first_name)}" />
+          <input type="text" class="j-last border border-[#e6dcfb] rounded-[10px] px-3 py-2 text-[13px] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" placeholder="Last name" value="${escAttr(j.last_name)}" />
         </div>
-        <input type="email" class="j-email w-full border border-[#e6dcfb] rounded-[10px] px-3 py-2 text-[13px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" placeholder="Email address" value="${escAttr(j.email)}" />
-        <input type="tel" class="j-phone w-full border border-[#e6dcfb] rounded-[10px] px-3 py-2 text-[13px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" placeholder="Phone (optional)" value="${escAttr(j.phone || '')}" />`;
-      container.appendChild(panel);
+        <input type="email" class="j-email w-full border border-[#e6dcfb] rounded-[10px] px-3 py-2 text-[13px] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" placeholder="Email address" value="${escAttr(j.email)}" />
+        <input type="tel"   class="j-phone w-full border border-[#e6dcfb] rounded-[10px] px-3 py-2 text-[13px] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" placeholder="Phone (optional)" value="${escAttr(j.phone || '')}" />`;
+      container.appendChild(p);
     }
   }
 
@@ -1106,7 +1092,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     row.className = 'flex items-center gap-2';
     row.innerHTML = `
       <input type="text" value="${escAttr(description)}" placeholder="e.g. £50 Pet Store Voucher"
-        class="flex-1 border border-[#e6dcfb] rounded-[10px] px-3 py-2 text-[13px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" />
+        class="flex-1 border border-[#e6dcfb] rounded-[10px] px-3 py-2 text-[13px] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" />
       <button type="button" class="rm-prize text-[#c4bed0] hover:text-red-400 transition-colors p-1">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>`;
@@ -1124,7 +1110,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (hintEl) hintEl.textContent = `Set to ${sym}0 for a free show.`;
   }
 
-  // ── Shared card/toggle helpers ────────────────────────────────────────────────
+  // ── Shared card / toggle helpers ─────────────────────────────────────────────
   function selectCard(container, value) {
     if (!container) return;
     container.querySelectorAll('[data-value]').forEach(card => {
