@@ -867,8 +867,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   }
 
   function openPanel(id) {
+    document.querySelectorAll('.edit-panel').forEach(p => { p.style.display = 'none'; });
     const panel = document.getElementById(`panel-${id}`);
     if (panel) panel.style.display = 'block';
+    panel?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
   // ── Save handlers ─────────────────────────────────────────────────────────────
