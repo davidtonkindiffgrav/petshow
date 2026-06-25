@@ -284,7 +284,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       ? (document.getElementById('club-name')).value.trim()
       : undefined;
 
-    const { error } = await supabase.auth.signUp({
+    const { data: signUpData, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -308,8 +308,14 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       return;
     }
 
-    document.getElementById('signup-card').classList.add('hidden');
-    document.getElementById('success-email').textContent = email;
-    document.getElementById('signup-success').classList.remove('hidden');
+    if (signUpData.session) {
+      // Email confirmation is off — user is already logged in, go straight to dashboard
+      window.location.href = base + 'choose';
+    } else {
+      // Email confirmation is on — show the check-your-inbox screen
+      document.getElementById('signup-card').classList.add('hidden');
+      document.getElementById('success-email').textContent = email;
+      document.getElementById('signup-success').classList.remove('hidden');
+    }
   });
 </script>
