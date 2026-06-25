@@ -46,9 +46,12 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
     </div>
   </div>
 
-  <!-- Populated state — placeholder until full dashboard view is built -->
+  <!-- Populated state -->
   <div id="state-populated" style="display:none">
-    <p class="text-[14px] text-[#9b94a8]">Your shows will appear here.</p>
+    <p class="text-[14px] text-[#6f6880]">
+      You have <span id="shows-count"></span> show<span id="shows-plural"></span>.
+      <a id="view-shows-link" href="#" class="text-brand font-semibold hover:underline ml-1">View all shows →</a>
+    </p>
   </div>
 
 </DashboardLayout>
@@ -94,7 +97,12 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
         window.location.href = base + 'organiser/new-show';
       });
     } else {
-      if (populatedEl) populatedEl.style.display = 'block';
+      if (populatedEl) {
+        document.getElementById('shows-count').textContent = String(count);
+        document.getElementById('shows-plural').textContent = count === 1 ? '' : 's';
+        document.getElementById('view-shows-link').href = base + 'organiser/shows';
+        populatedEl.style.display = 'block';
+      }
       if (newShowBtn) {
         newShowBtn.style.display = 'inline-flex';
         newShowBtn.addEventListener('click', () => {

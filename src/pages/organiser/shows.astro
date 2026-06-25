@@ -1,0 +1,232 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+---
+
+<DashboardLayout title="My Shows" activePage="shows">
+
+  <button slot="actions" id="btn-new-show"
+    class="inline-flex items-center gap-2 bg-brand text-white text-[13.5px] font-bold px-4 py-2.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+    New Show
+  </button>
+
+  <!-- Loading -->
+  <div id="state-loading" class="flex items-center justify-center h-64">
+    <div class="w-8 h-8 border-[3px] border-brand/20 border-t-brand rounded-full animate-spin"></div>
+  </div>
+
+  <!-- Empty state -->
+  <div id="state-empty" style="display:none" class="flex items-center justify-center min-h-[60vh]">
+    <div class="text-center max-w-[380px]">
+      <div class="w-20 h-20 rounded-full bg-brand-tint flex items-center justify-center mx-auto mb-6">
+        <svg width="40" height="40" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+          <rect x="6" y="10" width="36" height="32" rx="4" fill="#ede9fe"/>
+          <rect x="6" y="10" width="36" height="32" rx="4" stroke="#7c3aed" stroke-width="2.5" fill="none"/>
+          <line x1="16" y1="6" x2="16" y2="16" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="32" y1="6" x2="32" y2="16" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="6" y1="22" x2="42" y2="22" stroke="#7c3aed" stroke-width="2.5"/>
+          <line x1="20" y1="32" x2="28" y2="32" stroke="#7c3aed" stroke-width="2" stroke-linecap="round"/>
+          <line x1="24" y1="28" x2="24" y2="36" stroke="#7c3aed" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h2 class="text-[23px] font-extrabold text-[#1c1626] tracking-[-0.02em] mb-3">No shows yet</h2>
+      <p class="text-[14px] text-[#6f6880] leading-relaxed mb-7">Create your first show and it'll appear here with all its stats and settings.</p>
+      <button id="btn-create-first"
+        class="inline-flex items-center gap-2 bg-brand text-white text-[14px] font-bold px-6 py-3 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Create a Show
+      </button>
+    </div>
+  </div>
+
+  <!-- Shows list -->
+  <div id="state-list" style="display:none">
+    <div id="shows-list" class="space-y-3"></div>
+  </div>
+
+</DashboardLayout>
+
+<script>
+  import { getAuth } from '../../lib/auth.js';
+  import { supabase } from '../../lib/supabase.js';
+
+  const { session, profile, base } = await getAuth();
+
+  if (!session) {
+    window.location.replace(base + 'login');
+  } else {
+    const name = profile?.display_name || session.user.email?.split('@')[0] || 'Organiser';
+    const avatarEl = document.getElementById('sidebar-avatar');
+    const nameEl   = document.getElementById('sidebar-username');
+    const badgeEl  = document.getElementById('sidebar-role-badge');
+    if (avatarEl) avatarEl.textContent = name.charAt(0).toUpperCase();
+    if (nameEl)   nameEl.textContent   = name;
+    if (badgeEl)  badgeEl.textContent  = profile?.organiser_type === 'club' ? 'Club Organiser' : 'Organiser';
+    document.getElementById('sidebar-signout')?.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = base + 'login';
+    });
+
+    document.getElementById('btn-new-show')?.addEventListener('click', () => { window.location.href = base + 'organiser/new-show'; });
+    document.getElementById('btn-create-first')?.addEventListener('click', () => { window.location.href = base + 'organiser/new-show'; });
+
+    const { data: shows, error } = await supabase
+      .from('shows')
+      .select('*')
+      .eq('created_by', session.user.id)
+      .order('created_at', { ascending: false });
+
+    const loadingEl = document.getElementById('state-loading');
+    const emptyEl   = document.getElementById('state-empty');
+    const listEl    = document.getElementById('state-list');
+    if (loadingEl) loadingEl.style.display = 'none';
+
+    if (error || !shows || shows.length === 0) {
+      if (emptyEl) emptyEl.style.display = 'flex';
+    } else {
+      const catCounts = {};
+      await Promise.all(shows.map(async s => {
+        const { count } = await supabase
+          .from('show_categories')
+          .select('*', { count: 'exact', head: true })
+          .eq('show_id', s.id);
+        catCounts[s.id] = count || 0;
+      }));
+
+      if (listEl) listEl.style.display = 'block';
+      const container = document.getElementById('shows-list');
+      shows.forEach(show => container.appendChild(buildRow(show, catCounts[show.id] || 0)));
+    }
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────────
+
+  function showStatus(s) {
+    if (s.status === 'draft') return { label: 'Draft', color: '#6f6880', bg: '#f5f3fa' };
+    const now = Date.now();
+    if (s.entry_open_date && new Date(s.entry_open_date).getTime() > now) return { label: 'Scheduled', color: '#2563eb', bg: '#eff6ff' };
+    if (s.entry_close_date && new Date(s.entry_close_date).getTime() >= now) return { label: 'Open for Entries', color: '#16a34a', bg: '#f0fdf4' };
+    return { label: 'Closed', color: '#6b7280', bg: '#f9fafb' };
+  }
+
+  const SHOW_TYPE_LABELS  = { beauty_contest: 'Beauty Contest', fun_stakes: 'Fun Stakes', memorial: 'Memorial Show', other: 'Other' };
+  const BREED_SCOPE_LABELS = { all: 'All Breeds', breed_specific: 'Breed Specific', group_specific: 'Group Specific' };
+  const CURRENCY_SYMBOLS  = { GBP: '£', USD: '$', EUR: '€', AUD: 'A$', CAD: 'C$', NZD: 'NZ$', ZAR: 'R', SGD: 'S$' };
+
+  function dot(state) {
+    return state === 'ok' ? '#22c55e' : state === 'pending' ? '#fbbf24' : '#c4bed0';
+  }
+
+  function sectionTiles(show, catCount) {
+    function tile(label, state, summary) {
+      return `<div class="flex items-center gap-2 py-1.5 min-w-0">
+        <span class="w-2 h-2 rounded-full shrink-0" style="background:${dot(state)}"></span>
+        <span class="text-[12px] font-semibold text-[#4a4357] shrink-0">${label}</span>
+        <span class="text-[12px] text-[#9b94a8] truncate">${summary || (state === 'pending' ? 'Not configured' : 'Not used')}</span>
+      </div>`;
+    }
+
+    const breedSummary = show.breed_scope
+      ? (BREED_SCOPE_LABELS[show.breed_scope] + (show.breed_filter ? ` — ${show.breed_filter}` : show.group_filter ? ` — ${show.group_filter}` : ''))
+      : null;
+
+    return [
+      tile('Show Type',   show.show_type ? 'ok' : 'pending',    show.show_type ? SHOW_TYPE_LABELS[show.show_type] : null),
+      tile('Breed',       show.breed_scope ? 'ok' : 'pending',  breedSummary),
+      tile('Classes',     catCount > 0 ? 'ok' : 'pending',      catCount > 0 ? `${catCount} class${catCount !== 1 ? 'es' : ''}` : null),
+      tile('Sponsor',     show.has_sponsor === true ? 'ok' : show.has_sponsor === false ? 'off' : 'pending',
+                          show.has_sponsor === true ? 'Sponsor added' : show.has_sponsor === false ? 'No sponsor' : null),
+      tile('Judging',     show.is_judged === true ? 'ok' : show.is_judged === false ? 'off' : 'pending',
+                          show.is_judged === true ? 'Expert judges' : show.is_judged === false ? 'Public voting' : null),
+      tile('Awards',      (show.has_digital_certs === true || show.has_physical_prizes === true) ? 'ok'
+                          : (show.has_digital_certs === false && show.has_physical_prizes === false) ? 'off' : 'pending',
+                          (show.has_digital_certs || show.has_physical_prizes) ? 'Configured' : (show.has_digital_certs === false) ? 'No awards' : null),
+      tile('Fundraising', show.is_fundraising === true ? 'ok' : show.is_fundraising === false ? 'off' : 'pending',
+                          show.is_fundraising === true ? 'Active' : show.is_fundraising === false ? 'No fundraising' : null),
+      tile('Branding',    'pending', 'Upload coming soon'),
+    ].join('');
+  }
+
+  function buildRow(show, catCount) {
+    const status   = showStatus(show);
+    const showDate = show.show_date
+      ? new Date(show.show_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+      : '—';
+    const sym = CURRENCY_SYMBOLS[show.currency] || '£';
+
+    const feeText = show.is_fundraising === true
+      ? `${sym}${show.entry_fee || 0} entry fee`
+      : show.is_fundraising === false ? 'No fundraising' : 'Fees: not set';
+
+    const row = document.createElement('div');
+    row.className = 'bg-white rounded-card border border-[#e6dcfb] overflow-hidden';
+    row.innerHTML = `
+      <button class="row-header w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-[#faf7ff] transition-colors">
+        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0"
+          style="background:${status.bg};color:${status.color}">${esc(status.label)}</span>
+        <span class="flex-1 text-[15px] font-bold text-[#1c1626] truncate">${esc(show.title || 'Untitled Show')}</span>
+        <span class="text-[13px] text-[#9b94a8] shrink-0 hidden sm:block">${esc(showDate)}</span>
+        <span class="text-[13px] text-[#9b94a8] shrink-0 hidden md:block">— entries</span>
+        <svg class="chevron w-4 h-4 text-[#c4bed0] transition-transform duration-200 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+
+      <div class="row-panel border-t border-[#efebf5]" style="display:none">
+        <div class="flex flex-wrap gap-4 px-5 py-3.5 bg-[#faf7ff] border-b border-[#efebf5]">
+          <span class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#4a4357]">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            ${catCount} class${catCount !== 1 ? 'es' : ''}
+          </span>
+          <span class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#4a4357]">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            ${show.is_judged === true ? 'Expert judges' : show.is_judged === false ? 'Public voting' : 'Judging: not set'}
+          </span>
+          <span class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#4a4357]">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            ${esc(feeText)}
+          </span>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 px-5 py-3 border-b border-[#efebf5]">
+          ${sectionTiles(show, catCount)}
+        </div>
+
+        <div class="flex items-center gap-3 px-5 py-4">
+          <button class="btn-manage inline-flex items-center gap-2 bg-brand text-white text-[13px] font-bold px-4 py-2 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">
+            Manage Show
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+          ${show.status === 'draft' ? `<button class="btn-wizard text-[13px] font-semibold text-[#6f6880] border border-[#e6dcfb] px-4 py-2 rounded-btn hover:bg-[#faf7ff] transition-colors">Continue in Wizard</button>` : ''}
+        </div>
+      </div>
+    `;
+
+    row.querySelector('.row-header').addEventListener('click', () => {
+      const panel   = row.querySelector('.row-panel');
+      const chevron = row.querySelector('.chevron');
+      const open    = panel.style.display !== 'none';
+      panel.style.display   = open ? 'none' : 'block';
+      chevron.style.transform = open ? '' : 'rotate(180deg)';
+    });
+
+    row.querySelector('.btn-manage').addEventListener('click', e => {
+      e.stopPropagation();
+      window.location.href = base + `organiser/show/?id=${show.id}`;
+    });
+    row.querySelector('.btn-wizard')?.addEventListener('click', e => {
+      e.stopPropagation();
+      window.location.href = base + `organiser/new-show?id=${show.id}`;
+    });
+
+    return row;
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+</script>
