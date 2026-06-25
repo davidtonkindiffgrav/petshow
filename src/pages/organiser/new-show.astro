@@ -642,22 +642,18 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   function selectCard(container, value) {
     container.querySelectorAll('[data-value]').forEach(card => {
       if (card.disabled) return;
-      if (card.dataset.value === value) {
-        card.style.borderColor = '#7c3aed';
-        card.style.background  = '#faf7ff';
-        card.style.boxShadow   = '0 0 0 3px rgba(124,58,237,0.18)';
-      } else {
-        card.style.borderColor = '#e6dcfb';
-        card.style.background  = 'white';
-        card.style.boxShadow   = 'none';
-      }
+      const active = card.dataset.value === value;
+      card.dataset.selected    = active ? 'true' : 'false';
+      card.style.borderColor   = active ? '#7c3aed' : '#e6dcfb';
+      card.style.background    = active ? '#faf7ff' : 'white';
+      card.style.boxShadow     = active ? '0 0 0 3px rgba(124,58,237,0.18)' : 'none';
     });
   }
 
   function getSelectedCard(containerId) {
     const el = document.getElementById(containerId);
     if (!el) return null;
-    const active = el.querySelector('[style*="7c3aed"]');
+    const active = el.querySelector('[data-selected="true"]');
     return active ? active.dataset.value : null;
   }
 
@@ -688,8 +684,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     el.querySelectorAll('.yna').forEach(btn => {
       btn.addEventListener('click', () => {
         el.querySelectorAll('.yna').forEach(b => {
+          b.dataset.selected = 'false';
           b.style.borderColor = '#e6dcfb'; b.style.background = 'white'; b.style.boxShadow = 'none';
         });
+        btn.dataset.selected  = 'true';
         btn.style.borderColor = '#7c3aed';
         btn.style.background  = '#faf7ff';
         btn.style.boxShadow   = '0 0 0 3px rgba(124,58,237,0.18)';
@@ -702,12 +700,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const el = document.getElementById(containerId);
     if (!el || !value) return;
     el.querySelectorAll('.yna').forEach(btn => {
-      if (btn.dataset.value === value) {
-        btn.style.borderColor = '#7c3aed'; btn.style.background = '#faf7ff';
-        btn.style.boxShadow   = '0 0 0 3px rgba(124,58,237,0.18)';
-      } else {
-        btn.style.borderColor = '#e6dcfb'; btn.style.background = 'white'; btn.style.boxShadow = 'none';
-      }
+      const active = btn.dataset.value === value;
+      btn.dataset.selected  = active ? 'true' : 'false';
+      btn.style.borderColor = active ? '#7c3aed' : '#e6dcfb';
+      btn.style.background  = active ? '#faf7ff' : 'white';
+      btn.style.boxShadow   = active ? '0 0 0 3px rgba(124,58,237,0.18)' : 'none';
     });
   }
 
@@ -778,7 +775,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   function getYNAValue(containerId) {
     const el = document.getElementById(containerId);
     if (!el) return null;
-    const active = el.querySelector('.yna[style*="7c3aed"]');
+    const active = el.querySelector('.yna[data-selected="true"]');
     return active ? active.dataset.value : null;
   }
 
