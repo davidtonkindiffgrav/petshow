@@ -1,0 +1,1327 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+---
+
+<DashboardLayout title="Create a Show" activePage="shows">
+
+  <button slot="actions" id="action-save-draft" style="display:none"
+    class="inline-flex items-center gap-2 text-[13.5px] font-bold text-[#6f6880] border border-[#e6dcfb] px-4 py-2.5 rounded-btn hover:bg-[#faf7ff] transition-colors">
+    Save Draft
+  </button>
+
+  <!-- Draft resume banner -->
+  <div id="draft-banner" style="display:none"
+    class="flex items-center justify-between gap-4 bg-amber-tint border border-amber-brand/20 rounded-[14px] px-5 py-4 mb-6">
+    <div class="flex items-center gap-3">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <p class="text-[13.5px] font-semibold text-[#1c1626]">You have an unfinished show: <span id="draft-title" class="text-brand"></span></p>
+    </div>
+    <div class="flex items-center gap-2 shrink-0">
+      <button id="draft-continue" class="text-[13px] font-bold text-brand hover:underline">Continue →</button>
+      <span class="text-[#c4bed0]">|</span>
+      <button id="draft-fresh" class="text-[13px] text-[#9b94a8] hover:text-[#1c1626]">Start fresh</button>
+    </div>
+  </div>
+
+  <div class="max-w-2xl mx-auto">
+
+    <!-- Progress bar -->
+    <div class="mb-7">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-[12px] font-bold text-brand uppercase tracking-wider">Step <span id="prog-num">1</span> of 10</span>
+        <span id="prog-name" class="text-[13px] font-semibold text-[#6f6880]">Show Basics</span>
+      </div>
+      <div class="h-1.5 bg-[#efebf5] rounded-full overflow-hidden">
+        <div id="prog-bar" class="h-full bg-brand rounded-full transition-all duration-500" style="width:10%"></div>
+      </div>
+    </div>
+
+    <!-- Step error -->
+    <p id="step-error" style="display:none"
+      class="text-[13px] text-red-500 bg-red-50 border border-red-100 rounded-[11px] px-4 py-3 mb-5" role="alert"></p>
+
+    <!-- ─── Step 1: Show Basics ─────────────────────────────────────────────── -->
+    <div id="step-1" class="bg-white rounded-card shadow-winner-card p-8">
+      <h2 class="text-[21px] font-extrabold text-[#1c1626] tracking-[-0.02em] mb-1">Show Basics</h2>
+      <p class="text-[14px] text-[#6f6880] mb-7">The essentials — you can refine everything later.</p>
+
+      <div class="mb-5">
+        <label for="s1-title" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Show Name <span class="text-red-400">*</span></label>
+        <input type="text" id="s1-title" placeholder="e.g. Spring Paws Charity Show 2025"
+          class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 mb-5">
+        <div>
+          <label for="s1-entry-open" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Entries Open</label>
+          <input type="date" id="s1-entry-open"
+            class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        </div>
+        <div>
+          <label for="s1-entry-close" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Entries Close <span class="text-red-400">*</span></label>
+          <input type="date" id="s1-entry-close"
+            class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        </div>
+      </div>
+
+      <div class="mb-5">
+        <label for="s1-show-date" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Show Date <span class="text-red-400">*</span></label>
+        <input type="date" id="s1-show-date"
+          class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+      </div>
+
+      <div class="mb-5">
+        <label for="s1-host-org" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Host Organisation / Club</label>
+        <input type="text" id="s1-host-org" placeholder="Your club or organisation name"
+          class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+      </div>
+
+      <div class="mb-5">
+        <p class="text-[13px] font-semibold text-[#4a4357] mb-2.5">Type of Organisation <span class="text-red-400">*</span></p>
+        <div class="grid grid-cols-3 gap-3" id="org-type-cards">
+          <button type="button" data-value="non_profit" class="sel-card flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white px-2 py-4 text-center transition-all cursor-pointer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21C12 21 3.5 15.5 3.5 9A4.5 4.5 0 0 1 12 6.1 4.5 4.5 0 0 1 20.5 9C20.5 15.5 12 21 12 21z"/></svg>
+            <span class="text-[11.5px] font-bold text-[#1c1626] leading-tight">Non-Profit<br>Fundraiser</span>
+          </button>
+          <button type="button" data-value="registered_charity" class="sel-card flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white px-2 py-4 text-center transition-all cursor-pointer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span class="text-[11.5px] font-bold text-[#1c1626] leading-tight">Registered<br>Charity</span>
+          </button>
+          <button type="button" data-value="commercial" class="sel-card flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white px-2 py-4 text-center transition-all cursor-pointer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+            <span class="text-[11.5px] font-bold text-[#1c1626] leading-tight">Commercial<br>Organisation</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="s1-charity-field" style="display:none" class="mb-5">
+        <label for="s1-charity-number" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Charity Number <span class="text-[#9b94a8] font-normal">(optional)</span></label>
+        <input type="text" id="s1-charity-number" placeholder="e.g. 1234567"
+          class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label for="s1-contact-email" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Contact Email <span class="text-red-400">*</span></label>
+          <input type="email" id="s1-contact-email"
+            class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        </div>
+        <div>
+          <label for="s1-contact-phone" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Contact Phone <span class="text-[#9b94a8] font-normal">(optional)</span></label>
+          <input type="tel" id="s1-contact-phone" placeholder="+44 7700 000000"
+            class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Step 2: Show Type ──────────────────────────────────────────────── -->
+    <div id="step-2" style="display:none" class="bg-white rounded-card shadow-winner-card p-8">
+      <h2 class="text-[21px] font-extrabold text-[#1c1626] tracking-[-0.02em] mb-1">Show Type</h2>
+      <p class="text-[14px] text-[#6f6880] mb-7">What kind of competition are you running?</p>
+
+      <p class="text-[13px] font-semibold text-[#4a4357] mb-2.5">Type of Show <span class="text-red-400">*</span></p>
+      <div class="grid grid-cols-2 gap-3 mb-7" id="show-type-cards">
+        <button type="button" data-value="beauty_contest" class="sel-card flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white p-4 text-center transition-all cursor-pointer">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <span class="text-[13px] font-bold text-[#1c1626]">Beauty Contest</span>
+        </button>
+        <button type="button" data-value="fun_stakes" class="sel-card flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white p-4 text-center transition-all cursor-pointer">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+          <span class="text-[13px] font-bold text-[#1c1626]">Fun Stakes</span>
+        </button>
+        <button type="button" data-value="memorial" class="sel-card flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white p-4 text-center transition-all cursor-pointer">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21C12 21 3.5 15.5 3.5 9A4.5 4.5 0 0 1 12 6.1 4.5 4.5 0 0 1 20.5 9C20.5 15.5 12 21 12 21z"/></svg>
+          <span class="text-[13px] font-bold text-[#1c1626]">Memorial Show<br><span class="text-[11px] text-[#9b94a8] font-normal">"Over the Rainbow Bridge"</span></span>
+        </button>
+        <button type="button" data-value="other" disabled class="sel-card flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#efebf5] bg-[#fafafa] p-4 text-center opacity-50 cursor-not-allowed relative">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span class="text-[13px] font-bold text-[#9b94a8]">Other</span>
+          <span class="absolute top-2 right-2 text-[10px] font-bold bg-[#efebf5] text-[#9b94a8] px-1.5 py-0.5 rounded-full">Soon</span>
+        </button>
+      </div>
+
+      <p class="text-[13px] font-semibold text-[#4a4357] mb-2.5">Animal Type <span class="text-red-400">*</span></p>
+      <div class="grid grid-cols-4 gap-2" id="animal-type-cards">
+        <button type="button" data-value="dog" class="sel-card flex flex-col items-center gap-1.5 rounded-[12px] border-2 border-[#e6dcfb] bg-white px-2 py-3 text-center transition-all cursor-pointer">
+          <span class="text-[22px]">🐕</span>
+          <span class="text-[12px] font-bold text-[#1c1626]">Dog</span>
+        </button>
+        {['Cat 🐱','Rabbit 🐰','Guinea Pig 🐹','Horse 🐴','Bird 🐦','Other'].map(a => (
+          <button type="button" disabled class="flex flex-col items-center gap-1.5 rounded-[12px] border-2 border-[#efebf5] bg-[#fafafa] px-2 py-3 text-center opacity-40 cursor-not-allowed relative">
+            <span class="text-[22px]">{a.split(' ')[1] || '🐾'}</span>
+            <span class="text-[12px] font-bold text-[#9b94a8]">{a.split(' ')[0]}</span>
+          </button>
+        ))}
+      </div>
+      <p class="text-[11.5px] text-[#9b94a8] mt-2">More animal types coming soon.</p>
+    </div>
+
+    <!-- ─── Step 3: Breed & Eligibility ───────────────────────────────────── -->
+    <div id="step-3" style="display:none" class="bg-white rounded-card shadow-winner-card p-8">
+      <h2 class="text-[21px] font-extrabold text-[#1c1626] tracking-[-0.02em] mb-1">Breed & Eligibility</h2>
+      <p class="text-[14px] text-[#6f6880] mb-7">Which dogs can enter this show?</p>
+
+      <p class="text-[13px] font-semibold text-[#4a4357] mb-2.5">Breed Scope <span class="text-red-400">*</span></p>
+      <div class="grid grid-cols-3 gap-3 mb-5" id="breed-scope-cards">
+        <button type="button" data-value="all" class="sel-card flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white p-4 text-center transition-all cursor-pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <span class="text-[12px] font-bold text-[#1c1626]">All Breeds</span>
+        </button>
+        <button type="button" data-value="breed_specific" class="sel-card flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white p-4 text-center transition-all cursor-pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+          <span class="text-[12px] font-bold text-[#1c1626]">Breed Specific</span>
+        </button>
+        <button type="button" data-value="group_specific" class="sel-card flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white p-4 text-center transition-all cursor-pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span class="text-[12px] font-bold text-[#1c1626]">Group Specific</span>
+        </button>
+      </div>
+
+      <div id="s3-breed-field" style="display:none" class="mb-4">
+        <label for="s3-breed" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Breed Name <span class="text-red-400">*</span></label>
+        <input type="text" id="s3-breed" placeholder="e.g. Golden Retriever"
+          class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        <p class="text-[11.5px] text-[#9b94a8] mt-1.5">Breed selection dropdowns coming soon.</p>
+      </div>
+      <div id="s3-group-field" style="display:none">
+        <label for="s3-group" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Group Name <span class="text-red-400">*</span></label>
+        <input type="text" id="s3-group" placeholder="e.g. Gundog Group"
+          class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        <p class="text-[11.5px] text-[#9b94a8] mt-1.5">Group selection dropdowns coming soon.</p>
+      </div>
+    </div>
+
+    <!-- ─── Step 4: Competition Classes ───────────────────────────────────── -->
+    <div id="step-4" style="display:none" class="bg-white rounded-card shadow-winner-card p-8">
+      <h2 class="text-[21px] font-extrabold text-[#1c1626] tracking-[-0.02em] mb-1">Competition Classes</h2>
+      <p id="s4-desc" class="text-[14px] text-[#6f6880] mb-7">Select and customise the classes for your show.</p>
+
+      <!-- Beauty / Memorial: standard age classes -->
+      <div id="s4-standard" style="display:none">
+        <p class="text-[13px] font-semibold text-[#4a4357] mb-3">Standard Age Classes</p>
+        <div id="s4-class-list" class="space-y-2 mb-4"></div>
+        <button type="button" id="s4-add-class"
+          class="flex items-center gap-1.5 text-[13px] font-semibold text-brand hover:text-brand-dark transition-colors mt-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Custom Class
+        </button>
+      </div>
+
+      <!-- Fun Stakes: category checklist -->
+      <div id="s4-funstakes" style="display:none">
+        <p class="text-[13px] font-semibold text-[#4a4357] mb-3">Choose your categories</p>
+        <div id="s4-funstakes-list" class="grid grid-cols-2 gap-2 mb-4"></div>
+        <button type="button" id="s4-add-funstakes"
+          class="flex items-center gap-1.5 text-[13px] font-semibold text-brand hover:text-brand-dark transition-colors mt-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Custom Category
+        </button>
+        <div id="s4-custom-funstakes" class="space-y-2 mt-3"></div>
+      </div>
+    </div>
+
+    <!-- ─── Step 5: Sponsorship ────────────────────────────────────────────── -->
+    <div id="step-5" style="display:none" class="bg-white rounded-card shadow-winner-card p-8">
+      <h2 class="text-[21px] font-extrabold text-[#1c1626] tracking-[-0.02em] mb-1">Sponsorship</h2>
+      <p class="text-[14px] text-[#6f6880] mb-7">Do you have a sponsor for this show?</p>
+
+      <div class="grid grid-cols-3 gap-3 mb-6" id="sponsor-choice">
+        <button type="button" data-value="yes" class="yna flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white p-4 transition-all cursor-pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <span class="text-[13px] font-bold text-[#1c1626]">Yes</span>
+        </button>
+        <button type="button" data-value="no" class="yna flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white p-4 transition-all cursor-pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <span class="text-[13px] font-bold text-[#1c1626]">No</span>
+        </button>
+        <button type="button" data-value="later" class="yna flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white p-4 transition-all cursor-pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span class="text-[13px] font-bold text-[#1c1626]">Add Later</span>
+        </button>
+      </div>
+
+      <div id="s5-sponsor-form" style="display:none" class="border border-[#efebf5] rounded-[14px] p-5 space-y-4">
+        <div>
+          <label for="s5-sponsor-name" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Sponsor Name <span class="text-red-400">*</span></label>
+          <input type="text" id="s5-sponsor-name" placeholder="e.g. Pawsome Pet Supplies"
+            class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        </div>
+        <div>
+          <label for="s5-sponsor-website" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Sponsor Website <span class="text-[#9b94a8] font-normal">(optional)</span></label>
+          <input type="url" id="s5-sponsor-website" placeholder="https://example.com"
+            class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        </div>
+        <div class="rounded-[11px] border border-dashed border-[#e6dcfb] bg-[#faf7ff] px-4 py-3">
+          <p class="text-[13px] text-[#9b94a8]">🖼 Sponsor logo upload coming soon — you can add this from show settings later.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Step 6: Judging ────────────────────────────────────────────────── -->
+    <div id="step-6" style="display:none" class="bg-white rounded-card shadow-winner-card p-8">
+      <h2 class="text-[21px] font-extrabold text-[#1c1626] tracking-[-0.02em] mb-1">Judging</h2>
+      <p class="text-[14px] text-[#6f6880] mb-7">How will winners be decided?</p>
+
+      <div class="grid grid-cols-3 gap-3 mb-6" id="judging-choice">
+        <button type="button" data-value="yes" class="yna flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white p-4 transition-all cursor-pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <span class="text-[13px] font-bold text-[#1c1626]">Expert Judges</span>
+        </button>
+        <button type="button" data-value="no" class="yna flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white p-4 transition-all cursor-pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span class="text-[13px] font-bold text-[#1c1626]">Public Voting</span>
+        </button>
+        <button type="button" data-value="later" class="yna flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white p-4 transition-all cursor-pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span class="text-[13px] font-bold text-[#1c1626]">Add Later</span>
+        </button>
+      </div>
+
+      <div id="s6-judge-form" style="display:none">
+        <div class="flex items-center gap-4 mb-5">
+          <p class="text-[13px] font-semibold text-[#4a4357]">Number of Judges</p>
+          <div class="flex items-center gap-2">
+            <button type="button" id="judge-minus" class="w-8 h-8 rounded-full border border-[#e6dcfb] flex items-center justify-center text-brand hover:bg-brand-tint transition-colors">−</button>
+            <span id="judge-count-display" class="text-[16px] font-extrabold text-[#1c1626] w-6 text-center">1</span>
+            <button type="button" id="judge-plus" class="w-8 h-8 rounded-full border border-[#e6dcfb] flex items-center justify-center text-brand hover:bg-brand-tint transition-colors">+</button>
+          </div>
+        </div>
+
+        <p class="text-[13px] font-semibold text-[#4a4357] mb-2.5">Judge Setup</p>
+        <div class="grid grid-cols-2 gap-3 mb-5" id="judge-setup-cards">
+          <button type="button" data-value="now" class="sel-card flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white p-4 transition-all cursor-pointer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
+            <span class="text-[12.5px] font-bold text-[#1c1626]">Set up now</span>
+          </button>
+          <button type="button" data-value="later" class="sel-card flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white p-4 transition-all cursor-pointer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            <span class="text-[12.5px] font-bold text-[#1c1626]">Invite later</span>
+          </button>
+        </div>
+
+        <div id="s6-judge-fields" style="display:none">
+          <div id="s6-judge-panels" class="space-y-4"></div>
+          <p class="text-[12px] text-[#9b94a8] mt-3">Judges will receive an invitation email when you publish the show.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Step 7: Awards & Prizes ───────────────────────────────────────── -->
+    <div id="step-7" style="display:none" class="bg-white rounded-card shadow-winner-card p-8">
+      <h2 class="text-[21px] font-extrabold text-[#1c1626] tracking-[-0.02em] mb-1">Awards & Prizes</h2>
+      <p class="text-[14px] text-[#6f6880] mb-7">Will you be giving out awards or prizes?</p>
+
+      <div class="grid grid-cols-3 gap-3 mb-6" id="awards-choice">
+        <button type="button" data-value="yes" class="yna flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white p-4 transition-all cursor-pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <span class="text-[13px] font-bold text-[#1c1626]">Yes</span>
+        </button>
+        <button type="button" data-value="no" class="yna flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white p-4 transition-all cursor-pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <span class="text-[13px] font-bold text-[#1c1626]">No</span>
+        </button>
+        <button type="button" data-value="later" class="yna flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white p-4 transition-all cursor-pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span class="text-[13px] font-bold text-[#1c1626]">Add Later</span>
+        </button>
+      </div>
+
+      <div id="s7-awards-form" style="display:none" class="space-y-5">
+        <div class="flex items-center justify-between p-4 border border-[#efebf5] rounded-[12px]">
+          <div>
+            <p class="text-[13.5px] font-bold text-[#1c1626]">Digital Certificates</p>
+            <p class="text-[12px] text-[#9b94a8]">Award winners a downloadable certificate</p>
+          </div>
+          <button type="button" id="s7-certs-toggle" data-on="false"
+            class="w-11 h-6 rounded-full bg-[#efebf5] transition-colors relative flex items-center px-0.5">
+            <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
+          </button>
+        </div>
+
+        <div class="flex items-center justify-between p-4 border border-[#efebf5] rounded-[12px]">
+          <div>
+            <p class="text-[13.5px] font-bold text-[#1c1626]">Physical Prizes</p>
+            <p class="text-[12px] text-[#9b94a8]">Trophies, vouchers, gift packs, etc.</p>
+          </div>
+          <button type="button" id="s7-physical-toggle" data-on="false"
+            class="w-11 h-6 rounded-full bg-[#efebf5] transition-colors relative flex items-center px-0.5">
+            <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
+          </button>
+        </div>
+
+        <div id="s7-physical-form" style="display:none" class="pl-4 border-l-2 border-brand/20 space-y-4">
+          <p class="text-[13px] font-semibold text-[#4a4357] mb-2">Prize Source</p>
+          <div class="grid grid-cols-3 gap-2" id="prize-source-cards">
+            <button type="button" data-value="sponsor" class="sel-card rounded-[11px] border-2 border-[#e6dcfb] bg-white py-2.5 text-[12px] font-bold text-[#1c1626] transition-all cursor-pointer">Sponsor Supplied</button>
+            <button type="button" data-value="organisation" class="sel-card rounded-[11px] border-2 border-[#e6dcfb] bg-white py-2.5 text-[12px] font-bold text-[#1c1626] transition-all cursor-pointer">Organisation</button>
+            <button type="button" data-value="mixed" class="sel-card rounded-[11px] border-2 border-[#e6dcfb] bg-white py-2.5 text-[12px] font-bold text-[#1c1626] transition-all cursor-pointer">Mixed</button>
+          </div>
+          <div>
+            <p class="text-[13px] font-semibold text-[#4a4357] mb-2">Prize Descriptions</p>
+            <div id="s7-prize-list" class="space-y-2 mb-2"></div>
+            <button type="button" id="s7-add-prize"
+              class="flex items-center gap-1.5 text-[13px] font-semibold text-brand hover:text-brand-dark transition-colors">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Prize
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Step 8: Fundraising & Entry Fees ──────────────────────────────── -->
+    <div id="step-8" style="display:none" class="bg-white rounded-card shadow-winner-card p-8">
+      <h2 class="text-[21px] font-extrabold text-[#1c1626] tracking-[-0.02em] mb-1">Fundraising & Entry Fees</h2>
+      <p class="text-[14px] text-[#6f6880] mb-7">Will you be raising money through this show?</p>
+
+      <div class="grid grid-cols-3 gap-3 mb-6" id="fundraising-choice">
+        <button type="button" data-value="yes" class="yna flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white p-4 transition-all cursor-pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <span class="text-[13px] font-bold text-[#1c1626]">Yes</span>
+        </button>
+        <button type="button" data-value="no" class="yna flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white p-4 transition-all cursor-pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <span class="text-[13px] font-bold text-[#1c1626]">No</span>
+        </button>
+        <button type="button" data-value="later" class="yna flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white p-4 transition-all cursor-pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span class="text-[13px] font-bold text-[#1c1626]">Add Later</span>
+        </button>
+      </div>
+
+      <div id="s8-fundraising-form" style="display:none" class="space-y-5 mb-6">
+        <div>
+          <p class="text-[13px] font-semibold text-[#4a4357] mb-2.5">Donation Options</p>
+          <div class="grid grid-cols-3 gap-2" id="donation-type-cards">
+            <button type="button" data-value="optional" class="sel-card rounded-[11px] border-2 border-[#e6dcfb] bg-white py-2.5 text-[12px] font-bold text-[#1c1626] transition-all cursor-pointer">Optional</button>
+            <button type="button" data-value="required" class="sel-card rounded-[11px] border-2 border-[#e6dcfb] bg-white py-2.5 text-[12px] font-bold text-[#1c1626] transition-all cursor-pointer">Required</button>
+            <button type="button" data-value="only" class="sel-card rounded-[11px] border-2 border-[#e6dcfb] bg-white py-2.5 text-[12px] font-bold text-[#1c1626] transition-all cursor-pointer">Donations Only</button>
+          </div>
+        </div>
+        <div>
+          <label for="s8-goal" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Fundraising Goal <span class="text-[#9b94a8] font-normal">(optional)</span></label>
+          <div class="relative">
+            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-[15px] text-[#9b94a8] font-semibold">£</span>
+            <input type="number" id="s8-goal" min="0" placeholder="0.00"
+              class="w-full border border-[#e6dcfb] rounded-[11px] pl-8 pr-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+          </div>
+        </div>
+        <div class="flex items-center justify-between p-4 border border-[#efebf5] rounded-[12px]">
+          <div>
+            <p class="text-[13.5px] font-bold text-[#1c1626]">Donation Receipts</p>
+            <p id="s8-receipts-note" class="text-[12px] text-[#9b94a8]">Automatically available for Registered Charities</p>
+          </div>
+          <button type="button" id="s8-receipts-toggle" data-on="false"
+            class="w-11 h-6 rounded-full bg-[#efebf5] transition-colors relative flex items-center px-0.5">
+            <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
+          </button>
+        </div>
+        <div class="flex items-center justify-between p-4 border border-[#efebf5] rounded-[12px]">
+          <div>
+            <p class="text-[13.5px] font-bold text-[#1c1626]">Display Fundraising Progress Publicly</p>
+            <p class="text-[12px] text-[#9b94a8]">Show a progress bar on the public show page</p>
+          </div>
+          <button type="button" id="s8-public-toggle" data-on="false"
+            class="w-11 h-6 rounded-full bg-[#efebf5] transition-colors relative flex items-center px-0.5">
+            <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="border-t border-[#efebf5] pt-6">
+        <label for="s8-entry-fee" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Entry Fee per Entry</label>
+        <p class="text-[12px] text-[#9b94a8] mb-2">Set to £0 for a free show.</p>
+        <div class="relative max-w-[200px]">
+          <span class="absolute left-4 top-1/2 -translate-y-1/2 text-[15px] text-[#9b94a8] font-semibold">£</span>
+          <input type="number" id="s8-entry-fee" min="0" step="0.50" value="0"
+            class="w-full border border-[#e6dcfb] rounded-[11px] pl-8 pr-4 py-3 text-[15px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Step 9: Branding (placeholder) ────────────────────────────────── -->
+    <div id="step-9" style="display:none" class="bg-white rounded-card shadow-winner-card p-8">
+      <h2 class="text-[21px] font-extrabold text-[#1c1626] tracking-[-0.02em] mb-1">Branding</h2>
+      <p class="text-[14px] text-[#6f6880] mb-7">Give your show a distinctive look.</p>
+
+      <div class="bg-brand-tint/50 border border-brand/10 rounded-[14px] p-5 mb-6">
+        <p class="text-[13.5px] font-semibold text-[#1c1626] mb-1">Logo & banner upload coming soon</p>
+        <p class="text-[13px] text-[#6f6880]">You can continue and add your show's branding from the show settings page after publishing.</p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="border-2 border-dashed border-[#e6dcfb] rounded-[14px] p-6 flex flex-col items-center gap-2 opacity-40">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <p class="text-[12px] font-semibold text-[#9b94a8]">Organisation Logo</p>
+          <p class="text-[11px] text-[#c4bed0]">Coming soon</p>
+        </div>
+        <div class="border-2 border-dashed border-[#e6dcfb] rounded-[14px] p-6 flex flex-col items-center gap-2 opacity-40">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <p class="text-[12px] font-semibold text-[#9b94a8]">Show Banner</p>
+          <p class="text-[11px] text-[#c4bed0]">Coming soon</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Step 10: Review & Publish ─────────────────────────────────────── -->
+    <div id="step-10" style="display:none" class="bg-white rounded-card shadow-winner-card p-8">
+      <h2 class="text-[21px] font-extrabold text-[#1c1626] tracking-[-0.02em] mb-1">Review & Publish</h2>
+      <p class="text-[14px] text-[#6f6880] mb-7">Check everything looks right before going live.</p>
+      <div id="s10-review" class="space-y-3 mb-8"></div>
+
+      <div class="flex flex-col sm:flex-row gap-3 pt-6 border-t border-[#efebf5]">
+        <button id="btn-publish"
+          class="flex-1 inline-flex items-center justify-center gap-2 bg-brand text-white text-[15px] font-bold py-3.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Publish Now
+        </button>
+        <button id="btn-save-draft-final"
+          class="flex-1 inline-flex items-center justify-center gap-2 text-[#6f6880] border border-[#e6dcfb] text-[15px] font-bold py-3.5 rounded-btn hover:bg-[#faf7ff] transition-colors">
+          Save as Draft
+        </button>
+        <button disabled
+          class="flex-1 inline-flex items-center justify-center gap-2 text-[#c4bed0] border border-[#efebf5] text-[15px] font-bold py-3.5 rounded-btn cursor-not-allowed relative">
+          Schedule
+          <span class="absolute -top-2 -right-1 text-[10px] font-bold bg-[#efebf5] text-[#9b94a8] px-1.5 py-0.5 rounded-full">Soon</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Navigation buttons -->
+    <div class="flex items-center justify-between mt-6">
+      <button id="btn-back" style="display:none"
+        class="inline-flex items-center gap-2 text-[13.5px] font-semibold text-[#6f6880] hover:text-[#1c1626] transition-colors">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        Back
+      </button>
+      <div id="nav-spacer" class="flex-1"></div>
+      <button id="btn-next"
+        class="inline-flex items-center gap-2 bg-brand text-white text-[14px] font-bold px-6 py-3 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">
+        Continue
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </button>
+    </div>
+
+  </div>
+</DashboardLayout>
+
+<script>
+  import { getAuth } from '../../lib/auth.js';
+  import { supabase } from '../../lib/supabase.js';
+
+  // ─── Constants ──────────────────────────────────────────────────────────────
+  const STEP_NAMES = [
+    'Show Basics', 'Show Type', 'Breed & Eligibility', 'Classes',
+    'Sponsorship', 'Judging', 'Awards & Prizes', 'Fundraising',
+    'Branding', 'Review & Publish',
+  ];
+
+  const STANDARD_CLASSES = [
+    'Baby Puppy (Under 6 Months)', 'Puppy (6–12 Months)', 'Junior (1–2 Years)',
+    'Intermediate (2–3 Years)', 'Open (2–7 Years)', 'Veteran (8–10 Years)',
+    'Grand Veteran (Over 10 Years)',
+  ];
+
+  const FUN_STAKES = [
+    'Handsomest Dog', 'Prettiest Bitch', 'Best Neuter', 'Biggest Ears',
+    'Prettiest Eyes', 'Cutest Markings', 'Longest Tail', 'Funniest Pose',
+    'Most Awkward Pose', 'Best Rescue', 'Best Coat', 'Best Dressed',
+    'Best Dressed Owner and Dog', 'Looks Most Like Its Owner', 'Group Photo',
+  ];
+
+  // ─── State ──────────────────────────────────────────────────────────────────
+  const show = {
+    id: null,
+    title: '', host_org: '', org_type: null, charity_number: '',
+    contact_email: '', contact_phone: '',
+    entry_open_date: '', entry_close_date: '', show_date: '',
+    show_type: null, animal_type: 'dog',
+    breed_scope: 'all', breed_filter: '', group_filter: '',
+    has_sponsor: null, sponsors: [{ name: '', website: '' }],
+    is_judged: null, judge_count: 1, judge_setup: 'later',
+    judges: [],
+    has_digital_certs: null, has_physical_prizes: null, prize_source: null,
+    prizes: [],
+    is_fundraising: null, donation_type: null, fundraising_goal: '',
+    show_fundraising_publicly: null, donation_receipts: null,
+    entry_fee: 0,
+    classes: [],
+    wizard_step: 1,
+  };
+
+  let currentStep = 1;
+  let session, profile, base;
+  let draftShow = null;
+
+  // ─── Auth ───────────────────────────────────────────────────────────────────
+  const auth = await getAuth();
+  session = auth.session;
+  profile = auth.profile;
+  base    = auth.base;
+
+  if (!session) {
+    window.location.replace(base + 'login');
+  } else {
+    // Sidebar
+    const name = profile?.display_name || session.user.email?.split('@')[0] || 'Organiser';
+    const avatarEl = document.getElementById('sidebar-avatar');
+    const nameEl   = document.getElementById('sidebar-username');
+    const badgeEl  = document.getElementById('sidebar-role-badge');
+    if (avatarEl) avatarEl.textContent = name.charAt(0).toUpperCase();
+    if (nameEl)   nameEl.textContent   = name;
+    if (badgeEl)  badgeEl.textContent  = profile?.organiser_type === 'club' ? 'Club Organiser' : 'Organiser';
+    document.getElementById('sidebar-signout')?.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = base + 'login';
+    });
+
+    // Pre-fill
+    show.contact_email = session.user.email || '';
+    document.getElementById('s1-contact-email').value = show.contact_email;
+
+    if (profile?.organisation_id) {
+      const { data: org } = await supabase.from('organisations').select('name').eq('id', profile.organisation_id).single();
+      if (org) { show.host_org = org.name; document.getElementById('s1-host-org').value = org.name; }
+    }
+
+    // Check for existing draft
+    const { data: drafts } = await supabase
+      .from('shows').select('id, title, wizard_step').eq('created_by', session.user.id)
+      .eq('status', 'draft').order('created_at', { ascending: false }).limit(1);
+
+    if (drafts && drafts.length > 0) {
+      draftShow = drafts[0];
+      document.getElementById('draft-title').textContent = draftShow.title || 'Untitled Show';
+      document.getElementById('draft-banner').style.display = 'flex';
+    }
+
+    setupEventListeners();
+    initCardGroups();
+    goToStep(1);
+  }
+
+  // ─── Navigation ─────────────────────────────────────────────────────────────
+  function goToStep(n) {
+    document.getElementById(`step-${currentStep}`).style.display = 'none';
+    currentStep = n;
+    document.getElementById(`step-${currentStep}`).style.display = 'block';
+    document.getElementById('step-error').style.display = 'none';
+    updateProgress();
+    updateNav();
+    if (n === 4) initStep4();
+    if (n === 6) updateJudgePanels();
+    if (n === 10) buildReview();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function updateProgress() {
+    document.getElementById('prog-num').textContent = String(currentStep);
+    document.getElementById('prog-name').textContent = STEP_NAMES[currentStep - 1];
+    document.getElementById('prog-bar').style.width = `${(currentStep / 10) * 100}%`;
+  }
+
+  function updateNav() {
+    const backBtn  = document.getElementById('btn-back');
+    const nextBtn  = document.getElementById('btn-next');
+    const draftBtn = document.getElementById('action-save-draft');
+    backBtn.style.display  = currentStep > 1 ? 'inline-flex' : 'none';
+    nextBtn.style.display  = currentStep < 10 ? 'inline-flex' : 'none';
+    draftBtn.style.display = currentStep > 1 ? 'inline-flex' : 'none';
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('step-error');
+    el.textContent = msg;
+    el.style.display = 'block';
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  // ─── Card selection helper ───────────────────────────────────────────────────
+  function selectCard(container, value) {
+    container.querySelectorAll('[data-value]').forEach(card => {
+      if (card.disabled) return;
+      if (card.dataset.value === value) {
+        card.style.borderColor = '#7c3aed';
+        card.style.background  = '#faf7ff';
+        card.style.boxShadow   = '0 0 0 3px rgba(124,58,237,0.18)';
+      } else {
+        card.style.borderColor = '#e6dcfb';
+        card.style.background  = 'white';
+        card.style.boxShadow   = 'none';
+      }
+    });
+  }
+
+  function getSelectedCard(containerId) {
+    const el = document.getElementById(containerId);
+    if (!el) return null;
+    const active = el.querySelector('[style*="7c3aed"]');
+    return active ? active.dataset.value : null;
+  }
+
+  // ─── Toggle switch helper ───────────────────────────────────────────────────
+  function setupToggle(btnId, onChange) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const on = btn.dataset.on !== 'true';
+      btn.dataset.on = String(on);
+      btn.style.background = on ? '#7c3aed' : '#efebf5';
+      btn.querySelector('span').style.transform = on ? 'translateX(20px)' : 'translateX(0)';
+      onChange(on);
+    });
+  }
+
+  function setToggle(btnId, on) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.dataset.on = String(on);
+    btn.style.background = on ? '#7c3aed' : '#efebf5';
+    btn.querySelector('span').style.transform = on ? 'translateX(20px)' : 'translateX(0)';
+  }
+
+  // ─── YNA (Yes/No/Add Later) helper ──────────────────────────────────────────
+  function setupYNA(containerId, onChange) {
+    const el = document.getElementById(containerId);
+    el.querySelectorAll('.yna').forEach(btn => {
+      btn.addEventListener('click', () => {
+        el.querySelectorAll('.yna').forEach(b => {
+          b.style.borderColor = '#e6dcfb'; b.style.background = 'white'; b.style.boxShadow = 'none';
+        });
+        btn.style.borderColor = '#7c3aed';
+        btn.style.background  = '#faf7ff';
+        btn.style.boxShadow   = '0 0 0 3px rgba(124,58,237,0.18)';
+        onChange(btn.dataset.value);
+      });
+    });
+  }
+
+  function setYNA(containerId, value) {
+    const el = document.getElementById(containerId);
+    if (!el || !value) return;
+    el.querySelectorAll('.yna').forEach(btn => {
+      if (btn.dataset.value === value) {
+        btn.style.borderColor = '#7c3aed'; btn.style.background = '#faf7ff';
+        btn.style.boxShadow   = '0 0 0 3px rgba(124,58,237,0.18)';
+      } else {
+        btn.style.borderColor = '#e6dcfb'; btn.style.background = 'white'; btn.style.boxShadow = 'none';
+      }
+    });
+  }
+
+  // ─── Validation ─────────────────────────────────────────────────────────────
+  function validateStep(n) {
+    if (n === 1) {
+      if (!document.getElementById('s1-title').value.trim()) return showError('Please enter a show name.'), false;
+      if (!document.getElementById('s1-entry-close').value) return showError('Please set an entries close date.'), false;
+      if (!document.getElementById('s1-show-date').value) return showError('Please set a show date.'), false;
+      if (!getSelectedCard('org-type-cards')) return showError('Please select your type of organisation.'), false;
+      const email = document.getElementById('s1-contact-email').value.trim();
+      if (!email || !email.includes('@')) return showError('Please enter a valid contact email.'), false;
+      return true;
+    }
+    if (n === 2) {
+      if (!getSelectedCard('show-type-cards')) return showError('Please select a show type.'), false;
+      return true;
+    }
+    if (n === 3) {
+      const scope = getSelectedCard('breed-scope-cards');
+      if (!scope) return showError('Please select a breed scope.'), false;
+      if (scope === 'breed_specific' && !document.getElementById('s3-breed').value.trim()) return showError('Please enter a breed name.'), false;
+      if (scope === 'group_specific' && !document.getElementById('s3-group').value.trim()) return showError('Please enter a group name.'), false;
+      return true;
+    }
+    if (n === 4) {
+      if (show.classes.filter(c => c.enabled).length === 0) return showError('Please enable at least one class.'), false;
+      return true;
+    }
+    if (n === 5) {
+      const choice = getSelectedCard('sponsor-choice') || getYNAValue('sponsor-choice');
+      if (!choice) return showError('Please make a selection.'), false;
+      if (choice === 'yes' && !document.getElementById('s5-sponsor-name').value.trim()) return showError('Please enter a sponsor name.'), false;
+      return true;
+    }
+    if (n === 6) {
+      const choice = getYNAValue('judging-choice');
+      if (!choice) return showError('Please make a selection.'), false;
+      if (choice === 'yes') {
+        const setup = getSelectedCard('judge-setup-cards');
+        if (!setup) return showError('Please choose a judge setup option.'), false;
+        if (setup === 'now') {
+          for (let i = 0; i < show.judge_count; i++) {
+            const fn = document.getElementById(`judge-fn-${i}`)?.value.trim();
+            const ln = document.getElementById(`judge-ln-${i}`)?.value.trim();
+            const em = document.getElementById(`judge-em-${i}`)?.value.trim();
+            if (!fn || !ln || !em) return showError(`Please fill in all required fields for Judge ${i + 1}.`), false;
+          }
+        }
+      }
+      return true;
+    }
+    if (n === 7) {
+      const choice = getYNAValue('awards-choice');
+      if (!choice) return showError('Please make a selection.'), false;
+      return true;
+    }
+    if (n === 8) {
+      const choice = getYNAValue('fundraising-choice');
+      if (!choice) return showError('Please make a selection.'), false;
+      const fee = parseFloat(document.getElementById('s8-entry-fee').value);
+      if (isNaN(fee) || fee < 0) return showError('Please enter a valid entry fee (0 for free).'), false;
+      return true;
+    }
+    return true;
+  }
+
+  function getYNAValue(containerId) {
+    const el = document.getElementById(containerId);
+    if (!el) return null;
+    const active = el.querySelector('.yna[style*="7c3aed"]');
+    return active ? active.dataset.value : null;
+  }
+
+  // ─── Read step values into show state ───────────────────────────────────────
+  function readStep(n) {
+    if (n === 1) {
+      show.title          = document.getElementById('s1-title').value.trim();
+      show.entry_open_date = document.getElementById('s1-entry-open').value || null;
+      show.entry_close_date = document.getElementById('s1-entry-close').value || null;
+      show.show_date      = document.getElementById('s1-show-date').value || null;
+      show.host_org       = document.getElementById('s1-host-org').value.trim();
+      show.org_type       = getSelectedCard('org-type-cards');
+      show.charity_number = document.getElementById('s1-charity-number').value.trim();
+      show.contact_email  = document.getElementById('s1-contact-email').value.trim();
+      show.contact_phone  = document.getElementById('s1-contact-phone').value.trim();
+    }
+    if (n === 2) {
+      show.show_type   = getSelectedCard('show-type-cards');
+      show.animal_type = getSelectedCard('animal-type-cards') || 'dog';
+    }
+    if (n === 3) {
+      show.breed_scope  = getSelectedCard('breed-scope-cards') || 'all';
+      show.breed_filter = document.getElementById('s3-breed').value.trim();
+      show.group_filter = document.getElementById('s3-group').value.trim();
+    }
+    if (n === 4) {
+      // classes already updated in real-time via toggle handlers
+    }
+    if (n === 5) {
+      const choice = getYNAValue('sponsor-choice');
+      show.has_sponsor = choice === 'yes' ? true : choice === 'no' ? false : null;
+      if (choice === 'yes') {
+        show.sponsors = [{ name: document.getElementById('s5-sponsor-name').value.trim(), website: document.getElementById('s5-sponsor-website').value.trim() }];
+      }
+    }
+    if (n === 6) {
+      const choice = getYNAValue('judging-choice');
+      show.is_judged    = choice === 'yes' ? true : choice === 'no' ? false : null;
+      show.judge_setup  = getSelectedCard('judge-setup-cards') || 'later';
+      if (choice === 'yes' && show.judge_setup === 'now') {
+        show.judges = Array.from({ length: show.judge_count }, (_, i) => ({
+          first_name: document.getElementById(`judge-fn-${i}`)?.value.trim() || '',
+          last_name:  document.getElementById(`judge-ln-${i}`)?.value.trim() || '',
+          email:      document.getElementById(`judge-em-${i}`)?.value.trim() || '',
+          phone:      document.getElementById(`judge-ph-${i}`)?.value.trim() || '',
+        }));
+      }
+    }
+    if (n === 7) {
+      const choice = getYNAValue('awards-choice');
+      show.has_digital_certs   = choice === 'yes' ? document.getElementById('s7-certs-toggle').dataset.on === 'true' : null;
+      show.has_physical_prizes = choice === 'yes' ? document.getElementById('s7-physical-toggle').dataset.on === 'true' : null;
+      show.prize_source        = choice === 'yes' ? getSelectedCard('prize-source-cards') : null;
+      if (choice !== 'yes') { show.has_digital_certs = null; show.has_physical_prizes = null; }
+    }
+    if (n === 8) {
+      const choice = getYNAValue('fundraising-choice');
+      show.is_fundraising = choice === 'yes' ? true : choice === 'no' ? false : null;
+      if (choice === 'yes') {
+        show.donation_type              = getSelectedCard('donation-type-cards');
+        show.fundraising_goal           = parseFloat(document.getElementById('s8-goal').value) || null;
+        show.donation_receipts          = document.getElementById('s8-receipts-toggle').dataset.on === 'true';
+        show.show_fundraising_publicly  = document.getElementById('s8-public-toggle').dataset.on === 'true';
+      }
+      show.entry_fee = parseFloat(document.getElementById('s8-entry-fee').value) || 0;
+    }
+  }
+
+  // ─── Supabase save ───────────────────────────────────────────────────────────
+  async function saveShow(completedStep) {
+    const payload = {
+      title: show.title, org_type: show.org_type, charity_number: show.charity_number || null,
+      contact_email: show.contact_email, contact_phone: show.contact_phone || null,
+      entry_open_date: show.entry_open_date || null, entry_close_date: show.entry_close_date || null,
+      show_date: show.show_date || null,
+      show_type: show.show_type, animal_type: show.animal_type,
+      breed_scope: show.breed_scope, breed_filter: show.breed_filter || null, group_filter: show.group_filter || null,
+      has_sponsor: show.has_sponsor, is_judged: show.is_judged,
+      judge_count: show.judge_count, judge_setup: show.judge_setup,
+      has_digital_certs: show.has_digital_certs, has_physical_prizes: show.has_physical_prizes,
+      prize_source: show.prize_source, is_fundraising: show.is_fundraising,
+      donation_type: show.donation_type, fundraising_goal: show.fundraising_goal || null,
+      show_fundraising_publicly: show.show_fundraising_publicly, donation_receipts: show.donation_receipts,
+      entry_fee: show.entry_fee, status: 'draft',
+      wizard_step: completedStep + 1,
+    };
+
+    if (!show.id) {
+      payload.created_by = session.user.id;
+      if (profile?.organisation_id) payload.organisation_id = profile.organisation_id;
+      const { data, error } = await supabase.from('shows').insert(payload).select('id').single();
+      if (!error && data) show.id = data.id;
+    } else {
+      await supabase.from('shows').update(payload).eq('id', show.id);
+    }
+
+    // Save categories for step 4
+    if (completedStep === 4 && show.id) {
+      await supabase.from('show_categories').delete().eq('show_id', show.id);
+      const enabled = show.classes.filter(c => c.enabled);
+      if (enabled.length > 0) {
+        await supabase.from('show_categories').insert(enabled.map(c => ({ show_id: show.id, name: c.name })));
+      }
+    }
+
+    // Save judges for step 6
+    if (completedStep === 6 && show.id) {
+      await supabase.from('show_judges').delete().eq('show_id', show.id);
+      if (show.is_judged && show.judge_setup === 'now' && show.judges.length > 0) {
+        await supabase.from('show_judges').insert(show.judges.map(j => ({ show_id: show.id, ...j })));
+      }
+    }
+
+    // Save sponsor for step 5
+    if (completedStep === 5 && show.id) {
+      await supabase.from('show_sponsors').delete().eq('show_id', show.id);
+      if (show.has_sponsor && show.sponsors[0]?.name) {
+        await supabase.from('show_sponsors').insert(show.sponsors.filter(s => s.name).map(s => ({ show_id: show.id, ...s })));
+      }
+    }
+
+    // Save prizes for step 7
+    if (completedStep === 7 && show.id) {
+      await supabase.from('show_prizes').delete().eq('show_id', show.id);
+      if (show.has_physical_prizes && show.prizes.length > 0) {
+        await supabase.from('show_prizes').insert(show.prizes.filter(p => p).map(p => ({ show_id: show.id, description: p })));
+      }
+    }
+  }
+
+  // ─── Step 4 init ─────────────────────────────────────────────────────────────
+  function initStep4() {
+    const isBeauty  = show.show_type === 'beauty_contest' || show.show_type === 'memorial';
+    const isFun     = show.show_type === 'fun_stakes';
+    document.getElementById('s4-standard').style.display  = isBeauty ? 'block' : 'none';
+    document.getElementById('s4-funstakes').style.display = isFun    ? 'block' : 'none';
+    document.getElementById('s4-desc').textContent = isFun
+      ? 'Choose the fun categories for your show.'
+      : 'Select the classes for your show. Disable any you don\'t need, or add custom ones.';
+
+    if (isBeauty && show.classes.length === 0) {
+      show.classes = STANDARD_CLASSES.map(name => ({ name, enabled: true, custom: false }));
+      renderStandardClasses();
+    }
+    if (isFun && show.classes.length === 0) {
+      renderFunStakesCategories();
+    }
+  }
+
+  function renderStandardClasses() {
+    const list = document.getElementById('s4-class-list');
+    list.innerHTML = '';
+    show.classes.forEach((cls, i) => {
+      if (cls.custom) return;
+      const row = document.createElement('div');
+      row.className = 'flex items-center gap-3 p-3 border border-[#efebf5] rounded-[11px]';
+      row.innerHTML = `
+        <button type="button" data-idx="${i}" class="cls-toggle w-10 h-6 rounded-full ${cls.enabled ? 'bg-brand' : 'bg-[#efebf5]'} transition-colors relative flex items-center px-0.5 shrink-0">
+          <span class="w-5 h-5 rounded-full bg-white shadow transition-transform ${cls.enabled ? 'translate-x-4' : ''}"></span>
+        </button>
+        <span class="text-[13.5px] font-semibold text-[#1c1626] flex-1 ${cls.enabled ? '' : 'text-[#9b94a8] line-through'}">${cls.name}</span>
+      `;
+      list.appendChild(row);
+    });
+    // Re-append custom classes
+    show.classes.forEach((cls, i) => {
+      if (!cls.custom) return;
+      appendCustomClassRow(i, cls.name);
+    });
+    // Toggle handlers
+    list.querySelectorAll('.cls-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const i = parseInt(btn.dataset.idx);
+        show.classes[i].enabled = !show.classes[i].enabled;
+        renderStandardClasses();
+      });
+    });
+  }
+
+  function appendCustomClassRow(idx, value) {
+    const list = document.getElementById('s4-class-list');
+    const row = document.createElement('div');
+    row.dataset.customIdx = String(idx);
+    row.className = 'flex items-center gap-2';
+    row.innerHTML = `
+      <input type="text" value="${value}" placeholder="Class name"
+        class="flex-1 border border-[#e6dcfb] rounded-[11px] px-3 py-2.5 text-[14px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+      <button type="button" data-idx="${idx}" class="custom-remove text-[#c4bed0] hover:text-red-400 transition-colors">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    `;
+    row.querySelector('input').addEventListener('input', e => { show.classes[idx].name = e.target.value; });
+    row.querySelector('.custom-remove').addEventListener('click', () => {
+      show.classes.splice(idx, 1);
+      renderStandardClasses();
+    });
+    list.appendChild(row);
+  }
+
+  function renderFunStakesCategories() {
+    const list = document.getElementById('s4-funstakes-list');
+    list.innerHTML = '';
+    const selected = new Set(show.classes.filter(c => c.enabled).map(c => c.name));
+    FUN_STAKES.forEach(cat => {
+      const on = selected.has(cat);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'text-left rounded-[11px] border-2 px-3 py-2.5 text-[12.5px] font-semibold transition-all cursor-pointer';
+      btn.style.borderColor = on ? '#7c3aed' : '#e6dcfb';
+      btn.style.background  = on ? '#faf7ff' : 'white';
+      btn.textContent = cat;
+      btn.addEventListener('click', () => {
+        const isOn = btn.style.borderColor === 'rgb(124, 58, 237)';
+        btn.style.borderColor = isOn ? '#e6dcfb' : '#7c3aed';
+        btn.style.background  = isOn ? 'white'   : '#faf7ff';
+        if (isOn) {
+          show.classes = show.classes.filter(c => c.name !== cat);
+        } else {
+          show.classes.push({ name: cat, enabled: true, custom: false });
+        }
+      });
+      list.appendChild(btn);
+    });
+  }
+
+  // ─── Judge panels ────────────────────────────────────────────────────────────
+  function updateJudgePanels() {
+    const container = document.getElementById('s6-judge-panels');
+    container.innerHTML = '';
+    for (let i = 0; i < show.judge_count; i++) {
+      const j = show.judges[i] || { first_name: '', last_name: '', email: '', phone: '' };
+      const panel = document.createElement('div');
+      panel.className = 'border border-[#efebf5] rounded-[14px] p-4';
+      panel.innerHTML = `
+        <p class="text-[13px] font-bold text-brand mb-3">Judge ${i + 1}</p>
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <label class="block text-[12px] font-semibold text-[#4a4357] mb-1">First Name <span class="text-red-400">*</span></label>
+            <input type="text" id="judge-fn-${i}" value="${j.first_name}"
+              class="w-full border border-[#e6dcfb] rounded-[10px] px-3 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" />
+          </div>
+          <div>
+            <label class="block text-[12px] font-semibold text-[#4a4357] mb-1">Last Name <span class="text-red-400">*</span></label>
+            <input type="text" id="judge-ln-${i}" value="${j.last_name}"
+              class="w-full border border-[#e6dcfb] rounded-[10px] px-3 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[12px] font-semibold text-[#4a4357] mb-1">Email <span class="text-red-400">*</span></label>
+            <input type="email" id="judge-em-${i}" value="${j.email}"
+              class="w-full border border-[#e6dcfb] rounded-[10px] px-3 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" />
+          </div>
+          <div>
+            <label class="block text-[12px] font-semibold text-[#4a4357] mb-1">Phone <span class="text-[#9b94a8] font-normal">(optional)</span></label>
+            <input type="tel" id="judge-ph-${i}" value="${j.phone || ''}"
+              class="w-full border border-[#e6dcfb] rounded-[10px] px-3 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" />
+          </div>
+        </div>
+      `;
+      container.appendChild(panel);
+    }
+  }
+
+  // ─── Prize rows ──────────────────────────────────────────────────────────────
+  function addPrizeRow() {
+    const idx = show.prizes.length;
+    show.prizes.push('');
+    const list = document.getElementById('s7-prize-list');
+    const row = document.createElement('div');
+    row.className = 'flex items-center gap-2';
+    row.innerHTML = `
+      <input type="text" placeholder="e.g. £50 Pet Store Voucher"
+        class="flex-1 border border-[#e6dcfb] rounded-[11px] px-3 py-2.5 text-[14px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" />
+      <button type="button" class="prize-remove text-[#c4bed0] hover:text-red-400 transition-colors">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    `;
+    row.querySelector('input').addEventListener('input', e => { show.prizes[idx] = e.target.value; });
+    row.querySelector('.prize-remove').addEventListener('click', () => { row.remove(); show.prizes.splice(idx, 1); });
+    list.appendChild(row);
+  }
+
+  // ─── Review ─────────────────────────────────────────────────────────────────
+  function pendingBadge() {
+    return `<span class="inline-flex items-center gap-1 text-[11px] font-bold text-amber-dark bg-amber-tint px-2 py-0.5 rounded-full">⚠ Add Later</span>`;
+  }
+
+  function reviewRow(label, value, step) {
+    const isPending = value === null || value === undefined;
+    return `
+      <div class="flex items-start justify-between gap-4 py-3 border-b border-[#efebf5] last:border-0">
+        <span class="text-[13px] font-semibold text-[#4a4357] shrink-0 w-36">${label}</span>
+        <span class="text-[13px] text-[#1c1626] flex-1">${isPending ? pendingBadge() : value}</span>
+        <button type="button" class="text-[12px] font-semibold text-brand hover:underline shrink-0" onclick="goToStep(${step})">Edit</button>
+      </div>`;
+  }
+
+  function buildReview() {
+    const SHOW_TYPE_LABELS = { beauty_contest: 'Beauty Contest', fun_stakes: 'Fun Stakes', memorial: 'Memorial Show', other: 'Other' };
+    const ORG_TYPE_LABELS  = { non_profit: 'Non-Profit Fundraiser', registered_charity: 'Registered Charity', commercial: 'Commercial Organisation' };
+    const SCOPE_LABELS     = { all: 'All Breeds', breed_specific: `Breed Specific: ${show.breed_filter || '—'}`, group_specific: `Group Specific: ${show.group_filter || '—'}` };
+    const classes = show.classes.filter(c => c.enabled).map(c => c.name).join(', ') || '—';
+    const judges  = show.is_judged === true ? (show.judge_setup === 'now' ? `${show.judge_count} judge(s) — set up` : `${show.judge_count} judge(s) — invite later`) : show.is_judged === false ? 'Public voting' : null;
+
+    document.getElementById('s10-review').innerHTML = `
+      <div class="border border-[#efebf5] rounded-[14px] overflow-hidden">
+        <div class="bg-[#faf7ff] px-5 py-3 border-b border-[#efebf5]">
+          <p class="text-[12px] font-bold text-brand uppercase tracking-wide">Show Basics</p>
+        </div>
+        <div class="px-5">
+          ${reviewRow('Show Name', show.title, 1)}
+          ${reviewRow('Show Date', show.show_date || '—', 1)}
+          ${reviewRow('Entries Close', show.entry_close_date || '—', 1)}
+          ${reviewRow('Organisation', ORG_TYPE_LABELS[show.org_type] || '—', 1)}
+          ${reviewRow('Contact', show.contact_email, 1)}
+        </div>
+      </div>
+      <div class="border border-[#efebf5] rounded-[14px] overflow-hidden">
+        <div class="bg-[#faf7ff] px-5 py-3 border-b border-[#efebf5]">
+          <p class="text-[12px] font-bold text-brand uppercase tracking-wide">Show Type & Classes</p>
+        </div>
+        <div class="px-5">
+          ${reviewRow('Show Type', SHOW_TYPE_LABELS[show.show_type] || '—', 2)}
+          ${reviewRow('Animal Type', show.animal_type || 'Dog', 2)}
+          ${reviewRow('Breed Scope', SCOPE_LABELS[show.breed_scope] || '—', 3)}
+          ${reviewRow('Classes', classes, 4)}
+        </div>
+      </div>
+      <div class="border border-[#efebf5] rounded-[14px] overflow-hidden">
+        <div class="bg-[#faf7ff] px-5 py-3 border-b border-[#efebf5]">
+          <p class="text-[12px] font-bold text-brand uppercase tracking-wide">Sponsorship, Judging & Awards</p>
+        </div>
+        <div class="px-5">
+          ${reviewRow('Sponsor', show.has_sponsor === true ? (show.sponsors[0]?.name || 'Yes') : show.has_sponsor === false ? 'No sponsor' : null, 5)}
+          ${reviewRow('Judging', judges, 6)}
+          ${reviewRow('Awards', show.has_digital_certs === null && show.has_physical_prizes === null && show.has_digital_certs !== false ? null : `Certs: ${show.has_digital_certs ? 'Yes' : 'No'} · Physical: ${show.has_physical_prizes ? 'Yes' : 'No'}`, 7)}
+        </div>
+      </div>
+      <div class="border border-[#efebf5] rounded-[14px] overflow-hidden">
+        <div class="bg-[#faf7ff] px-5 py-3 border-b border-[#efebf5]">
+          <p class="text-[12px] font-bold text-brand uppercase tracking-wide">Fundraising & Entry Fees</p>
+        </div>
+        <div class="px-5">
+          ${reviewRow('Fundraising', show.is_fundraising === true ? (show.donation_type || 'Yes') : show.is_fundraising === false ? 'No fundraising' : null, 8)}
+          ${reviewRow('Entry Fee', show.entry_fee === 0 ? 'Free' : `£${show.entry_fee}`, 8)}
+        </div>
+      </div>`;
+  }
+
+  // ─── Publish / Save draft ───────────────────────────────────────────────────
+  async function finalSave(status) {
+    if (!show.id) return;
+    await supabase.from('shows').update({ status, wizard_step: 10 }).eq('id', show.id);
+    window.location.href = status === 'published'
+      ? `${base}show/?id=${show.id}`
+      : base + 'organiser';
+  }
+
+  // ─── Draft resume ────────────────────────────────────────────────────────────
+  async function loadDraft(id) {
+    const { data } = await supabase.from('shows').select('*').eq('id', id).single();
+    if (!data) return;
+    Object.assign(show, {
+      id: data.id, title: data.title || '', host_org: '', org_type: data.org_type,
+      charity_number: data.charity_number || '', contact_email: data.contact_email || '',
+      contact_phone: data.contact_phone || '', entry_open_date: data.entry_open_date || '',
+      entry_close_date: data.entry_close_date || '', show_date: data.show_date || '',
+      show_type: data.show_type, animal_type: data.animal_type || 'dog',
+      breed_scope: data.breed_scope || 'all', breed_filter: data.breed_filter || '',
+      group_filter: data.group_filter || '', has_sponsor: data.has_sponsor,
+      is_judged: data.is_judged, judge_count: data.judge_count || 1,
+      judge_setup: data.judge_setup || 'later', has_digital_certs: data.has_digital_certs,
+      has_physical_prizes: data.has_physical_prizes, prize_source: data.prize_source,
+      is_fundraising: data.is_fundraising, donation_type: data.donation_type,
+      fundraising_goal: data.fundraising_goal || '', donation_receipts: data.donation_receipts,
+      show_fundraising_publicly: data.show_fundraising_publicly, entry_fee: data.entry_fee || 0,
+    });
+    // Populate Step 1 fields
+    document.getElementById('s1-title').value         = show.title;
+    document.getElementById('s1-entry-open').value    = show.entry_open_date;
+    document.getElementById('s1-entry-close').value   = show.entry_close_date;
+    document.getElementById('s1-show-date').value     = show.show_date;
+    document.getElementById('s1-contact-email').value = show.contact_email;
+    document.getElementById('s1-contact-phone').value = show.contact_phone;
+    if (show.org_type) selectCard(document.getElementById('org-type-cards'), show.org_type);
+    if (show.org_type === 'registered_charity') {
+      document.getElementById('s1-charity-field').style.display = 'block';
+      document.getElementById('s1-charity-number').value = show.charity_number;
+    }
+    // Restore other card states
+    if (show.show_type) selectCard(document.getElementById('show-type-cards'), show.show_type);
+    if (show.animal_type) selectCard(document.getElementById('animal-type-cards'), show.animal_type);
+    selectCard(document.getElementById('breed-scope-cards'), show.breed_scope);
+    updateBreedFields();
+    // YNA states
+    if (show.has_sponsor !== null) setYNA('sponsor-choice', show.has_sponsor === true ? 'yes' : show.has_sponsor === false ? 'no' : 'later');
+    if (show.has_sponsor) document.getElementById('s5-sponsor-form').style.display = 'block';
+    if (show.is_judged !== null) setYNA('judging-choice', show.is_judged === true ? 'yes' : show.is_judged === false ? 'no' : 'later');
+    if (show.is_judged) document.getElementById('s6-judge-form').style.display = 'block';
+    // Load categories
+    const { data: cats } = await supabase.from('show_categories').select('name').eq('show_id', show.id);
+    if (cats) show.classes = cats.map(c => ({ name: c.name, enabled: true, custom: false }));
+    // Navigate to last completed step
+    goToStep(Math.min(data.wizard_step || 1, 10));
+  }
+
+  // ─── Misc helpers ────────────────────────────────────────────────────────────
+  function updateBreedFields() {
+    document.getElementById('s3-breed-field').style.display = show.breed_scope === 'breed_specific' ? 'block' : 'none';
+    document.getElementById('s3-group-field').style.display = show.breed_scope === 'group_specific' ? 'block' : 'none';
+  }
+
+  // ─── Event listeners setup ──────────────────────────────────────────────────
+  function initCardGroups() {
+    // Step 1: org type
+    document.getElementById('org-type-cards').querySelectorAll('[data-value]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectCard(document.getElementById('org-type-cards'), btn.dataset.value);
+        document.getElementById('s1-charity-field').style.display = btn.dataset.value === 'registered_charity' ? 'block' : 'none';
+      });
+    });
+    // Step 2: show type + animal type
+    document.getElementById('show-type-cards').querySelectorAll('[data-value]').forEach(btn => {
+      btn.addEventListener('click', () => { selectCard(document.getElementById('show-type-cards'), btn.dataset.value); });
+    });
+    document.getElementById('animal-type-cards').querySelectorAll('[data-value]').forEach(btn => {
+      btn.addEventListener('click', () => { selectCard(document.getElementById('animal-type-cards'), btn.dataset.value); });
+    });
+    // Default animal: dog
+    selectCard(document.getElementById('animal-type-cards'), 'dog');
+    // Step 3: breed scope
+    document.getElementById('breed-scope-cards').querySelectorAll('[data-value]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectCard(document.getElementById('breed-scope-cards'), btn.dataset.value);
+        show.breed_scope = btn.dataset.value;
+        updateBreedFields();
+      });
+    });
+    selectCard(document.getElementById('breed-scope-cards'), 'all');
+    // Step 4: add custom class
+    document.getElementById('s4-add-class').addEventListener('click', () => {
+      const idx = show.classes.length;
+      show.classes.push({ name: '', enabled: true, custom: true });
+      appendCustomClassRow(idx, '');
+    });
+    document.getElementById('s4-add-funstakes').addEventListener('click', () => {
+      const div = document.getElementById('s4-custom-funstakes');
+      const idx = show.classes.length;
+      show.classes.push({ name: '', enabled: true, custom: true });
+      const row = document.createElement('div');
+      row.className = 'flex items-center gap-2';
+      row.innerHTML = `<input type="text" placeholder="Custom category" class="flex-1 border border-[#e6dcfb] rounded-[11px] px-3 py-2.5 text-[14px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" /><button type="button" class="text-[#c4bed0] hover:text-red-400 transition-colors"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
+      row.querySelector('input').addEventListener('input', e => { show.classes[idx].name = e.target.value; });
+      row.querySelector('button').addEventListener('click', () => { row.remove(); show.classes.splice(idx, 1); });
+      div.appendChild(row);
+    });
+    // Step 5: sponsorship YNA
+    setupYNA('sponsor-choice', val => {
+      document.getElementById('s5-sponsor-form').style.display = val === 'yes' ? 'block' : 'none';
+    });
+    // Step 6: judging YNA + judge count + setup cards
+    setupYNA('judging-choice', val => {
+      document.getElementById('s6-judge-form').style.display = val === 'yes' ? 'block' : 'none';
+    });
+    document.getElementById('judge-minus').addEventListener('click', () => {
+      if (show.judge_count > 1) { show.judge_count--; document.getElementById('judge-count-display').textContent = String(show.judge_count); updateJudgePanels(); }
+    });
+    document.getElementById('judge-plus').addEventListener('click', () => {
+      if (show.judge_count < 7) { show.judge_count++; document.getElementById('judge-count-display').textContent = String(show.judge_count); updateJudgePanels(); }
+    });
+    document.getElementById('judge-setup-cards').querySelectorAll('[data-value]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectCard(document.getElementById('judge-setup-cards'), btn.dataset.value);
+        show.judge_setup = btn.dataset.value;
+        document.getElementById('s6-judge-fields').style.display = btn.dataset.value === 'now' ? 'block' : 'none';
+        if (btn.dataset.value === 'now') updateJudgePanels();
+      });
+    });
+    // Step 7: awards YNA + toggles + prize source
+    setupYNA('awards-choice', val => {
+      document.getElementById('s7-awards-form').style.display = val === 'yes' ? 'block' : 'none';
+    });
+    setupToggle('s7-certs-toggle', on => { show.has_digital_certs = on; });
+    setupToggle('s7-physical-toggle', on => {
+      show.has_physical_prizes = on;
+      document.getElementById('s7-physical-form').style.display = on ? 'block' : 'none';
+    });
+    document.getElementById('prize-source-cards').querySelectorAll('[data-value]').forEach(btn => {
+      btn.addEventListener('click', () => { selectCard(document.getElementById('prize-source-cards'), btn.dataset.value); });
+    });
+    document.getElementById('s7-add-prize').addEventListener('click', addPrizeRow);
+    // Step 8: fundraising YNA + toggles + donation type
+    setupYNA('fundraising-choice', val => {
+      document.getElementById('s8-fundraising-form').style.display = val === 'yes' ? 'block' : 'none';
+    });
+    setupToggle('s8-receipts-toggle', on => { show.donation_receipts = on; });
+    setupToggle('s8-public-toggle', on => { show.show_fundraising_publicly = on; });
+    document.getElementById('donation-type-cards').querySelectorAll('[data-value]').forEach(btn => {
+      btn.addEventListener('click', () => { selectCard(document.getElementById('donation-type-cards'), btn.dataset.value); });
+    });
+    // Auto-enable receipts for registered charity
+    if (show.org_type === 'registered_charity') setToggle('s8-receipts-toggle', true);
+  }
+
+  function setupEventListeners() {
+    document.getElementById('btn-next').addEventListener('click', async () => {
+      if (!validateStep(currentStep)) return;
+      readStep(currentStep);
+      const btnNext = document.getElementById('btn-next');
+      btnNext.textContent = 'Saving…';
+      btnNext.disabled = true;
+      await saveShow(currentStep);
+      btnNext.innerHTML = 'Continue <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
+      btnNext.disabled = false;
+      goToStep(currentStep + 1);
+    });
+
+    document.getElementById('btn-back').addEventListener('click', () => { goToStep(currentStep - 1); });
+
+    document.getElementById('action-save-draft').addEventListener('click', async () => {
+      readStep(currentStep);
+      await saveShow(currentStep);
+      window.location.href = base + 'organiser';
+    });
+
+    document.getElementById('btn-publish').addEventListener('click', async () => {
+      document.getElementById('btn-publish').textContent = 'Publishing…';
+      await finalSave('published');
+    });
+
+    document.getElementById('btn-save-draft-final').addEventListener('click', async () => {
+      await finalSave('draft');
+    });
+
+    document.getElementById('draft-continue').addEventListener('click', async () => {
+      document.getElementById('draft-banner').style.display = 'none';
+      if (draftShow) await loadDraft(draftShow.id);
+    });
+
+    document.getElementById('draft-fresh').addEventListener('click', () => {
+      document.getElementById('draft-banner').style.display = 'none';
+      draftShow = null;
+    });
+  }
+</script>
