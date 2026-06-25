@@ -40,31 +40,31 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     <!-- Section cards grid — headers only, no inline panels -->
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" id="sections-grid">
       <div class="section-card bg-white rounded-card border border-[#e6dcfb]" id="card-basics">
-        <div class="card-header flex items-center justify-between px-5 py-4 min-h-[72px]" id="hdr-basics"></div>
+        <div class="card-header p-5" id="hdr-basics"></div>
       </div>
       <div class="section-card bg-white rounded-card border border-[#e6dcfb]" id="card-showtype">
-        <div class="card-header flex items-center justify-between px-5 py-4 min-h-[72px]" id="hdr-showtype"></div>
+        <div class="card-header p-5" id="hdr-showtype"></div>
       </div>
       <div class="section-card bg-white rounded-card border border-[#e6dcfb]" id="card-breed">
-        <div class="card-header flex items-center justify-between px-5 py-4 min-h-[72px]" id="hdr-breed"></div>
+        <div class="card-header p-5" id="hdr-breed"></div>
       </div>
       <div class="section-card bg-white rounded-card border border-[#e6dcfb]" id="card-classes">
-        <div class="card-header flex items-center justify-between px-5 py-4 min-h-[72px]" id="hdr-classes"></div>
+        <div class="card-header p-5" id="hdr-classes"></div>
       </div>
       <div class="section-card bg-white rounded-card border border-[#e6dcfb]" id="card-sponsorship">
-        <div class="card-header flex items-center justify-between px-5 py-4 min-h-[72px]" id="hdr-sponsorship"></div>
+        <div class="card-header p-5" id="hdr-sponsorship"></div>
       </div>
       <div class="section-card bg-white rounded-card border border-[#e6dcfb]" id="card-judging">
-        <div class="card-header flex items-center justify-between px-5 py-4 min-h-[72px]" id="hdr-judging"></div>
+        <div class="card-header p-5" id="hdr-judging"></div>
       </div>
       <div class="section-card bg-white rounded-card border border-[#e6dcfb]" id="card-awards">
-        <div class="card-header flex items-center justify-between px-5 py-4 min-h-[72px]" id="hdr-awards"></div>
+        <div class="card-header p-5" id="hdr-awards"></div>
       </div>
       <div class="section-card bg-white rounded-card border border-[#e6dcfb]" id="card-fundraising">
-        <div class="card-header flex items-center justify-between px-5 py-4 min-h-[72px]" id="hdr-fundraising"></div>
+        <div class="card-header p-5" id="hdr-fundraising"></div>
       </div>
       <div class="section-card bg-white rounded-card border border-[#e6dcfb]" id="card-branding">
-        <div class="card-header flex items-center justify-between px-5 py-4 min-h-[72px]" id="hdr-branding"></div>
+        <div class="card-header p-5" id="hdr-branding"></div>
       </div>
     </div>
   </div>
@@ -645,65 +645,166 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   }
 
   // ── Card header rendering ────────────────────────────────────────────────────
-  function setHeader(id, dotColor, title, summary, actionLabel) {
+  const DOT_TEXT_COLORS = { '#22c55e': '#16a34a', '#fbbf24': '#d97706', '#c4bed0': '#9b94a8' };
+
+  // setHeader(id, dot, statusText, title, rows, actionLabel)
+  // rows = array of [label, value] pairs shown below the title
+  function setHeader(id, dot, statusText, title, rows, actionLabel) {
     const el = document.getElementById(`hdr-${id}`);
     if (!el) return;
+    const textColor = DOT_TEXT_COLORS[dot] || '#9b94a8';
+    const rowsHtml = rows.length
+      ? `<div class="space-y-2 border-t border-[#f5f3fa] mt-3 pt-3">${
+          rows.map(([lbl, val]) =>
+            `<div class="flex items-start gap-2">
+              <span class="text-[10.5px] font-bold text-[#c4bed0] uppercase tracking-wide w-[72px] shrink-0 leading-[1.7]">${lbl}</span>
+              <span class="text-[12.5px] text-[#4a4357] font-medium leading-snug">${val}</span>
+            </div>`
+          ).join('')
+        }</div>`
+      : '';
     el.innerHTML = `
-      <div class="flex items-center gap-3 min-w-0">
-        <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:${dotColor}"></span>
-        <div class="min-w-0">
-          <p class="text-[14px] font-bold text-[#1c1626]">${title}</p>
-          <p class="text-[12px] text-[#9b94a8] truncate">${summary}</p>
+      <div class="flex items-start justify-between gap-2">
+        <div>
+          <div class="flex items-center gap-1.5 mb-1.5">
+            <span class="w-2 h-2 rounded-full shrink-0" style="background:${dot}"></span>
+            <span class="text-[10.5px] font-bold uppercase tracking-wide" style="color:${textColor}">${statusText}</span>
+          </div>
+          <p class="text-[15px] font-extrabold text-[#1c1626] leading-tight">${title}</p>
         </div>
+        <button class="action-btn text-[13px] font-bold text-brand hover:underline shrink-0 mt-1" data-panel="${id}">${actionLabel}</button>
       </div>
-      <button class="action-btn text-[13px] font-bold text-brand hover:underline shrink-0 ml-3" data-panel="${id}">${actionLabel}</button>`;
+      ${rowsHtml}`;
   }
 
   function renderAllHeaders() {
-    setHeader('basics', '#22c55e', 'Show Basics', show.title || 'Untitled', 'Edit');
+    function fmtDate(d) {
+      return d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+    }
 
-    if (show.show_type) setHeader('showtype', '#22c55e', 'Show Type', SHOW_TYPE_LABELS[show.show_type] || show.show_type, 'Edit');
-    else setHeader('showtype', '#fbbf24', 'Show Type', 'Not configured', 'Set Up');
+    setHeader('basics', '#22c55e', 'Configured', 'Show Basics', [
+      ['Name',      show.title || '—'],
+      ['Show date', fmtDate(show.show_date)],
+      ['Closes',    fmtDate(show.entry_close_date)],
+      ['Org type',  ORG_TYPE_LABELS[show.org_type] || '—'],
+    ], 'Edit');
 
-    const breedSummary = show.breed_scope
-      ? (BREED_SCOPE_LABELS[show.breed_scope] + (show.breed_filter ? ` — ${show.breed_filter}` : show.group_filter ? ` — ${show.group_filter}` : ''))
-      : null;
-    if (breedSummary) setHeader('breed', '#22c55e', 'Breed & Eligibility', breedSummary, 'Edit');
-    else setHeader('breed', '#fbbf24', 'Breed & Eligibility', 'Not configured', 'Set Up');
+    if (show.show_type) {
+      setHeader('showtype', '#22c55e', 'Configured', 'Show Type', [
+        ['Type',   SHOW_TYPE_LABELS[show.show_type]],
+        ['Animal', show.animal_type ? show.animal_type.charAt(0).toUpperCase() + show.animal_type.slice(1) : 'Dog'],
+      ], 'Edit');
+    } else {
+      setHeader('showtype', '#fbbf24', 'Setup needed', 'Show Type', [
+        ['Type',   '—'],
+        ['Animal', '—'],
+      ], 'Set Up');
+    }
 
-    if (categories.length > 0) setHeader('classes', '#22c55e', 'Classes', `${categories.length} class${categories.length !== 1 ? 'es' : ''} configured`, 'Edit');
-    else setHeader('classes', '#fbbf24', 'Classes', 'No classes added yet', 'Set Up');
+    if (show.breed_scope) {
+      const filter = show.breed_scope === 'breed_specific' ? show.breed_filter
+                   : show.breed_scope === 'group_specific'  ? show.group_filter : null;
+      setHeader('breed', '#22c55e', 'Configured', 'Breed & Eligibility', [
+        ['Scope',  BREED_SCOPE_LABELS[show.breed_scope]],
+        ...(filter ? [['Filter', filter]] : []),
+      ], 'Edit');
+    } else {
+      setHeader('breed', '#fbbf24', 'Setup needed', 'Breed & Eligibility', [
+        ['Scope', '—'],
+      ], 'Set Up');
+    }
 
-    if (show.has_sponsor === true) setHeader('sponsorship', '#22c55e', 'Sponsorship', sponsors[0]?.name || 'Sponsor added', 'Edit');
-    else if (show.has_sponsor === false) setHeader('sponsorship', '#c4bed0', 'Sponsorship', 'No sponsor for this show', 'Enable');
-    else setHeader('sponsorship', '#fbbf24', 'Sponsorship', 'Not configured', 'Set Up');
+    if (categories.length > 0) {
+      const preview = categories.slice(0, 3).map(c => c.name).join(', ')
+        + (categories.length > 3 ? ` +${categories.length - 3} more` : '');
+      setHeader('classes', '#22c55e', 'Configured', 'Classes', [
+        ['Count',   `${categories.length} class${categories.length !== 1 ? 'es' : ''}`],
+        ['Classes', preview],
+      ], 'Edit');
+    } else {
+      setHeader('classes', '#fbbf24', 'Setup needed', 'Classes', [
+        ['Count', 'None added yet'],
+      ], 'Set Up');
+    }
 
-    if (show.is_judged === true) setHeader('judging', '#22c55e', 'Judging', `Expert judges · ${judgeCount} judge${judgeCount !== 1 ? 's' : ''}`, 'Edit');
-    else if (show.is_judged === false) setHeader('judging', '#c4bed0', 'Judging', 'Public voting', 'Edit');
-    else setHeader('judging', '#fbbf24', 'Judging', 'Not configured', 'Set Up');
+    if (show.has_sponsor === true) {
+      const rows = [['Status', 'Sponsor added']];
+      if (sponsors[0]?.name)    rows.push(['Name',    sponsors[0].name]);
+      if (sponsors[0]?.website) rows.push(['Website', sponsors[0].website]);
+      setHeader('sponsorship', '#22c55e', 'Configured', 'Sponsorship', rows, 'Edit');
+    } else if (show.has_sponsor === false) {
+      setHeader('sponsorship', '#c4bed0', 'Not used', 'Sponsorship', [
+        ['Status', 'No sponsor for this show'],
+      ], 'Enable');
+    } else {
+      setHeader('sponsorship', '#fbbf24', 'Setup needed', 'Sponsorship', [
+        ['Status', '—'],
+      ], 'Set Up');
+    }
 
-    const hasCerts = show.has_digital_certs === true, hasPhysical = show.has_physical_prizes === true;
-    const noAwards = show.has_digital_certs === false && show.has_physical_prizes === false;
+    if (show.is_judged === true) {
+      const rows = [
+        ['Method', 'Expert judges'],
+        ['Count',  `${judgeCount} judge${judgeCount !== 1 ? 's' : ''}`],
+      ];
+      if (judges[0]?.first_name) rows.push(['Lead', `${judges[0].first_name} ${judges[0].last_name || ''}`.trim()]);
+      setHeader('judging', '#22c55e', 'Configured', 'Judging', rows, 'Edit');
+    } else if (show.is_judged === false) {
+      setHeader('judging', '#c4bed0', 'Public voting', 'Judging', [
+        ['Method', 'Public voting'],
+      ], 'Edit');
+    } else {
+      setHeader('judging', '#fbbf24', 'Setup needed', 'Judging', [
+        ['Method', '—'],
+      ], 'Set Up');
+    }
+
+    const hasCerts    = show.has_digital_certs === true;
+    const hasPhysical = show.has_physical_prizes === true;
+    const noAwards    = show.has_digital_certs === false && show.has_physical_prizes === false;
     if (hasCerts || hasPhysical) {
-      const parts = [hasCerts ? 'Digital certs' : null, hasPhysical ? 'Physical prizes' : null].filter(Boolean);
-      setHeader('awards', '#22c55e', 'Awards & Prizes', parts.join(' · '), 'Edit');
+      const rows = [
+        ['Certs',    hasCerts    ? 'Digital certificates' : 'None'],
+        ['Physical', hasPhysical ? 'Physical prizes'      : 'None'],
+      ];
+      if (hasPhysical && show.prize_source) rows.push(['Source', show.prize_source.charAt(0).toUpperCase() + show.prize_source.slice(1)]);
+      setHeader('awards', '#22c55e', 'Configured', 'Awards & Prizes', rows, 'Edit');
     } else if (noAwards) {
-      setHeader('awards', '#c4bed0', 'Awards & Prizes', 'No awards for this show', 'Enable');
+      setHeader('awards', '#c4bed0', 'Not used', 'Awards & Prizes', [
+        ['Status', 'No awards for this show'],
+      ], 'Enable');
     } else {
-      setHeader('awards', '#fbbf24', 'Awards & Prizes', 'Not configured', 'Set Up');
+      setHeader('awards', '#fbbf24', 'Setup needed', 'Awards & Prizes', [
+        ['Certs',    '—'],
+        ['Physical', '—'],
+      ], 'Set Up');
     }
 
-    const sym = CURRENCY_SYMBOLS[show.currency] || '£';
+    const sym     = CURRENCY_SYMBOLS[show.currency] || '£';
+    const feeText = show.entry_fee > 0 ? `${sym}${show.entry_fee}` : `${sym}0 (free)`;
     if (show.is_fundraising === true) {
-      const goalText = show.fundraising_goal ? ` · Goal: ${sym}${show.fundraising_goal}` : '';
-      setHeader('fundraising', '#22c55e', 'Fundraising & Fees', `Active${goalText} · ${sym}${show.entry_fee || 0} entry fee`, 'Edit');
+      setHeader('fundraising', '#22c55e', 'Configured', 'Fundraising & Fees', [
+        ['Status',    'Fundraising active'],
+        ['Entry fee', feeText],
+        ['Goal',      show.fundraising_goal ? `${sym}${show.fundraising_goal}` : 'Not set'],
+        ['Currency',  show.currency || 'GBP'],
+      ], 'Edit');
     } else if (show.is_fundraising === false) {
-      setHeader('fundraising', '#c4bed0', 'Fundraising & Fees', `No fundraising · ${sym}${show.entry_fee || 0} entry fee`, 'Edit');
+      setHeader('fundraising', '#c4bed0', 'No fundraising', 'Fundraising & Fees', [
+        ['Entry fee', feeText],
+        ['Currency',  show.currency || 'GBP'],
+      ], 'Edit');
     } else {
-      setHeader('fundraising', '#fbbf24', 'Fundraising & Fees', 'Not configured', 'Set Up');
+      setHeader('fundraising', '#fbbf24', 'Setup needed', 'Fundraising & Fees', [
+        ['Status',    '—'],
+        ['Entry fee', '—'],
+      ], 'Set Up');
     }
 
-    setHeader('branding', '#fbbf24', 'Branding', 'Upload coming soon', 'Preview');
+    setHeader('branding', '#fbbf24', 'Coming soon', 'Branding', [
+      ['Logo',   'Not uploaded'],
+      ['Banner', 'Not uploaded'],
+    ], 'Preview');
   }
 
   // ── Populate forms ───────────────────────────────────────────────────────────
