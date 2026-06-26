@@ -276,7 +276,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
               <svg class="upload-icon shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
               <div>
                 <span class="upload-label block text-[13px] text-[#9b94a8]">Click to upload sponsor logo</span>
-                <span class="text-[11px] text-[#c4bed0]">JPG, PNG, WebP · max 2 MB</span>
+                <span class="upload-size-hint text-[11px] text-[#c4bed0]">JPG, PNG, WebP · max 2 MB</span>
               </div>
             </div>
           </div>
@@ -457,7 +457,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
               <img class="upload-preview hidden max-h-20 rounded-lg object-contain mb-1" />
               <svg class="upload-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
               <span class="upload-label text-[12px] text-[#9b94a8]">Click to upload</span>
-              <span class="text-[11px] text-[#c4bed0]">JPG, PNG, WebP · max 2 MB</span>
+              <span class="upload-size-hint text-[11px] text-[#c4bed0]">JPG, PNG, WebP · max 2 MB</span>
             </div>
           </div>
         </div>
@@ -470,7 +470,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
               <img class="upload-preview hidden max-h-20 rounded-lg object-contain mb-1" />
               <svg class="upload-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
               <span class="upload-label text-[12px] text-[#9b94a8]">Click to upload</span>
-              <span class="text-[11px] text-[#c4bed0]">JPG, PNG, WebP · max 2 MB</span>
+              <span class="upload-size-hint text-[11px] text-[#c4bed0]">JPG, PNG, WebP · max 2 MB</span>
             </div>
           </div>
         </div>
@@ -486,7 +486,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
             <svg class="upload-icon shrink-0" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
             <div>
               <span class="upload-label block text-[13px] text-[#9b94a8] font-medium">Click to upload a banner image</span>
-              <span class="text-[11px] text-[#c4bed0]">JPG, PNG, WebP · max 2 MB · recommended 1600×400</span>
+              <span class="upload-size-hint text-[11px] text-[#c4bed0]">JPG, PNG, WebP · max 2 MB · recommended 1600×400</span>
             </div>
           </div>
         </div>
@@ -658,9 +658,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
   let currentStep = 1;
   let session, profile, base;
-  let draftShow   = null;
-  let serviceFees = {};
-  let savedJudges = [];
+  let draftShow      = null;
+  let serviceFees    = {};
+  let savedJudges    = [];
+  let maxUploadMb    = 5;
   const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
   // ─── Auth ───────────────────────────────────────────────────────────────────
@@ -709,8 +710,14 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     }
 
     const { data: feeSettings } = await supabase
-      .from('platform_settings').select('key, value').in('key', ['service_fee_AUD', 'service_fee_NZD']);
-    (feeSettings || []).forEach(r => { serviceFees[r.key] = parseFloat(r.value) || 0; });
+      .from('platform_settings').select('key, value').in('key', ['service_fee_AUD', 'service_fee_NZD', 'max_upload_mb']);
+    (feeSettings || []).forEach(r => {
+      if (r.key === 'max_upload_mb') maxUploadMb = parseFloat(r.value) || 5;
+      else serviceFees[r.key] = parseFloat(r.value) || 0;
+    });
+    document.querySelectorAll('.upload-size-hint').forEach(el => {
+      el.textContent = el.textContent.replace(/\d+ MB/, `${maxUploadMb} MB`);
+    });
 
     const { data: sjData } = await supabase
       .from('saved_judges').select('*').eq('organiser_id', session.user.id).order('first_name');
@@ -1240,7 +1247,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       photoBtn.addEventListener('click', () => photoInput.click());
       photoInput.addEventListener('change', async () => {
         const file = photoInput.files[0];
-        if (!file || file.size > 2 * 1024 * 1024 || !show.id) return;
+        if (!file || file.size > maxUploadMb * 1024 * 1024 || !show.id) return;
         photoBtn.textContent = 'Uploading…';
         try {
           const url = await uploadImage(`judges/${show.id}/judge-${i}`, file);
@@ -1509,7 +1516,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     async function processFile(file) {
       if (!file) return;
-      if (file.size > 2 * 1024 * 1024) { label.textContent = 'File too large (max 2 MB)'; return; }
+      if (file.size > maxUploadMb * 1024 * 1024) { label.textContent = `File too large (max ${maxUploadMb} MB)`; return; }
       const path = getPath();
       if (!path) { label.textContent = 'Save show progress first'; return; }
       label.textContent = 'Uploading…';

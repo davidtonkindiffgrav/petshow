@@ -513,7 +513,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
               <svg class="upload-icon shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
               <div>
                 <span class="upload-label block text-[12px] text-[#9b94a8]">Click to upload banner</span>
-                <span class="text-[11px] text-[#c4bed0]">JPG, PNG, WebP · max 2 MB</span>
+                <span class="upload-size-hint text-[11px] text-[#c4bed0]">JPG, PNG, WebP · max 2 MB</span>
               </div>
             </div>
           </div>
@@ -545,8 +545,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   let showId      = null;
   let mgmtBase    = '';
   let judgeCount  = 1;
-  let serviceFees = {};
-  let savedJudges = [];
+  let serviceFees    = {};
+  let savedJudges    = [];
+  let maxUploadMb    = 5;
   let pendingBranding = { logo: null, orgLogo: null, banner: null };
 
   const SHOW_TYPE_LABELS  = { beauty_contest: 'Beauty Contest', fun_stakes: 'Fun Stakes', memorial: 'Memorial Show', other: 'Other' };
@@ -587,7 +588,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       supabase.from('show_judges').select('*').eq('show_id', showId),
       supabase.from('show_sponsors').select('*').eq('show_id', showId),
       supabase.from('show_prizes').select('description').eq('show_id', showId),
-      supabase.from('platform_settings').select('key, value').in('key', ['service_fee_AUD', 'service_fee_NZD']),
+      supabase.from('platform_settings').select('key, value').in('key', ['service_fee_AUD', 'service_fee_NZD', 'max_upload_mb']),
       supabase.from('saved_judges').select('*').eq('organiser_id', uid).order('first_name'),
     ]);
 
@@ -599,7 +600,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     sponsors    = sponsorsRes.data || [];
     prizes      = prizesRes.data   || [];
     savedJudges = sjRes.data       || [];
-    (feeRes.data || []).forEach(r => { serviceFees[r.key] = parseFloat(r.value) || 0; });
+    (feeRes.data || []).forEach(r => {
+      if (r.key === 'max_upload_mb') maxUploadMb = parseFloat(r.value) || 5;
+      else serviceFees[r.key] = parseFloat(r.value) || 0;
+    });
+    document.querySelectorAll('.upload-size-hint').forEach(el => {
+      el.textContent = el.textContent.replace(/\d+ MB/, `${maxUploadMb} MB`);
+    });
     judgeCount = judges.length || show.judge_count || 1;
 
     document.getElementById('page-loading').style.display = 'none';
@@ -1097,7 +1104,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     input.value = '';
     function processFile(file) {
       if (!file) return;
-      if (file.size > 2 * 1024 * 1024) { label.textContent = 'Too large (max 2 MB)'; return; }
+      if (file.size > maxUploadMb * 1024 * 1024) { label.textContent = `Too large (max ${maxUploadMb} MB)`; return; }
       pendingBranding[key] = file;
       const reader = new FileReader();
       reader.onload = e => {
