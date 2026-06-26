@@ -1506,9 +1506,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const preview = el.querySelector('.upload-preview');
     const label   = el.querySelector('.upload-label');
     const icon    = el.querySelector('.upload-icon');
-    trigger.addEventListener('click', () => input.click());
-    input.addEventListener('change', async () => {
-      const file = input.files[0];
+
+    async function processFile(file) {
       if (!file) return;
       if (file.size > 2 * 1024 * 1024) { label.textContent = 'File too large (max 2 MB)'; return; }
       const path = getPath();
@@ -1522,6 +1521,25 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         label.textContent = 'Click to replace';
         onUrl(url);
       } catch { label.textContent = 'Upload failed — try again'; }
+    }
+
+    trigger.addEventListener('click', () => input.click());
+    input.addEventListener('change', () => processFile(input.files[0]));
+
+    trigger.addEventListener('dragover', e => {
+      e.preventDefault();
+      trigger.style.borderColor = '#1ba89a';
+      trigger.style.background  = 'rgba(27,168,154,0.06)';
+    });
+    trigger.addEventListener('dragleave', () => {
+      trigger.style.borderColor = '';
+      trigger.style.background  = '';
+    });
+    trigger.addEventListener('drop', e => {
+      e.preventDefault();
+      trigger.style.borderColor = '';
+      trigger.style.background  = '';
+      processFile(e.dataTransfer.files[0]);
     });
   }
 

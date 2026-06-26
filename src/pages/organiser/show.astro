@@ -1095,10 +1095,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     // Clear any previously queued file
     pendingBranding[key] = null;
     input.value = '';
-    // Wire click
-    trigger.onclick = () => input.click();
-    input.onchange = () => {
-      const file = input.files[0];
+    function processFile(file) {
       if (!file) return;
       if (file.size > 2 * 1024 * 1024) { label.textContent = 'Too large (max 2 MB)'; return; }
       pendingBranding[key] = file;
@@ -1109,6 +1106,25 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         label.textContent = 'Click to replace (unsaved)';
       };
       reader.readAsDataURL(file);
+    }
+
+    trigger.onclick  = () => input.click();
+    input.onchange   = () => processFile(input.files[0]);
+
+    trigger.ondragover = e => {
+      e.preventDefault();
+      trigger.style.borderColor = '#1ba89a';
+      trigger.style.background  = 'rgba(27,168,154,0.06)';
+    };
+    trigger.ondragleave = () => {
+      trigger.style.borderColor = '';
+      trigger.style.background  = '';
+    };
+    trigger.ondrop = e => {
+      e.preventDefault();
+      trigger.style.borderColor = '';
+      trigger.style.background  = '';
+      processFile(e.dataTransfer.files[0]);
     };
   }
 
