@@ -535,6 +535,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   let session, profile, base;
   let draftShow   = null;
   let serviceFees = {};
+  let savedJudges = [];
+  const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
   // ─── Auth ───────────────────────────────────────────────────────────────────
   const auth = await getAuth();
@@ -584,6 +586,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const { data: feeSettings } = await supabase
       .from('platform_settings').select('key, value').in('key', ['service_fee_AUD', 'service_fee_NZD']);
     (feeSettings || []).forEach(r => { serviceFees[r.key] = parseFloat(r.value) || 0; });
+
+    const { data: sjData } = await supabase
+      .from('saved_judges').select('*').eq('organiser_id', session.user.id).order('first_name');
+    if (sjData) savedJudges = sjData;
 
     setupEventListeners();
     initCardGroups();
@@ -882,6 +888,22 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       if (show.is_judged && show.judge_setup === 'now' && show.judges.length > 0) {
         await supabase.from('show_judges').insert(show.judges.map(j => ({ show_id: show.id, ...j })));
       }
+      // Save ticked judges to saved_judges (skip duplicates by email)
+      if (show.is_judged && show.judge_setup === 'now') {
+        for (let i = 0; i < show.judge_count; i++) {
+          if (!document.getElementById(`judge-save-${i}`)?.checked) continue;
+          const fn = document.getElementById(`judge-fn-${i}`)?.value.trim();
+          const ln = document.getElementById(`judge-ln-${i}`)?.value.trim();
+          const em = document.getElementById(`judge-em-${i}`)?.value.trim() || null;
+          const ph = document.getElementById(`judge-ph-${i}`)?.value.trim() || null;
+          if (!fn || !ln) continue;
+          if (em && savedJudges.some(sj => sj.email?.toLowerCase() === em.toLowerCase())) continue;
+          const { data: newSJ } = await supabase.from('saved_judges')
+            .insert({ organiser_id: session.user.id, first_name: fn, last_name: ln, email: em, phone: ph })
+            .select().single();
+          if (newSJ) savedJudges.push(newSJ);
+        }
+      }
     }
 
     // Save sponsor for step 5
@@ -1003,34 +1025,74 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     for (let i = 0; i < show.judge_count; i++) {
       const j = show.judges[i] || { first_name: '', last_name: '', email: '', phone: '' };
       const panel = document.createElement('div');
-      panel.className = 'border border-[#efebf5] rounded-[14px] p-4';
+      panel.className = 'border border-[#efebf5] rounded-[14px] p-4 space-y-3';
+
+      const pickerHtml = savedJudges.length > 0 ? `
+        <div class="relative judge-picker-wrap">
+          <button type="button" class="judge-picker-btn text-[12.5px] font-semibold text-brand flex items-center gap-1.5 hover:underline">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Saved judges
+          </button>
+          <div class="judge-picker-dropdown" style="display:none;position:absolute;left:0;top:100%;margin-top:4px;z-index:30;background:white;border:1px solid #e6dcfb;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.10);min-width:230px;overflow:hidden;padding:4px 0;">
+            ${savedJudges.map(sj => `<button type="button" class="judge-pick-item w-full text-left px-4 py-2.5 hover:bg-[#faf7ff] transition-colors" data-id="${sj.id}"><span style="display:block;font-size:13px;font-weight:600;color:#1c1626;">${esc(sj.first_name)} ${esc(sj.last_name)}</span>${sj.email ? `<span style="display:block;font-size:11.5px;color:#9b94a8;">${esc(sj.email)}</span>` : ''}</button>`).join('')}
+          </div>
+        </div>` : '';
+
       panel.innerHTML = `
-        <p class="text-[13px] font-bold text-brand mb-3">Judge ${i + 1}</p>
-        <div class="grid grid-cols-2 gap-3 mb-3">
+        <div class="flex items-center justify-between">
+          <p class="text-[13px] font-bold text-brand">Judge ${i + 1}</p>
+          ${pickerHtml}
+        </div>
+        <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-[12px] font-semibold text-[#4a4357] mb-1">First Name <span class="text-red-400">*</span></label>
-            <input type="text" id="judge-fn-${i}" value="${j.first_name}"
+            <input type="text" id="judge-fn-${i}" value="${esc(j.first_name)}"
               class="w-full border border-[#e6dcfb] rounded-[10px] px-3 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" />
           </div>
           <div>
             <label class="block text-[12px] font-semibold text-[#4a4357] mb-1">Last Name <span class="text-red-400">*</span></label>
-            <input type="text" id="judge-ln-${i}" value="${j.last_name}"
+            <input type="text" id="judge-ln-${i}" value="${esc(j.last_name)}"
               class="w-full border border-[#e6dcfb] rounded-[10px] px-3 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" />
           </div>
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-[12px] font-semibold text-[#4a4357] mb-1">Email <span class="text-red-400">*</span></label>
-            <input type="email" id="judge-em-${i}" value="${j.email}"
+            <input type="email" id="judge-em-${i}" value="${esc(j.email)}"
               class="w-full border border-[#e6dcfb] rounded-[10px] px-3 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" />
           </div>
           <div>
             <label class="block text-[12px] font-semibold text-[#4a4357] mb-1">Phone <span class="text-[#9b94a8] font-normal">(optional)</span></label>
-            <input type="tel" id="judge-ph-${i}" value="${j.phone || ''}"
+            <input type="tel" id="judge-ph-${i}" value="${esc(j.phone || '')}"
               class="w-full border border-[#e6dcfb] rounded-[10px] px-3 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" />
           </div>
         </div>
+        <label class="flex items-center gap-2 pt-1 cursor-pointer select-none">
+          <input type="checkbox" id="judge-save-${i}" class="w-4 h-4 accent-brand" />
+          <span class="text-[12.5px] text-[#6f6880]">Save to my judge book</span>
+        </label>
       `;
+
+      const pickerBtn = panel.querySelector('.judge-picker-btn');
+      const dropdown  = panel.querySelector('.judge-picker-dropdown');
+      if (pickerBtn && dropdown) {
+        pickerBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          document.querySelectorAll('.judge-picker-dropdown').forEach(d => { if (d !== dropdown) d.style.display = 'none'; });
+          dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+        });
+        panel.querySelectorAll('.judge-pick-item').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const sj = savedJudges.find(s => s.id === btn.dataset.id);
+            if (!sj) return;
+            document.getElementById(`judge-fn-${i}`).value = sj.first_name;
+            document.getElementById(`judge-ln-${i}`).value = sj.last_name;
+            document.getElementById(`judge-em-${i}`).value = sj.email || '';
+            document.getElementById(`judge-ph-${i}`).value = sj.phone || '';
+            dropdown.style.display = 'none';
+          });
+        });
+      }
       container.appendChild(panel);
     }
   }
@@ -1271,6 +1333,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       btn.addEventListener('click', () => { selectCard(document.getElementById('prize-source-cards'), btn.dataset.value); });
     });
     document.getElementById('s7-add-prize').addEventListener('click', addPrizeRow);
+    // Close judge picker dropdowns when clicking outside
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.judge-picker-dropdown').forEach(d => { d.style.display = 'none'; });
+    });
     // Step 8: public toggle + currency selector
     setupToggle('s8-public-toggle', on => { show.show_fundraising_publicly = on; });
     // Currency selector

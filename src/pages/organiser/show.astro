@@ -508,6 +508,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   let mgmtBase    = '';
   let judgeCount  = 1;
   let serviceFees = {};
+  let savedJudges = [];
 
   const SHOW_TYPE_LABELS  = { beauty_contest: 'Beauty Contest', fun_stakes: 'Fun Stakes', memorial: 'Memorial Show', other: 'Other' };
   const BREED_SCOPE_LABELS = { all: 'All Breeds', breed_specific: 'Breed Specific', group_specific: 'Group Specific' };
@@ -541,13 +542,14 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (!showId) { window.location.replace(mgmtBase + 'organiser/shows'); return; }
 
     const uid = auth.session.user.id;
-    const [showRes, catsRes, judgesRes, sponsorsRes, prizesRes, feeRes] = await Promise.all([
+    const [showRes, catsRes, judgesRes, sponsorsRes, prizesRes, feeRes, sjRes] = await Promise.all([
       supabase.from('shows').select('*').eq('id', showId).eq('created_by', uid).single(),
       supabase.from('show_categories').select('*').eq('show_id', showId),
       supabase.from('show_judges').select('*').eq('show_id', showId),
       supabase.from('show_sponsors').select('*').eq('show_id', showId),
       supabase.from('show_prizes').select('description').eq('show_id', showId),
       supabase.from('platform_settings').select('key, value').in('key', ['service_fee_AUD', 'service_fee_NZD']),
+      supabase.from('saved_judges').select('*').eq('organiser_id', uid).order('first_name'),
     ]);
 
     if (!showRes.data) { window.location.replace(mgmtBase + 'organiser/shows'); return; }
@@ -557,6 +559,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     judges      = judgesRes.data   || [];
     sponsors    = sponsorsRes.data || [];
     prizes      = prizesRes.data   || [];
+    savedJudges = sjRes.data       || [];
     (feeRes.data || []).forEach(r => { serviceFees[r.key] = parseFloat(r.value) || 0; });
     judgeCount = judges.length || show.judge_count || 1;
 
@@ -966,6 +969,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.getElementById('mgmt-judge-plus').addEventListener('click', () => {
       if (judgeCount < 7) { judgeCount++; document.getElementById('mgmt-judge-count').textContent = String(judgeCount); rebuildJudgePanels(); }
     });
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.judge-picker-dropdown').forEach(d => { d.style.display = 'none'; });
+    });
 
     // Awards
     setupYN('mgmt-awards-yn', val => {
@@ -1091,13 +1097,28 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const val = getYNValue('mgmt-judging-yn');
     if (!val) return showPanelError('judging', 'Please make a selection.');
     if (val === 'yes') {
-      const newJudges = Array.from(document.querySelectorAll('#mgmt-judge-panels .judge-panel')).map(p => ({
+      const panels = Array.from(document.querySelectorAll('#mgmt-judge-panels .judge-panel'));
+      const newJudges = panels.map(p => ({
         show_id: showId,
         first_name: p.querySelector('.j-first').value.trim(),
         last_name:  p.querySelector('.j-last').value.trim(),
         email:      p.querySelector('.j-email').value.trim(),
         phone:      p.querySelector('.j-phone').value.trim() || null,
       }));
+      // Save ticked judges to saved_judges (skip duplicates by email)
+      for (const p of panels) {
+        if (!p.querySelector('.j-save')?.checked) continue;
+        const fn = p.querySelector('.j-first').value.trim();
+        const ln = p.querySelector('.j-last').value.trim();
+        const em = p.querySelector('.j-email').value.trim() || null;
+        const ph = p.querySelector('.j-phone').value.trim() || null;
+        if (!fn || !ln) continue;
+        if (em && savedJudges.some(sj => sj.email?.toLowerCase() === em.toLowerCase())) continue;
+        const { data: newSJ } = await supabase.from('saved_judges')
+          .insert({ organiser_id: show.created_by, first_name: fn, last_name: ln, email: em, phone: ph })
+          .select().single();
+        if (newSJ) savedJudges.push(newSJ);
+      }
       await saveSection('judging', { is_judged: true, judge_count: judgeCount }, async () => {
         await supabase.from('show_judges').delete().eq('show_id', showId);
         if (newJudges.some(j => j.first_name)) await supabase.from('show_judges').insert(newJudges.filter(j => j.first_name));
@@ -1198,14 +1219,54 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       const j = judges[i] || { first_name: '', last_name: '', email: '', phone: '' };
       const p = document.createElement('div');
       p.className = 'judge-panel border border-[#efebf5] rounded-[12px] p-4 space-y-3';
+
+      const pickerHtml = savedJudges.length > 0 ? `
+        <div class="relative judge-picker-wrap">
+          <button type="button" class="judge-picker-btn text-[12px] font-semibold text-brand flex items-center gap-1.5 hover:underline">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Saved judges
+          </button>
+          <div class="judge-picker-dropdown" style="display:none;position:absolute;left:0;top:100%;margin-top:4px;z-index:30;background:white;border:1px solid #e6dcfb;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.10);min-width:220px;overflow:hidden;padding:4px 0;">
+            ${savedJudges.map(sj => `<button type="button" class="judge-pick-item w-full text-left px-4 py-2.5 hover:bg-[#faf7ff] transition-colors" data-id="${sj.id}"><span style="display:block;font-size:13px;font-weight:600;color:#1c1626;">${escAttr(sj.first_name)} ${escAttr(sj.last_name)}</span>${sj.email ? `<span style="display:block;font-size:11.5px;color:#9b94a8;">${escAttr(sj.email)}</span>` : ''}</button>`).join('')}
+          </div>
+        </div>` : '';
+
       p.innerHTML = `
-        <p class="text-[12px] font-bold text-[#6f6880] uppercase tracking-wide">Judge ${i + 1}</p>
+        <div class="flex items-center justify-between">
+          <p class="text-[12px] font-bold text-[#6f6880] uppercase tracking-wide">Judge ${i + 1}</p>
+          ${pickerHtml}
+        </div>
         <div class="grid grid-cols-2 gap-3">
           <input type="text" class="j-first border border-[#e6dcfb] rounded-[10px] px-3 py-2 text-[13px] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" placeholder="First name" value="${escAttr(j.first_name)}" />
           <input type="text" class="j-last border border-[#e6dcfb] rounded-[10px] px-3 py-2 text-[13px] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" placeholder="Last name" value="${escAttr(j.last_name)}" />
         </div>
         <input type="email" class="j-email w-full border border-[#e6dcfb] rounded-[10px] px-3 py-2 text-[13px] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" placeholder="Email address" value="${escAttr(j.email)}" />
-        <input type="tel"   class="j-phone w-full border border-[#e6dcfb] rounded-[10px] px-3 py-2 text-[13px] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" placeholder="Phone (optional)" value="${escAttr(j.phone || '')}" />`;
+        <input type="tel"   class="j-phone w-full border border-[#e6dcfb] rounded-[10px] px-3 py-2 text-[13px] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" placeholder="Phone (optional)" value="${escAttr(j.phone || '')}" />
+        <label class="flex items-center gap-2 pt-1 cursor-pointer select-none">
+          <input type="checkbox" class="j-save w-4 h-4 accent-brand" />
+          <span class="text-[12px] text-[#9b94a8]">Save to my judge book</span>
+        </label>`;
+
+      const pickerBtn = p.querySelector('.judge-picker-btn');
+      const dropdown  = p.querySelector('.judge-picker-dropdown');
+      if (pickerBtn && dropdown) {
+        pickerBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          document.querySelectorAll('.judge-picker-dropdown').forEach(d => { if (d !== dropdown) d.style.display = 'none'; });
+          dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+        });
+        p.querySelectorAll('.judge-pick-item').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const sj = savedJudges.find(s => s.id === btn.dataset.id);
+            if (!sj) return;
+            p.querySelector('.j-first').value = sj.first_name;
+            p.querySelector('.j-last').value  = sj.last_name;
+            p.querySelector('.j-email').value = sj.email || '';
+            p.querySelector('.j-phone').value = sj.phone || '';
+            dropdown.style.display = 'none';
+          });
+        });
+      }
       container.appendChild(p);
     }
   }
