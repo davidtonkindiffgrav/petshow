@@ -89,17 +89,19 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             <span class="text-[11.5px] font-bold text-[#1c1626] leading-tight">Registered<br>Charity</span>
           </button>
-          <button type="button" data-value="commercial" class="sel-card flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white px-2 py-4 text-center transition-all cursor-pointer">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
-            <span class="text-[11.5px] font-bold text-[#1c1626] leading-tight">Commercial<br>Organisation</span>
+          <button type="button" data-value="commercial" disabled class="relative flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#efebf5] bg-[#fafafa] px-2 py-4 text-center opacity-50 cursor-not-allowed">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+            <span class="text-[11.5px] font-bold text-[#9b94a8] leading-tight">Commercial<br>Organisation</span>
+            <span class="text-[9px] font-bold text-[#9b94a8] uppercase tracking-wide">Coming soon</span>
           </button>
         </div>
       </div>
 
       <div id="s1-charity-field" style="display:none" class="mb-5">
-        <label for="s1-charity-number" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Charity Number <span class="text-[#9b94a8] font-normal">(optional)</span></label>
+        <label for="s1-charity-number" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Charity / Non-Profit Number <span class="text-red-400">*</span></label>
         <input type="text" id="s1-charity-number" placeholder="e.g. 1234567"
           class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        <p class="text-[11.5px] text-[#9b94a8] mt-1.5">Required to create and publish your show.</p>
       </div>
 
       <div class="grid grid-cols-2 gap-4">
@@ -380,14 +382,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         <label for="s8-currency" class="text-[13px] font-semibold text-[#4a4357] shrink-0">Currency</label>
         <select id="s8-currency"
           class="border border-[#e6dcfb] rounded-[11px] px-4 py-2.5 text-[14px] font-semibold text-[#1c1626] bg-white focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors">
-          <option value="GBP">GBP — £ British Pound</option>
-          <option value="USD">USD — $ US Dollar</option>
-          <option value="EUR">EUR — € Euro</option>
           <option value="AUD">AUD — A$ Australian Dollar</option>
-          <option value="CAD">CAD — C$ Canadian Dollar</option>
           <option value="NZD">NZD — NZ$ New Zealand Dollar</option>
-          <option value="ZAR">ZAR — R South African Rand</option>
-          <option value="SGD">SGD — S$ Singapore Dollar</option>
         </select>
       </div>
 
@@ -561,7 +557,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     prizes: [],
     is_fundraising: null, donation_type: null, fundraising_goal: '',
     show_fundraising_publicly: null, donation_receipts: null,
-    currency: 'GBP', entry_fee: 0,
+    currency: 'AUD', entry_fee: 0,
     classes: [],
     wizard_step: 1,
   };
@@ -734,6 +730,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       if (!document.getElementById('s1-entry-close').value) return showError('Please set an entries close date.'), false;
       if (!document.getElementById('s1-show-date').value) return showError('Please set a show date.'), false;
       if (!getSelectedCard('org-type-cards')) return showError('Please select your type of organisation.'), false;
+      const orgType = getSelectedCard('org-type-cards');
+      if (orgType === 'non_profit' || orgType === 'registered_charity') {
+        if (!document.getElementById('s1-charity-number').value.trim()) return showError('Please enter your Charity / Non-Profit Number to continue.'), false;
+      }
       const email = document.getElementById('s1-contact-email').value.trim();
       if (!email || !email.includes('@')) return showError('Please enter a valid contact email.'), false;
       return true;
@@ -859,7 +859,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         show.donation_receipts          = document.getElementById('s8-receipts-toggle').dataset.on === 'true';
         show.show_fundraising_publicly  = document.getElementById('s8-public-toggle').dataset.on === 'true';
       }
-      show.currency  = document.getElementById('s8-currency').value || 'GBP';
+      show.currency  = document.getElementById('s8-currency').value || 'AUD';
       show.entry_fee = parseFloat(document.getElementById('s8-entry-fee').value) || 0;
     }
   }
@@ -1141,7 +1141,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         </div>
         <div class="px-5">
           ${reviewRow('Fundraising', show.is_fundraising === true ? (show.donation_type || 'Yes') : show.is_fundraising === false ? 'No fundraising' : null, 8)}
-          ${reviewRow('Currency', show.currency || 'GBP', 8)}
+          ${reviewRow('Currency', show.currency || 'AUD', 8)}
           ${reviewRow('Entry Fee', show.entry_fee === 0 ? 'Free' : `${CURRENCY_SYMBOLS[show.currency] || show.currency}${show.entry_fee}`, 8)}
         </div>
       </div>`;
@@ -1174,7 +1174,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       is_fundraising: data.is_fundraising, donation_type: data.donation_type,
       fundraising_goal: data.fundraising_goal || '', donation_receipts: data.donation_receipts,
       show_fundraising_publicly: data.show_fundraising_publicly,
-      currency: data.currency || 'GBP', entry_fee: data.entry_fee || 0,
+      currency: data.currency || 'AUD', entry_fee: data.entry_fee || 0,
     });
     // Populate Step 1 fields
     document.getElementById('s1-title').value         = show.title;
@@ -1184,7 +1184,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.getElementById('s1-contact-email').value = show.contact_email;
     document.getElementById('s1-contact-phone').value = show.contact_phone;
     if (show.org_type) selectCard(document.getElementById('org-type-cards'), show.org_type);
-    if (show.org_type === 'registered_charity') {
+    if (show.org_type === 'registered_charity' || show.org_type === 'non_profit') {
       document.getElementById('s1-charity-field').style.display = 'block';
       document.getElementById('s1-charity-number').value = show.charity_number;
     }
@@ -1222,7 +1222,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.getElementById('org-type-cards').querySelectorAll('[data-value]').forEach(btn => {
       btn.addEventListener('click', () => {
         selectCard(document.getElementById('org-type-cards'), btn.dataset.value);
-        document.getElementById('s1-charity-field').style.display = btn.dataset.value === 'registered_charity' ? 'block' : 'none';
+        const needsNum = btn.dataset.value === 'registered_charity' || btn.dataset.value === 'non_profit';
+        document.getElementById('s1-charity-field').style.display = needsNum ? 'block' : 'none';
       });
     });
     // Step 2: show type + animal type

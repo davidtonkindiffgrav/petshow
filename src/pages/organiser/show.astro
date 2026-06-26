@@ -135,16 +135,18 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
               <span class="text-[10.5px] font-bold text-[#1c1626] leading-tight">Registered<br>Charity</span>
             </button>
-            <button type="button" data-value="commercial" class="sel-card flex flex-col items-center gap-1.5 rounded-[12px] border-2 border-[#e6dcfb] bg-white px-2 py-3 text-center transition-all cursor-pointer">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
-              <span class="text-[10.5px] font-bold text-[#1c1626] leading-tight">Commercial<br>Organisation</span>
+            <button type="button" data-value="commercial" disabled class="flex flex-col items-center gap-1.5 rounded-[12px] border-2 border-[#efebf5] bg-[#fafafa] px-2 py-3 text-center opacity-50 cursor-not-allowed">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+              <span class="text-[10.5px] font-bold text-[#9b94a8] leading-tight">Commercial<br>Organisation</span>
+              <span class="text-[9px] font-bold text-[#9b94a8] uppercase tracking-wide">Coming soon</span>
             </button>
           </div>
         </div>
         <div id="mgmt-charity-field" style="display:none">
-          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Charity Number <span class="text-[#9b94a8] font-normal">(optional)</span></label>
+          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Charity / Non-Profit Number <span class="text-red-400">*</span></label>
           <input type="text" id="mgmt-charity-number" placeholder="e.g. 1234567"
             class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+          <p class="text-[11.5px] text-[#9b94a8] mt-1.5">Required to publish your show.</p>
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
@@ -393,14 +395,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           <label for="mgmt-currency" class="text-[13px] font-semibold text-[#4a4357] shrink-0">Currency</label>
           <select id="mgmt-currency"
             class="border border-[#e6dcfb] rounded-[11px] px-3 py-2 text-[13px] font-semibold text-[#1c1626] bg-white focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors">
-            <option value="GBP">GBP — £ British Pound</option>
-            <option value="USD">USD — $ US Dollar</option>
-            <option value="EUR">EUR — € Euro</option>
             <option value="AUD">AUD — A$ Australian Dollar</option>
-            <option value="CAD">CAD — C$ Canadian Dollar</option>
             <option value="NZD">NZD — NZ$ New Zealand Dollar</option>
-            <option value="ZAR">ZAR — R South African Rand</option>
-            <option value="SGD">SGD — S$ Singapore Dollar</option>
           </select>
         </div>
         <div class="grid grid-cols-2 gap-3 mb-5" id="mgmt-fundraising-yn">
@@ -593,7 +589,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   // ── Page header ──────────────────────────────────────────────────────────────
   function renderPageHeader() {
     document.getElementById('show-title-display').textContent = show.title || 'Untitled Show';
-    document.title = `${show.title || 'Show'} — PetShow Online`;
+    document.title = `${show.title || 'Show'} — Fur to Feathers`;
 
     const st    = showStatus();
     const badge = document.getElementById('show-status-badge');
@@ -601,7 +597,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     badge.style.background = st.bg;
     badge.style.color      = st.color;
 
-    const sym     = CURRENCY_SYMBOLS[show.currency] || '£';
+    const sym     = CURRENCY_SYMBOLS[show.currency] || 'A$';
     const feeText = show.entry_fee > 0 ? ` · ${sym}${show.entry_fee} entry fee` : ' · Free entry';
     const dateText = show.show_date
       ? new Date(show.show_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -631,6 +627,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
   async function handlePublish() {
     const btn = document.getElementById('btn-publish');
+    if (show.status !== 'published') {
+      const needsNum = show.org_type === 'registered_charity' || show.org_type === 'non_profit';
+      if (needsNum && !show.charity_number) {
+        showPageError('A Charity / Non-Profit Number is required before publishing. Please update Show Basics.');
+        return;
+      }
+    }
     if (show.status === 'published') {
       if (!confirm('Unpublish this show? It will be hidden from the public entry page.')) return;
     }
@@ -780,19 +783,19 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       ], 'Set Up');
     }
 
-    const sym     = CURRENCY_SYMBOLS[show.currency] || '£';
+    const sym     = CURRENCY_SYMBOLS[show.currency] || 'A$';
     const feeText = show.entry_fee > 0 ? `${sym}${show.entry_fee}` : `${sym}0 (free)`;
     if (show.is_fundraising === true) {
       setHeader('fundraising', '#22c55e', 'Configured', 'Fundraising & Fees', [
         ['Status',    'Fundraising active'],
         ['Entry fee', feeText],
         ['Goal',      show.fundraising_goal ? `${sym}${show.fundraising_goal}` : 'Not set'],
-        ['Currency',  show.currency || 'GBP'],
+        ['Currency',  show.currency || 'AUD'],
       ], 'Edit');
     } else if (show.is_fundraising === false) {
       setHeader('fundraising', '#c4bed0', 'No fundraising', 'Fundraising & Fees', [
         ['Entry fee', feeText],
-        ['Currency',  show.currency || 'GBP'],
+        ['Currency',  show.currency || 'AUD'],
       ], 'Edit');
     } else {
       setHeader('fundraising', '#fbbf24', 'Setup needed', 'Fundraising & Fees', [
@@ -819,7 +822,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.getElementById('mgmt-charity-number').value = show.charity_number || '';
     if (show.org_type) {
       selectCard(document.getElementById('mgmt-org-type-cards'), show.org_type);
-      document.getElementById('mgmt-charity-field').style.display = show.org_type === 'registered_charity' ? 'block' : 'none';
+      document.getElementById('mgmt-charity-field').style.display = (show.org_type === 'registered_charity' || show.org_type === 'non_profit') ? 'block' : 'none';
     }
 
     if (show.show_type) selectCard(document.getElementById('mgmt-show-type-cards'), show.show_type);
@@ -866,8 +869,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       }
     }
 
-    document.getElementById('mgmt-currency').value = show.currency || 'GBP';
-    applyCurrencySymbol(show.currency || 'GBP');
+    document.getElementById('mgmt-currency').value = show.currency || 'AUD';
+    applyCurrencySymbol(show.currency || 'AUD');
     if (show.is_fundraising === true) {
       setYN('mgmt-fundraising-yn', 'yes');
       document.getElementById('mgmt-fundraising-form').style.display = 'block';
@@ -911,7 +914,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.getElementById('mgmt-org-type-cards').querySelectorAll('[data-value]').forEach(btn => {
       btn.addEventListener('click', () => {
         selectCard(document.getElementById('mgmt-org-type-cards'), btn.dataset.value);
-        document.getElementById('mgmt-charity-field').style.display = btn.dataset.value === 'registered_charity' ? 'block' : 'none';
+        const needsNum = btn.dataset.value === 'registered_charity' || btn.dataset.value === 'non_profit';
+        document.getElementById('mgmt-charity-field').style.display = needsNum ? 'block' : 'none';
       });
     });
 
@@ -1002,10 +1006,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (!title) return showPanelError('basics', 'Please enter a show name.');
     if (!email || !email.includes('@')) return showPanelError('basics', 'Please enter a valid contact email.');
     if (!orgType) return showPanelError('basics', 'Please select a type of organisation.');
+    const needsNum = orgType === 'registered_charity' || orgType === 'non_profit';
+    const charityNum = document.getElementById('mgmt-charity-number').value.trim();
+    if (needsNum && !charityNum) return showPanelError('basics', 'Please enter your Charity / Non-Profit Number.');
     await saveSection('basics', {
       title, org_type: orgType,
       host_org: document.getElementById('mgmt-host-org').value.trim() || null,
-      charity_number: orgType === 'registered_charity' ? document.getElementById('mgmt-charity-number').value.trim() || null : null,
+      charity_number: needsNum ? charityNum || null : null,
       contact_email: email,
       contact_phone: document.getElementById('mgmt-contact-phone').value.trim() || null,
       entry_open_date:  document.getElementById('mgmt-entry-open').value  || null,
@@ -1114,7 +1121,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   async function saveFundraising() {
     const val      = getYNValue('mgmt-fundraising-yn');
     if (!val) return showPanelError('fundraising', 'Please make a selection.');
-    const currency = document.getElementById('mgmt-currency').value || 'GBP';
+    const currency = document.getElementById('mgmt-currency').value || 'AUD';
     const entryFee = parseFloat(document.getElementById('mgmt-entry-fee').value) || 0;
     const payload  = { currency, entry_fee: entryFee };
     if (val === 'yes') {

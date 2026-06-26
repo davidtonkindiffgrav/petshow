@@ -31,7 +31,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
         <!-- Lead paragraph -->
         <p class="text-[16px] min-[600px]:text-[18px] leading-[1.62] text-[#5d566b] max-w-[430px] mb-8">
-          PetShow Online makes it easy to run virtual dog shows and pet competitions that bring
+          Fur to Feathers makes it easy to run online pet shows and competitions that bring
           communities together and raise money for the causes you care about.
         </p>
 
@@ -117,9 +117,9 @@ const base = raw.endsWith('/') ? raw : raw + '/';
             loading="eager"
           />
 
-          <!-- Left-edge fade overlay -->
+          <!-- Left-edge fade overlay (desktop only) -->
           <div
-            class="absolute inset-0 pointer-events-none"
+            class="hidden min-[900px]:block absolute inset-0 pointer-events-none"
             style="background:linear-gradient(90deg,#ffffff 0%,#ffffff 24%,rgba(255,255,255,0.88) 40%,rgba(255,255,255,0.35) 57%,rgba(255,255,255,0) 72%)"
             aria-hidden="true"
           ></div>
@@ -225,7 +225,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   <section id="how" class="max-w-how mx-auto px-4 min-[600px]:px-7 pt-12 min-[900px]:pt-[74px] pb-10 min-[900px]:pb-16">
     <!-- Heading -->
     <div class="text-center mb-10 min-[600px]:mb-12">
-      <h2 class="text-[26px] min-[600px]:text-[34px] font-extrabold tracking-[-0.02em] text-[#1c1626]">How PetShow Online Works</h2>
+      <h2 class="text-[26px] min-[600px]:text-[34px] font-extrabold tracking-[-0.02em] text-[#1c1626]">How Fur to Feathers Works</h2>
       <div class="w-16 h-1 bg-brand rounded-full mx-auto mt-3"></div>
     </div>
 
@@ -314,7 +314,6 @@ const base = raw.endsWith('/') ? raw : raw + '/';
         <div class="max-[700px]:mx-auto" aria-hidden="true">
           <svg width="84" height="84" viewBox="0 0 84 84" fill="none">
             <path d="M42 72S14 55 14 33a16 16 0 0 1 28-10.5A16 16 0 0 1 70 33C70 55 42 72 42 72z" fill="#7c3aed"/>
-            <!-- Paw cutout (white) -->
             <ellipse cx="42" cy="50" rx="7" ry="5.5" fill="white"/>
             <ellipse cx="34" cy="43" rx="3.5" ry="4" fill="white"/>
             <ellipse cx="50" cy="43" rx="3.5" ry="4" fill="white"/>
@@ -327,21 +326,23 @@ const base = raw.endsWith('/') ? raw : raw + '/';
         <div class="max-[700px]:text-center">
           <h2 class="text-[21px] font-extrabold text-brand leading-snug mb-2">Built for pet lovers and causes that matter.</h2>
           <p class="text-[14px] text-[#6f6880] leading-relaxed max-w-[380px] max-[700px]:mx-auto">
-            From local fundraisers to special events, PetShow Online helps you create memorable experiences and make a real impact.
+            From local fundraisers to special events, Fur to Feathers helps you create memorable experiences and make a real impact.
           </p>
         </div>
 
-        <!-- Stats -->
-        <div class="flex flex-wrap gap-9 max-[700px]:justify-center max-[700px]:gap-6">
+        <!-- Feature highlights -->
+        <div class="grid grid-cols-2 gap-x-6 gap-y-3 max-[700px]:mx-auto">
           {[
-            { num: '2,500+',  label: 'Shows Created' },
-            { num: '150K+',   label: 'Happy Participants' },
-            { num: '$1.8M+',  label: 'Raised for Charity' },
-            { num: '100%',    label: 'Pet Lover Approved' },
-          ].map(({ num, label }) => (
-            <div class="text-center">
-              <p class="text-[28px] min-[600px]:text-[34px] font-extrabold text-brand tracking-[-0.02em] leading-none">{num}</p>
-              <p class="text-[13px] font-semibold text-[#7d7689] mt-1">{label}</p>
+            'Free to get started',
+            'Live in minutes',
+            'No tech skills needed',
+            'Built for fundraising',
+          ].map(label => (
+            <div class="flex items-center gap-2">
+              <span class="w-5 h-5 rounded-full bg-brand/10 flex items-center justify-center shrink-0">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              </span>
+              <span class="text-[13px] font-semibold text-[#4a4357] whitespace-nowrap">{label}</span>
             </div>
           ))}
         </div>

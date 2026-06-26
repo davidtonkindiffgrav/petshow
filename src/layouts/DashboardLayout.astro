@@ -24,7 +24,7 @@ function navClass(page: string) {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{title} — PetShow Online</title>
+    <title>{title} — Fur to Feathers</title>
     {description && <meta name="description" content={description} />}
     <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -36,24 +36,37 @@ function navClass(page: string) {
   </head>
   <body class="flex h-screen overflow-hidden bg-[#f5f3fa] font-sans antialiased text-[#1c1626]">
 
-    <!-- Sidebar -->
-    <aside class="w-[220px] shrink-0 bg-[#1c1626] flex flex-col h-full overflow-y-auto">
+    <!-- Mobile backdrop -->
+    <div id="sidebar-backdrop"
+      class="fixed inset-0 bg-black/40 z-40 opacity-0 pointer-events-none transition-opacity duration-300 min-[900px]:hidden"
+      aria-hidden="true"></div>
 
-      <!-- Logo -->
-      <div class="px-5 pt-7 pb-6 border-b border-white/10">
-        <a href={base} class="flex items-center gap-2.5 no-underline">
-          <svg width="34" height="34" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+    <!-- Sidebar — fixed overlay on mobile, in-flow on desktop -->
+    <aside id="dashboard-sidebar"
+      class="fixed inset-y-0 left-0 z-50 w-[220px] bg-[#1c1626] flex flex-col h-full overflow-y-auto -translate-x-full transition-transform duration-300 ease-in-out min-[900px]:relative min-[900px]:translate-x-0 min-[900px]:z-auto min-[900px]:shrink-0">
+
+      <!-- Logo row + mobile close button -->
+      <div class="px-5 pt-7 pb-6 border-b border-white/10 flex items-center justify-between gap-3">
+        <a href={base} class="flex items-center gap-2.5 no-underline min-w-0">
+          <svg width="34" height="34" viewBox="0 0 48 48" fill="none" aria-hidden="true" class="shrink-0">
             <ellipse cx="24" cy="31" rx="11" ry="9" fill="#7c3aed"/>
             <ellipse cx="11" cy="23" rx="5.5" ry="6" fill="#7c3aed"/>
             <ellipse cx="37" cy="23" rx="5.5" ry="6" fill="#7c3aed"/>
             <ellipse cx="17" cy="14" rx="5" ry="5.5" fill="#a855f7"/>
             <ellipse cx="31" cy="14" rx="5" ry="5.5" fill="#a855f7"/>
           </svg>
-          <div class="flex flex-col leading-none">
-            <span class="text-[16px] font-extrabold tracking-[-0.02em] text-white">PetShow</span>
-            <span class="text-[8px] font-bold text-white/35 tracking-[0.32em] uppercase">ONLINE</span>
+          <div class="flex flex-col leading-none min-w-0">
+            <span class="text-[15px] font-extrabold tracking-[-0.02em] text-white truncate">Fur to Feathers</span>
+            <span class="text-[8px] font-bold text-white/35 tracking-[0.32em] uppercase">PET SHOWS</span>
           </div>
         </a>
+        <button id="sidebar-close"
+          class="min-[900px]:hidden w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:text-white transition-colors shrink-0"
+          aria-label="Close navigation">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
       </div>
 
       <!-- Nav -->
@@ -142,13 +155,21 @@ function navClass(page: string) {
     <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
 
       <!-- Top bar -->
-      <header class="h-16 bg-white border-b border-[#efebf5] flex items-center px-8 justify-between shrink-0">
-        <h1 class="text-[19px] font-extrabold text-[#1c1626] tracking-[-0.01em]">{title}</h1>
+      <header class="h-16 bg-white border-b border-[#efebf5] flex items-center px-4 min-[900px]:px-8 justify-between shrink-0 gap-3">
+        <!-- Hamburger — mobile only -->
+        <button id="sidebar-toggle"
+          class="min-[900px]:hidden w-9 h-9 rounded-lg flex items-center justify-center text-[#4a4357] hover:bg-[#f5f3fa] transition-colors shrink-0"
+          aria-label="Open navigation" aria-expanded="false" aria-controls="dashboard-sidebar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+        <h1 class="text-[17px] min-[900px]:text-[19px] font-extrabold text-[#1c1626] tracking-[-0.01em] flex-1 min-[900px]:flex-none truncate">{title}</h1>
         <slot name="actions" />
       </header>
 
       <!-- Scrollable content -->
-      <main class="flex-1 overflow-y-auto p-8">
+      <main class="flex-1 overflow-y-auto p-4 min-[900px]:p-8">
         <slot />
       </main>
 
@@ -156,3 +177,34 @@ function navClass(page: string) {
 
   </body>
 </html>
+
+<script>
+  const sidebar  = document.getElementById('dashboard-sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  const toggle   = document.getElementById('sidebar-toggle');
+  const closeBtn = document.getElementById('sidebar-close');
+
+  function openSidebar() {
+    sidebar.style.transform = 'translateX(0)';
+    backdrop.style.opacity = '1';
+    backdrop.style.pointerEvents = 'auto';
+    toggle?.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeSidebar() {
+    sidebar.style.transform = '';
+    backdrop.style.opacity = '0';
+    backdrop.style.pointerEvents = 'none';
+    toggle?.setAttribute('aria-expanded', 'false');
+  }
+
+  toggle?.addEventListener('click', openSidebar);
+  closeBtn?.addEventListener('click', closeSidebar);
+  backdrop?.addEventListener('click', closeSidebar);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSidebar(); });
+
+  // Auto-close when a nav link is tapped on mobile
+  sidebar?.querySelectorAll('a').forEach(a =>
+    a.addEventListener('click', () => { if (window.innerWidth < 900) closeSidebar(); })
+  );
+</script>
