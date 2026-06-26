@@ -567,15 +567,18 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       if (org) { show.host_org = org.name; document.getElementById('s1-host-org').value = org.name; }
     }
 
-    // Check for existing draft
-    const { data: drafts } = await supabase
-      .from('shows').select('id, title, wizard_step').eq('created_by', session.user.id)
-      .eq('status', 'draft').order('created_at', { ascending: false }).limit(1);
+    // Check for existing draft (skip banner if we're loading a specific show via ?id=)
+    const urlIdEarly = new URLSearchParams(window.location.search).get('id');
+    if (!urlIdEarly) {
+      const { data: drafts } = await supabase
+        .from('shows').select('id, title, wizard_step').eq('created_by', session.user.id)
+        .eq('status', 'draft').order('created_at', { ascending: false }).limit(1);
 
-    if (drafts && drafts.length > 0) {
-      draftShow = drafts[0];
-      document.getElementById('draft-title').textContent = draftShow.title || 'Untitled Show';
-      document.getElementById('draft-banner').style.display = 'flex';
+      if (drafts && drafts.length > 0) {
+        draftShow = drafts[0];
+        document.getElementById('draft-title').textContent = draftShow.title || 'Untitled Show';
+        document.getElementById('draft-banner').style.display = 'flex';
+      }
     }
 
     const { data: feeSettings } = await supabase
@@ -584,7 +587,14 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     setupEventListeners();
     initCardGroups();
-    goToStep(1);
+
+    const urlId = new URLSearchParams(window.location.search).get('id');
+    if (urlId) {
+      document.getElementById('draft-banner').style.display = 'none';
+      await loadDraft(urlId);
+    } else {
+      goToStep(1);
+    }
   }
 
   // ─── Navigation ─────────────────────────────────────────────────────────────
