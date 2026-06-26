@@ -192,10 +192,18 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         </div>
       </div>
       <div id="s3-group-field" style="display:none">
-        <label for="s3-group" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Group Name <span class="text-red-400">*</span></label>
-        <input type="text" id="s3-group" placeholder="e.g. Gundog Group"
-          class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
-        <p class="text-[11.5px] text-[#9b94a8] mt-1.5">Group selection dropdowns coming soon.</p>
+        <label for="s3-group" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Group <span class="text-red-400">*</span></label>
+        <select id="s3-group"
+          class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] bg-white focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors">
+          <option value="">— Select a group —</option>
+          <option value="Toy Dogs">Toy Dogs</option>
+          <option value="Terriers">Terriers</option>
+          <option value="Gundogs">Gundogs</option>
+          <option value="Hounds">Hounds</option>
+          <option value="Working Dogs">Working Dogs</option>
+          <option value="Utility Dogs">Utility Dogs</option>
+          <option value="Non-Sporting">Non-Sporting</option>
+        </select>
       </div>
     </div>
 
