@@ -34,7 +34,7 @@ function navClass(page: string) {
       rel="stylesheet"
     />
   </head>
-  <body class="flex h-screen overflow-hidden bg-[#f5f3fa] font-sans antialiased text-[#1c1626]">
+  <body class="flex h-screen overflow-hidden bg-[#f0fafa] font-sans antialiased text-[#1c1626]">
 
     <!-- Mobile backdrop -->
     <div id="sidebar-backdrop"
@@ -43,12 +43,14 @@ function navClass(page: string) {
 
     <!-- Sidebar — fixed overlay on mobile, in-flow on desktop -->
     <aside id="dashboard-sidebar"
-      class="fixed inset-y-0 left-0 z-50 w-[220px] bg-[#1c1626] flex flex-col h-full overflow-y-auto -translate-x-full transition-transform duration-300 ease-in-out min-[900px]:relative min-[900px]:translate-x-0 min-[900px]:z-auto min-[900px]:shrink-0">
+      class="fixed inset-y-0 left-0 z-50 w-[220px] bg-[#002d6b] flex flex-col h-full overflow-y-auto -translate-x-full transition-transform duration-300 ease-in-out min-[900px]:relative min-[900px]:translate-x-0 min-[900px]:z-auto min-[900px]:shrink-0">
 
       <!-- Logo row + mobile close button -->
       <div class="px-5 pt-7 pb-6 border-b border-white/10 flex items-center justify-between gap-3">
         <a href={base} class="inline-flex items-center no-underline min-w-0">
-          <img src={`${base}images/ftf_logo_2048x648.png`} alt="Fur to Feathers" style="height:26px;width:auto" class="block" />
+          <span class="inline-flex bg-white rounded-[6px] px-2 py-1">
+            <img src={`${base}images/ftf_logo_2048x648.png`} alt="Fur to Feathers" style="height:22px;width:auto" class="block" />
+          </span>
         </a>
         <button id="sidebar-close"
           class="min-[900px]:hidden w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:text-white transition-colors shrink-0"
@@ -148,7 +150,7 @@ function navClass(page: string) {
       <header class="h-16 bg-white border-b border-[#efebf5] flex items-center px-4 min-[900px]:px-8 justify-between shrink-0 gap-3">
         <!-- Hamburger — mobile only -->
         <button id="sidebar-toggle"
-          class="min-[900px]:hidden w-9 h-9 rounded-lg flex items-center justify-center text-[#4a4357] hover:bg-[#f5f3fa] transition-colors shrink-0"
+          class="min-[900px]:hidden w-9 h-9 rounded-lg flex items-center justify-center text-[#4a4357] hover:bg-[#f0fafa] transition-colors shrink-0"
           aria-label="Open navigation" aria-expanded="false" aria-controls="dashboard-sidebar">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
             <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
