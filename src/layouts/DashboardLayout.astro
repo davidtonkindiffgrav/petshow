@@ -26,7 +26,11 @@ function navClass(page: string) {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title} — Fur to Feathers</title>
     {description && <meta name="description" content={description} />}
-    <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
+    <link rel="icon" type="image/x-icon" href={`${base}images/favicon.ico`} />
+    <link rel="icon" type="image/png" sizes="32x32" href={`${base}images/favicon-32x32.png`} />
+    <link rel="icon" type="image/png" sizes="16x16" href={`${base}images/favicon-16x16.png`} />
+    <link rel="apple-touch-icon" sizes="180x180" href={`${base}images/apple-touch-icon.png`} />
+    <link rel="manifest" href={`${base}images/site.webmanifest`} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -45,15 +49,13 @@ function navClass(page: string) {
     <aside id="dashboard-sidebar"
       class="fixed inset-y-0 left-0 z-50 w-[220px] bg-[#002d6b] flex flex-col h-full overflow-y-auto -translate-x-full transition-transform duration-300 ease-in-out min-[900px]:relative min-[900px]:translate-x-0 min-[900px]:z-auto min-[900px]:shrink-0">
 
-      <!-- Logo row + mobile close button -->
-      <div class="px-5 pt-7 pb-6 border-b border-white/10 flex items-center justify-between gap-3">
+      <!-- White logo header -->
+      <div class="bg-white px-5 py-4 flex items-center justify-between gap-3 shrink-0">
         <a href={base} class="inline-flex items-center no-underline min-w-0">
-          <span class="inline-flex bg-white rounded-[6px] px-2 py-1">
-            <img src={`${base}images/ftf_logo_2048x648.png`} alt="Fur to Feathers" style="height:22px;width:auto" class="block" />
-          </span>
+          <img src={`${base}images/ftf_logo_2048x648.png`} alt="Fur to Feathers" style="height:34px;width:auto" class="block" />
         </a>
         <button id="sidebar-close"
-          class="min-[900px]:hidden w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:text-white transition-colors shrink-0"
+          class="min-[900px]:hidden w-7 h-7 rounded-full bg-[#e8f7f6] flex items-center justify-center text-[#002d6b] hover:bg-brand/20 transition-colors shrink-0"
           aria-label="Close navigation">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>

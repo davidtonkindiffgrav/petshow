@@ -24,7 +24,11 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
-    <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
+    <link rel="icon" type="image/x-icon" href={`${base}images/favicon.ico`} />
+    <link rel="icon" type="image/png" sizes="32x32" href={`${base}images/favicon-32x32.png`} />
+    <link rel="icon" type="image/png" sizes="16x16" href={`${base}images/favicon-16x16.png`} />
+    <link rel="apple-touch-icon" sizes="180x180" href={`${base}images/apple-touch-icon.png`} />
+    <link rel="manifest" href={`${base}images/site.webmanifest`} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
