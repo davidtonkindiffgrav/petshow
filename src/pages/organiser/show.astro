@@ -450,14 +450,19 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         <div class="border-t border-[#efebf5] pt-4 mb-4">
           <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Entry Fee per Entry</label>
           <p id="mgmt-fee-hint" class="text-[12px] text-[#9b94a8] mb-2">Set to A$0 for a free show.</p>
-          <div class="relative max-w-[180px]">
-            <span id="mgmt-sym-fee" class="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-[#9b94a8] font-semibold">A$</span>
-            <input type="number" id="mgmt-entry-fee" min="0" step="0.50" value="0"
-              class="w-full border border-[#e6dcfb] rounded-[11px] pl-11 pr-4 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+          <div class="flex items-center gap-4">
+            <div class="relative max-w-[180px]">
+              <span id="mgmt-sym-fee" class="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-[#9b94a8] font-semibold">A$</span>
+              <input type="number" id="mgmt-entry-fee" min="0" step="0.50" value="0"
+                class="w-full border border-[#e6dcfb] rounded-[11px] pl-11 pr-4 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+            </div>
+            <div>
+              <p class="text-[10.5px] font-semibold text-[#9b94a8] uppercase tracking-wide mb-0.5">Entrant pays</p>
+              <p id="mgmt-total-charge" class="text-[18px] font-extrabold text-brand leading-none">A$1.10</p>
+            </div>
           </div>
           <div class="mt-3 rounded-[11px] bg-[#faf7ff] border border-[#e6dcfb] p-3 space-y-1.5">
             <p class="text-[12.5px] text-[#4a4357]">Platform fee: <span id="mgmt-svc-amount" class="font-semibold">A$1.10</span> per entry — please allow for this in your pricing.</p>
-            <p class="text-[12.5px] text-[#6f6880]">Total charged to entrant: <span id="mgmt-total-charge" class="font-extrabold text-brand">A$1.10</span></p>
             <p class="text-[12px] text-[#9b94a8] italic"><span id="mgmt-entrant-preview">Entry = A$1.10 (A$0.00 + A$1.10 platform fee)</span></p>
           </div>
         </div>
