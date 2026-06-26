@@ -475,27 +475,55 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
       <!-- Panel: Branding -->
       <div id="panel-branding" style="display:none" class="p-6 space-y-4">
-        <div class="grid grid-cols-2 gap-4" id="branding-logo-row">
+
+        <div class="grid grid-cols-2 gap-4">
+          <!-- Show Logo -->
           <div>
-            <p class="text-[12px] font-semibold text-[#4a4357] mb-1.5">Show Logo</p>
-            <div id="branding-show-logo" class="h-24 rounded-[11px] border-2 border-dashed border-[#b8e4e0] bg-[#f0fafa] flex items-center justify-center overflow-hidden">
-              <p class="text-[11px] text-[#c4bed0]">Not uploaded</p>
+            <p class="text-[12px] font-semibold text-[#4a4357] mb-1.5">Show Logo <span class="text-[#9b94a8] font-normal">(optional)</span></p>
+            <div id="branding-logo-widget">
+              <input type="file" class="upload-input hidden" accept="image/jpeg,image/png,image/webp" data-key="logo" />
+              <div class="upload-trigger flex flex-col items-center gap-1.5 border-2 border-dashed border-[#b8e4e0] rounded-[12px] p-4 cursor-pointer hover:bg-brand-tint/50 transition-colors text-center min-h-[100px] justify-center">
+                <img class="upload-preview hidden max-h-16 rounded object-contain mb-1" />
+                <svg class="upload-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                <span class="upload-label text-[11.5px] text-[#9b94a8]">Click to upload</span>
+              </div>
             </div>
           </div>
+          <!-- Org Logo -->
           <div>
-            <p class="text-[12px] font-semibold text-[#4a4357] mb-1.5">Organisation Logo</p>
-            <div id="branding-org-logo" class="h-24 rounded-[11px] border-2 border-dashed border-[#b8e4e0] bg-[#f0fafa] flex items-center justify-center overflow-hidden">
-              <p class="text-[11px] text-[#c4bed0]">Not uploaded</p>
+            <p class="text-[12px] font-semibold text-[#4a4357] mb-1.5">Organisation Logo <span class="text-[#9b94a8] font-normal">(optional)</span></p>
+            <div id="branding-org-widget">
+              <input type="file" class="upload-input hidden" accept="image/jpeg,image/png,image/webp" data-key="orgLogo" />
+              <div class="upload-trigger flex flex-col items-center gap-1.5 border-2 border-dashed border-[#b8e4e0] rounded-[12px] p-4 cursor-pointer hover:bg-brand-tint/50 transition-colors text-center min-h-[100px] justify-center">
+                <img class="upload-preview hidden max-h-16 rounded object-contain mb-1" />
+                <svg class="upload-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                <span class="upload-label text-[11.5px] text-[#9b94a8]">Click to upload</span>
+              </div>
             </div>
           </div>
         </div>
+
+        <!-- Banner -->
         <div>
-          <p class="text-[12px] font-semibold text-[#4a4357] mb-1.5">Show Banner</p>
-          <div id="branding-banner" class="h-20 rounded-[11px] border-2 border-dashed border-[#b8e4e0] bg-[#f0fafa] flex items-center justify-center overflow-hidden">
-            <p class="text-[11px] text-[#c4bed0]">Not uploaded</p>
+          <p class="text-[12px] font-semibold text-[#4a4357] mb-1.5">Show Banner <span class="text-[#9b94a8] font-normal">(optional · recommended 1600×400)</span></p>
+          <div id="branding-banner-widget">
+            <input type="file" class="upload-input hidden" accept="image/jpeg,image/png,image/webp" data-key="banner" />
+            <div class="upload-trigger flex items-center gap-3 border-2 border-dashed border-[#b8e4e0] rounded-[12px] px-4 py-4 cursor-pointer hover:bg-brand-tint/50 transition-colors">
+              <img class="upload-preview hidden h-12 rounded object-cover shrink-0" />
+              <svg class="upload-icon shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <div>
+                <span class="upload-label block text-[12px] text-[#9b94a8]">Click to upload banner</span>
+                <span class="text-[11px] text-[#c4bed0]">JPG, PNG, WebP · max 2 MB</span>
+              </div>
+            </div>
           </div>
         </div>
-        <p class="text-[12px] text-[#9b94a8]">To update branding, use the <span class="font-semibold">Edit Show</span> wizard.</p>
+
+        <p class="panel-error text-[12px] text-red-500" style="display:none"></p>
+        <div class="drawer-actions flex justify-end gap-3 pb-2">
+          <button class="cancel-btn text-[13px] font-semibold text-[#9b94a8] hover:text-[#1c1626] px-3 py-2 transition-colors">Cancel</button>
+          <button class="save-btn bg-brand text-white text-[13px] font-bold px-5 py-2.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Save changes</button>
+        </div>
       </div>
 
     </div><!-- end drawer body -->
@@ -506,6 +534,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 <script>
   import { getAuth } from '../../lib/auth.js';
   import { supabase } from '../../lib/supabase.js';
+  import { uploadImage } from '../../lib/storage.js';
 
   // ── State ────────────────────────────────────────────────────────────────────
   let show        = null;
@@ -518,6 +547,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   let judgeCount  = 1;
   let serviceFees = {};
   let savedJudges = [];
+  let pendingBranding = { logo: null, orgLogo: null, banner: null };
 
   const SHOW_TYPE_LABELS  = { beauty_contest: 'Beauty Contest', fun_stakes: 'Fun Stakes', memorial: 'Memorial Show', other: 'Other' };
   const BREED_SCOPE_LABELS = { all: 'All Breeds', breed_specific: 'Breed Specific', group_specific: 'Group Specific' };
@@ -596,6 +626,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     // Scroll drawer body to top
     drawer.querySelector('.flex-1.overflow-y-auto').scrollTop = 0;
+
+    // Init branding upload widgets each time the panel opens
+    if (id === 'branding') {
+      initBrandingWidget('branding-logo-widget',   'logo');
+      initBrandingWidget('branding-org-widget',    'orgLogo');
+      initBrandingWidget('branding-banner-widget', 'banner');
+    }
 
     // Highlight the active card
     document.querySelectorAll('.section-card').forEach(c => c.classList.remove('ring-2', 'ring-brand'));
@@ -677,12 +714,6 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
   // setHeader(id, dot, statusText, title, rows, actionLabel)
   // rows = array of [label, value] pairs shown below the title
-  function populateBrandingSlot(id, url, fit) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.innerHTML = `<img src="${url}" class="w-full h-full object-${fit}" />`;
-  }
-
   function setHeader(id, dot, statusText, title, rows, actionLabel) {
     const el = document.getElementById(`hdr-${id}`);
     if (!el) return;
@@ -843,11 +874,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       ['Show Logo',   show.logo_url     ? 'Uploaded' : 'Not uploaded'],
       ['Org Logo',    show.org_logo_url ? 'Uploaded' : 'Not uploaded'],
       ['Banner',      show.banner_url   ? 'Uploaded' : 'Not uploaded'],
-    ], 'Preview');
-    // Populate branding panel images
-    if (show.logo_url)     populateBrandingSlot('branding-show-logo', show.logo_url, 'contain');
-    if (show.org_logo_url) populateBrandingSlot('branding-org-logo',  show.org_logo_url, 'contain');
-    if (show.banner_url)   populateBrandingSlot('branding-banner',    show.banner_url, 'cover');
+    ], 'Edit');
   }
 
   // ── Populate forms ───────────────────────────────────────────────────────────
@@ -949,6 +976,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.querySelector('#panel-judging .save-btn').addEventListener('click', saveJudging);
     document.querySelector('#panel-awards .save-btn').addEventListener('click', saveAwards);
     document.querySelector('#panel-fundraising .save-btn').addEventListener('click', saveFundraising);
+    document.querySelector('#panel-branding .save-btn').addEventListener('click', saveBranding);
 
     // Org type
     document.getElementById('mgmt-org-type-cards').querySelectorAll('[data-value]').forEach(btn => {
@@ -1043,6 +1071,71 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (postSave) await postSave();
     renderAllHeaders();
     closeDrawer();
+  }
+
+  function initBrandingWidget(widgetId, key) {
+    const el      = document.getElementById(widgetId);
+    if (!el) return;
+    const input   = el.querySelector('.upload-input');
+    const trigger = el.querySelector('.upload-trigger');
+    const preview = el.querySelector('.upload-preview');
+    const label   = el.querySelector('.upload-label');
+    const icon    = el.querySelector('.upload-icon');
+    // Restore current image
+    const currentUrl = key === 'logo' ? show?.logo_url : key === 'orgLogo' ? show?.org_logo_url : show?.banner_url;
+    if (currentUrl) {
+      preview.src = currentUrl; preview.classList.remove('hidden');
+      if (icon) icon.classList.add('hidden');
+      label.textContent = 'Click to replace';
+    } else {
+      preview.src = ''; preview.classList.add('hidden');
+      if (icon) icon.classList.remove('hidden');
+      label.textContent = 'Click to upload';
+    }
+    // Clear any previously queued file
+    pendingBranding[key] = null;
+    input.value = '';
+    // Wire click
+    trigger.onclick = () => input.click();
+    input.onchange = () => {
+      const file = input.files[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) { label.textContent = 'Too large (max 2 MB)'; return; }
+      pendingBranding[key] = file;
+      const reader = new FileReader();
+      reader.onload = e => {
+        preview.src = e.target.result; preview.classList.remove('hidden');
+        if (icon) icon.classList.add('hidden');
+        label.textContent = 'Click to replace (unsaved)';
+      };
+      reader.readAsDataURL(file);
+    };
+  }
+
+  async function saveBranding() {
+    const panel   = document.getElementById('panel-branding');
+    const saveBtn = panel?.querySelector('.save-btn');
+    const errEl   = panel?.querySelector('.panel-error');
+    if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+    if (saveBtn) { saveBtn.textContent = 'Saving…'; saveBtn.disabled = true; }
+    try {
+      const updates = {};
+      if (pendingBranding.logo)    updates.logo_url     = await uploadImage(`shows/${showId}/logo`,     pendingBranding.logo);
+      if (pendingBranding.orgLogo) updates.org_logo_url = await uploadImage(`shows/${showId}/org-logo`, pendingBranding.orgLogo);
+      if (pendingBranding.banner)  updates.banner_url   = await uploadImage(`shows/${showId}/banner`,   pendingBranding.banner);
+      if (Object.keys(updates).length > 0) {
+        const { error } = await supabase.from('shows').update(updates).eq('id', showId);
+        if (error) throw error;
+        Object.assign(show, updates);
+      }
+      pendingBranding = { logo: null, orgLogo: null, banner: null };
+      renderAllHeaders();
+      closeDrawer();
+    } catch (err) {
+      if (errEl) { errEl.textContent = err.message || 'Upload failed'; errEl.style.display = 'block'; }
+    } finally {
+      if (saveBtn) { saveBtn.textContent = 'Save changes'; saveBtn.disabled = false; }
+    }
   }
 
   async function saveBasics() {
