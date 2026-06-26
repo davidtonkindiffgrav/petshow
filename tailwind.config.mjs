@@ -13,8 +13,8 @@ export default {
           tint:    '#f1eafe',
           tint2:   '#efe7fd',
         },
-        coral:        '#f0518a',
-        'coral-soft': '#f0a4d0',
+        coral:        '#f07050',
+        'coral-soft': '#f9b8a8',
         teal: {
           brand:    '#0d9488',
           light:    '#2dd4bf',

@@ -2,41 +2,16 @@
 const raw = import.meta.env.BASE_URL;
 const base = raw.endsWith('/') ? raw : raw + '/';
 interface Props {
-  size?: number;
-  wordmarkSize?: number;
-  subtitleSize?: number;
+  height?: number;
 }
-const { size = 38, wordmarkSize = 25, subtitleSize = 10 } = Astro.props;
+const { height = 36 } = Astro.props;
 ---
 
-<a href={base} class="inline-flex items-center gap-2.5 no-underline">
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 48 48"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    aria-hidden="true"
-  >
-    <ellipse cx="24" cy="31" rx="11" ry="9" fill="#7c3aed" />
-    <ellipse cx="11" cy="23" rx="5.5" ry="6" fill="#7c3aed" />
-    <ellipse cx="37" cy="23" rx="5.5" ry="6" fill="#7c3aed" />
-    <ellipse cx="17" cy="14" rx="5" ry="5.5" fill="#a855f7" />
-    <ellipse cx="31" cy="14" rx="5" ry="5.5" fill="#a855f7" />
-  </svg>
-
-  <div class="flex flex-col leading-none">
-    <span
-      class="font-extrabold tracking-[-0.02em] text-[#1c1626]"
-      style={`font-size:${wordmarkSize}px`}
-    >
-      Fur to Feathers
-    </span>
-    <span
-      class="font-bold text-[#9b94a8] tracking-[0.32em] uppercase mt-[1px]"
-      style={`font-size:${subtitleSize}px`}
-    >
-      PET SHOWS
-    </span>
-  </div>
+<a href={base} class="inline-flex items-center no-underline">
+  <img
+    src={`${base}images/ftf_logo_2048x648.png`}
+    alt="Fur to Feathers — Online Pet Shows"
+    style={`height:${height}px;width:auto`}
+    class="block"
+  />
 </a>

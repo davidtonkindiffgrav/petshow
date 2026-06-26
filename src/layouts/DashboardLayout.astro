@@ -47,18 +47,8 @@ function navClass(page: string) {
 
       <!-- Logo row + mobile close button -->
       <div class="px-5 pt-7 pb-6 border-b border-white/10 flex items-center justify-between gap-3">
-        <a href={base} class="flex items-center gap-2.5 no-underline min-w-0">
-          <svg width="34" height="34" viewBox="0 0 48 48" fill="none" aria-hidden="true" class="shrink-0">
-            <ellipse cx="24" cy="31" rx="11" ry="9" fill="#7c3aed"/>
-            <ellipse cx="11" cy="23" rx="5.5" ry="6" fill="#7c3aed"/>
-            <ellipse cx="37" cy="23" rx="5.5" ry="6" fill="#7c3aed"/>
-            <ellipse cx="17" cy="14" rx="5" ry="5.5" fill="#a855f7"/>
-            <ellipse cx="31" cy="14" rx="5" ry="5.5" fill="#a855f7"/>
-          </svg>
-          <div class="flex flex-col leading-none min-w-0">
-            <span class="text-[15px] font-extrabold tracking-[-0.02em] text-white truncate">Fur to Feathers</span>
-            <span class="text-[8px] font-bold text-white/35 tracking-[0.32em] uppercase">PET SHOWS</span>
-          </div>
+        <a href={base} class="inline-flex items-center no-underline min-w-0">
+          <img src={`${base}images/ftf_logo_2048x648.png`} alt="Fur to Feathers" style="height:26px;width:auto" class="block" />
         </a>
         <button id="sidebar-close"
           class="min-[900px]:hidden w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:text-white transition-colors shrink-0"
