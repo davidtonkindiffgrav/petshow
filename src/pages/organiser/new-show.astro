@@ -416,7 +416,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           <div class="relative">
             <span id="s8-symbol-goal" class="absolute left-4 top-1/2 -translate-y-1/2 text-[15px] text-[#9b94a8] font-semibold">£</span>
             <input type="number" id="s8-goal" min="0" placeholder="0.00"
-              class="w-full border border-[#e6dcfb] rounded-[11px] pl-8 pr-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+              class="w-full border border-[#e6dcfb] rounded-[11px] pl-12 pr-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
           </div>
         </div>
         <div class="flex items-center justify-between p-4 border border-[#efebf5] rounded-[12px]">
@@ -447,7 +447,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         <div class="relative max-w-[200px]">
           <span id="s8-symbol-fee" class="absolute left-4 top-1/2 -translate-y-1/2 text-[15px] text-[#9b94a8] font-semibold">£</span>
           <input type="number" id="s8-entry-fee" min="0" step="0.50" value="0"
-            class="w-full border border-[#e6dcfb] rounded-[11px] pl-8 pr-4 py-3 text-[15px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+            class="w-full border border-[#e6dcfb] rounded-[11px] pl-12 pr-4 py-3 text-[15px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        </div>
+        <div class="mt-3 rounded-[13px] bg-[#faf7ff] border border-[#e6dcfb] p-4 space-y-2">
+          <p class="text-[13px] text-[#4a4357]">Platform fee: <span id="s8-svc-amount" class="font-semibold">A$1.10</span> per entry — please allow for this in your pricing.</p>
+          <p class="text-[13px] text-[#6f6880]">Total charged to entrant: <span id="s8-total-charge" class="font-extrabold text-brand">A$1.10</span></p>
+          <p class="text-[12px] text-[#9b94a8] italic"><span id="s8-entrant-preview">Entry = A$1.10 (A$0.00 + A$1.10 platform fee)</span></p>
         </div>
       </div>
     </div>
@@ -566,7 +571,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
   let currentStep = 1;
   let session, profile, base;
-  let draftShow = null;
+  let draftShow   = null;
+  let serviceFees = {};
 
   // ─── Auth ───────────────────────────────────────────────────────────────────
   const auth = await getAuth();
@@ -609,6 +615,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       document.getElementById('draft-title').textContent = draftShow.title || 'Untitled Show';
       document.getElementById('draft-banner').style.display = 'flex';
     }
+
+    const { data: feeSettings } = await supabase
+      .from('platform_settings').select('key, value').in('key', ['service_fee_AUD', 'service_fee_NZD']);
+    (feeSettings || []).forEach(r => { serviceFees[r.key] = parseFloat(r.value) || 0; });
 
     setupEventListeners();
     initCardGroups();
@@ -1311,6 +1321,22 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.getElementById('s8-currency').addEventListener('change', e => {
       applyCurrencySymbol(e.target.value);
     });
+    document.getElementById('s8-entry-fee').addEventListener('input', () => {
+      updateFeeBreakdown(document.getElementById('s8-currency')?.value || 'AUD');
+    });
+  }
+
+  function updateFeeBreakdown(code) {
+    const sym    = CURRENCY_SYMBOLS[code] || code;
+    const svcFee = serviceFees[`service_fee_${code}`] ?? 1.10;
+    const entry  = parseFloat(document.getElementById('s8-entry-fee')?.value) || 0;
+    const total  = entry + svcFee;
+    const amountEl  = document.getElementById('s8-svc-amount');
+    const totalEl   = document.getElementById('s8-total-charge');
+    const previewEl = document.getElementById('s8-entrant-preview');
+    if (amountEl)  amountEl.textContent  = `${sym}${svcFee.toFixed(2)}`;
+    if (totalEl)   totalEl.textContent   = `${sym}${total.toFixed(2)}`;
+    if (previewEl) previewEl.textContent = `Entry = ${sym}${total.toFixed(2)} (${sym}${entry.toFixed(2)} + ${sym}${svcFee.toFixed(2)} platform fee)`;
   }
 
   function applyCurrencySymbol(code) {
@@ -1318,6 +1344,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.getElementById('s8-symbol-goal').textContent = sym;
     document.getElementById('s8-symbol-fee').textContent  = sym;
     document.getElementById('s8-fee-hint').textContent    = `Set to ${sym}0 for a free show.`;
+    updateFeeBreakdown(code);
   }
 
   function setupEventListeners() {
