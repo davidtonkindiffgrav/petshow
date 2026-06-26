@@ -822,7 +822,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (show.is_judged === true) {
       const rows = [
         ['Method', 'Expert judges'],
-        ['Count',  `${judgeCount} judge${judgeCount !== 1 ? 's' : ''}`],
+        ['Count',  `${judgeCount} judge${Number(judgeCount) !== 1 ? 's' : ''}`],
       ];
       if (judges[0]?.first_name) rows.push(['Lead', `${judges[0].first_name} ${judges[0].last_name || ''}`.trim()]);
       setHeader('judging', '#22c55e', 'Configured', 'Judging', rows, 'Edit');
@@ -878,10 +878,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       ], 'Set Up');
     }
 
-    const hasLogo   = !!(show.logo_url || show.org_logo_url);
-    const hasBanner = !!show.banner_url;
-    const brandingStatus = hasLogo || hasBanner ? 'Uploaded' : 'Not uploaded';
-    const brandingColor  = hasLogo || hasBanner ? '#1ba89a' : '#9b94a8';
+    const uploadedCount = [show.logo_url, show.org_logo_url, show.banner_url].filter(Boolean).length;
+    const brandingStatus = uploadedCount === 3 ? 'Uploaded' : uploadedCount > 0 ? 'Partial' : 'Not uploaded';
+    const brandingColor  = uploadedCount === 3 ? '#22c55e' : uploadedCount > 0 ? '#fbbf24' : '#c4bed0';
     setHeader('branding', brandingColor, brandingStatus, 'Branding', [
       ['Show Logo',   show.logo_url     ? 'Uploaded' : 'Not uploaded'],
       ['Org Logo',    show.org_logo_url ? 'Uploaded' : 'Not uploaded'],
