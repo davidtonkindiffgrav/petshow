@@ -933,11 +933,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       ? 'Choose the fun categories for your show.'
       : 'Select the classes for your show. Disable any you don\'t need, or add custom ones.';
 
-    if (isBeauty && show.classes.length === 0) {
-      show.classes = STANDARD_CLASSES.map(name => ({ name, enabled: true, custom: false }));
+    if (isBeauty) {
+      if (show.classes.length === 0) {
+        show.classes = STANDARD_CLASSES.map(name => ({ name, enabled: true, custom: false }));
+      }
       renderStandardClasses();
     }
-    if (isFun && show.classes.length === 0) {
+    if (isFun) {
       renderFunStakesCategories();
     }
   }
@@ -1195,26 +1197,55 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
   // ─── Draft resume ────────────────────────────────────────────────────────────
   async function loadDraft(id) {
-    const { data } = await supabase.from('shows').select('*').eq('id', id).single();
+    const [{ data }, { data: sponsorData }, { data: judgesData }, { data: prizesData }, { data: cats }] = await Promise.all([
+      supabase.from('shows').select('*').eq('id', id).single(),
+      supabase.from('show_sponsors').select('*').eq('show_id', id),
+      supabase.from('show_judges').select('*').eq('show_id', id),
+      supabase.from('show_prizes').select('description').eq('show_id', id),
+      supabase.from('show_categories').select('name').eq('show_id', id),
+    ]);
     if (!data) return;
+
     Object.assign(show, {
-      id: data.id, title: data.title || '', host_org: '', org_type: data.org_type,
-      charity_number: data.charity_number || '', contact_email: data.contact_email || '',
-      contact_phone: data.contact_phone || '', entry_open_date: data.entry_open_date || '',
-      entry_close_date: data.entry_close_date || '', show_date: data.show_date || '',
-      show_type: data.show_type, animal_type: data.animal_type || 'dog',
-      breed_scope: data.breed_scope || 'all', breed_filter: data.breed_filter || '',
-      group_filter: data.group_filter || '', has_sponsor: data.has_sponsor,
-      is_judged: data.is_judged, judge_count: data.judge_count || 1,
-      judge_setup: data.judge_setup || 'later', has_digital_certs: data.has_digital_certs,
-      has_physical_prizes: data.has_physical_prizes, prize_source: data.prize_source,
-      is_fundraising: data.is_fundraising, donation_type: data.donation_type,
-      fundraising_goal: data.fundraising_goal || '', donation_receipts: data.donation_receipts,
+      id: data.id,
+      title: data.title || '',
+      host_org: data.host_org || '',
+      org_type: data.org_type,
+      charity_number: data.charity_number || '',
+      contact_email: data.contact_email || '',
+      contact_phone: data.contact_phone || '',
+      entry_open_date: (data.entry_open_date || '').slice(0, 10),
+      entry_close_date: (data.entry_close_date || '').slice(0, 10),
+      show_date: (data.show_date || '').slice(0, 10),
+      show_type: data.show_type,
+      animal_type: data.animal_type || 'dog',
+      breed_scope: data.breed_scope || 'all',
+      breed_filter: data.breed_filter || '',
+      group_filter: data.group_filter || '',
+      has_sponsor: data.has_sponsor,
+      sponsors: sponsorData?.length > 0
+        ? sponsorData.map(s => ({ name: s.name || '', website: s.website || '' }))
+        : [{ name: '', website: '' }],
+      is_judged: data.is_judged,
+      judge_count: data.judge_count || 1,
+      judge_setup: data.judge_setup || 'later',
+      judges: judgesData?.length > 0
+        ? judgesData.map(j => ({ first_name: j.first_name || '', last_name: j.last_name || '', email: j.email || '', phone: j.phone || '' }))
+        : [],
+      has_digital_certs: data.has_digital_certs,
+      has_physical_prizes: data.has_physical_prizes,
+      prize_source: data.prize_source,
+      prizes: prizesData?.map(p => p.description) || [],
+      classes: cats?.length > 0 ? cats.map(c => ({ name: c.name, enabled: true, custom: false })) : [],
+      is_fundraising: data.is_fundraising ?? true,
       show_fundraising_publicly: data.show_fundraising_publicly,
-      currency: data.currency || 'AUD', entry_fee: data.entry_fee || 0,
+      currency: data.currency || 'AUD',
+      entry_fee: data.entry_fee || 0,
     });
-    // Populate Step 1 fields
+
+    // Step 1
     document.getElementById('s1-title').value         = show.title;
+    document.getElementById('s1-host-org').value      = show.host_org;
     document.getElementById('s1-entry-open').value    = show.entry_open_date;
     document.getElementById('s1-entry-close').value   = show.entry_close_date;
     document.getElementById('s1-show-date').value     = show.show_date;
@@ -1225,25 +1256,80 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       document.getElementById('s1-charity-field').style.display = 'block';
       document.getElementById('s1-charity-number').value = show.charity_number;
     }
-    // Restore other card states
-    if (show.show_type) selectCard(document.getElementById('show-type-cards'), show.show_type);
+
+    // Step 2
+    if (show.show_type)   selectCard(document.getElementById('show-type-cards'),   show.show_type);
     if (show.animal_type) selectCard(document.getElementById('animal-type-cards'), show.animal_type);
+
+    // Step 3
     selectCard(document.getElementById('breed-scope-cards'), show.breed_scope);
     updateBreedFields();
-    // YNA states
-    if (show.has_sponsor !== null) setYNA('sponsor-choice', show.has_sponsor === true ? 'yes' : show.has_sponsor === false ? 'no' : 'later');
-    if (show.has_sponsor) document.getElementById('s5-sponsor-form').style.display = 'block';
-    if (show.is_judged !== null) setYNA('judging-choice', show.is_judged === true ? 'yes' : show.is_judged === false ? 'no' : 'later');
-    if (show.is_judged) document.getElementById('s6-judge-form').style.display = 'block';
-    // Restore currency
+    document.getElementById('s3-breed').value = show.breed_filter;
+    document.getElementById('s3-group').value = show.group_filter;
+
+    // Step 5 — sponsor
+    if (show.has_sponsor !== null) {
+      setYNA('sponsor-choice', show.has_sponsor === true ? 'yes' : show.has_sponsor === false ? 'no' : 'later');
+      if (show.has_sponsor) {
+        document.getElementById('s5-sponsor-form').style.display = 'block';
+        document.getElementById('s5-sponsor-name').value    = show.sponsors[0]?.name || '';
+        document.getElementById('s5-sponsor-website').value = show.sponsors[0]?.website || '';
+      }
+    }
+
+    // Step 6 — judging
+    if (show.is_judged !== null) {
+      setYNA('judging-choice', show.is_judged === true ? 'yes' : show.is_judged === false ? 'no' : 'later');
+      if (show.is_judged) {
+        document.getElementById('s6-judge-form').style.display = 'block';
+        document.getElementById('judge-count-display').textContent = String(show.judge_count);
+        if (show.judge_setup) {
+          selectCard(document.getElementById('judge-setup-cards'), show.judge_setup);
+          if (show.judge_setup === 'now') {
+            document.getElementById('s6-judge-fields').style.display = 'block';
+            updateJudgePanels();
+          }
+        }
+      }
+    }
+
+    // Step 7 — awards
+    const awardsSet = data.has_digital_certs !== null || data.has_physical_prizes !== null;
+    if (awardsSet) {
+      setYNA('awards-choice', 'yes');
+      document.getElementById('s7-awards-form').style.display = 'block';
+      setToggle('s7-certs-toggle', !!show.has_digital_certs);
+      setToggle('s7-physical-toggle', !!show.has_physical_prizes);
+      if (show.has_physical_prizes) {
+        document.getElementById('s7-physical-form').style.display = 'block';
+        if (show.prize_source) selectCard(document.getElementById('prize-source-cards'), show.prize_source);
+        const list = document.getElementById('s7-prize-list');
+        list.innerHTML = '';
+        show.prizes.forEach((desc, idx) => {
+          const row = document.createElement('div');
+          row.className = 'flex items-center gap-2';
+          row.innerHTML = `
+            <input type="text" value="${esc(desc)}" placeholder="e.g. $50 Pet Store Voucher"
+              class="flex-1 border border-[#e6dcfb] rounded-[11px] px-3 py-2.5 text-[14px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" />
+            <button type="button" class="prize-remove text-[#c4bed0] hover:text-red-400 transition-colors">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          `;
+          row.querySelector('input').addEventListener('input', e => { show.prizes[idx] = e.target.value; });
+          row.querySelector('.prize-remove').addEventListener('click', () => { row.remove(); show.prizes.splice(idx, 1); });
+          list.appendChild(row);
+        });
+      }
+    }
+
+    // Step 8 — fees
+    document.getElementById('s8-entry-fee').value = String(show.entry_fee || '');
+    setToggle('s8-public-toggle', !!show.show_fundraising_publicly);
     if (show.currency) {
       document.getElementById('s8-currency').value = show.currency;
       applyCurrencySymbol(show.currency);
     }
-    // Load categories
-    const { data: cats } = await supabase.from('show_categories').select('name').eq('show_id', show.id);
-    if (cats) show.classes = cats.map(c => ({ name: c.name, enabled: true, custom: false }));
-    // Navigate to last completed step
+
     goToStep(Math.min(data.wizard_step || 1, 10));
   }
 
