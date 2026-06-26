@@ -198,11 +198,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         </div>
 
         <div class="flex items-center gap-3 px-5 py-4">
-          <button class="btn-manage inline-flex items-center gap-2 bg-brand text-white text-[13px] font-bold px-4 py-2 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">
-            Manage Show
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-          </button>
-          ${show.status === 'draft' ? `<button class="btn-wizard text-[13px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-4 py-2 rounded-btn hover:bg-[#f0fafa] transition-colors">Continue in Wizard</button>` : ''}
+          ${show.status === 'published'
+            ? `<button class="btn-dashboard inline-flex items-center gap-2 bg-brand text-white text-[13px] font-bold px-4 py-2 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Dashboard</button>`
+            : `<button class="btn-wizard inline-flex items-center gap-2 bg-brand text-white text-[13px] font-bold px-4 py-2 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Continue in Wizard</button>`
+          }
+          <button class="btn-manage text-[13px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-4 py-2 rounded-btn hover:bg-[#f0fafa] transition-colors">Settings</button>
         </div>
       </div>
     `;
@@ -215,6 +215,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       chevron.style.transform = open ? '' : 'rotate(180deg)';
     });
 
+    row.querySelector('.btn-dashboard')?.addEventListener('click', e => {
+      e.stopPropagation();
+      window.location.href = base + `organiser?show=${show.id}`;
+    });
     row.querySelector('.btn-manage').addEventListener('click', e => {
       e.stopPropagation();
       window.location.href = base + `organiser/show/?id=${show.id}`;

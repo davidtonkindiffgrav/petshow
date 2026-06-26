@@ -544,6 +544,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   let prizes      = [];
   let showId      = null;
   let mgmtBase    = '';
+  let uid         = '';
   let judgeCount  = 1;
   let serviceFees    = {};
   let savedJudges    = [];
@@ -581,7 +582,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     showId = new URLSearchParams(window.location.search).get('id');
     if (!showId) { window.location.replace(mgmtBase + 'organiser/shows'); return; }
 
-    const uid = auth.session.user.id;
+    uid = auth.session.user.id;
     const [showRes, catsRes, judgesRes, sponsorsRes, prizesRes, feeRes, sjRes] = await Promise.all([
       supabase.from('shows').select('*').eq('id', showId).eq('created_by', uid).single(),
       supabase.from('show_categories').select('*').eq('show_id', showId),
@@ -705,6 +706,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       const needsNum = show.org_type === 'registered_charity' || show.org_type === 'non_profit';
       if (needsNum && !show.charity_number) {
         showPageError('A Charity / Non-Profit Number is required before publishing. Please update Show Basics.');
+        return;
+      }
+      const { data: existing } = await supabase
+        .from('shows').select('id, title').eq('created_by', uid).eq('status', 'published').neq('id', showId).maybeSingle();
+      if (existing) {
+        showPageError(`"${existing.title || 'Another show'}" is already published. Unpublish it before publishing this show.`);
         return;
       }
     }
