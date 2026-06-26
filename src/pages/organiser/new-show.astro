@@ -1244,9 +1244,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       const photoBtn    = panel.querySelector('.judge-photo-btn');
       const photoInput  = panel.querySelector('.judge-photo-input');
       const photoCircle = panel.querySelector('.judge-photo-circle');
-      photoBtn.addEventListener('click', () => photoInput.click());
-      photoInput.addEventListener('change', async () => {
-        const file = photoInput.files[0];
+
+      async function processJudgePhoto(file) {
         if (!file || file.size > maxUploadMb * 1024 * 1024 || !show.id) return;
         photoBtn.textContent = 'Uploading…';
         try {
@@ -1256,6 +1255,25 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           photoCircle.innerHTML = `<img src="${url}" class="w-full h-full object-cover" />`;
           photoBtn.textContent = 'Replace photo';
         } catch { photoBtn.textContent = 'Failed — try again'; }
+      }
+
+      photoBtn.addEventListener('click', () => photoInput.click());
+      photoInput.addEventListener('change', () => processJudgePhoto(photoInput.files[0]));
+
+      photoCircle.addEventListener('dragover', e => {
+        e.preventDefault();
+        photoCircle.style.borderColor = '#1ba89a';
+        photoCircle.style.background  = 'rgba(27,168,154,0.10)';
+      });
+      photoCircle.addEventListener('dragleave', () => {
+        photoCircle.style.borderColor = '';
+        photoCircle.style.background  = '';
+      });
+      photoCircle.addEventListener('drop', e => {
+        e.preventDefault();
+        photoCircle.style.borderColor = '';
+        photoCircle.style.background  = '';
+        processJudgePhoto(e.dataTransfer.files[0]);
       });
 
       container.appendChild(panel);
