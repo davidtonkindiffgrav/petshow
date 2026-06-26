@@ -373,10 +373,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       </div>
     </div>
 
-    <!-- ─── Step 8: Fundraising & Entry Fees ──────────────────────────────── -->
+    <!-- ─── Step 8: Entry Fees ────────────────────────────────────────────── -->
     <div id="step-8" style="display:none" class="bg-white rounded-card shadow-winner-card p-8">
-      <h2 class="text-[21px] font-extrabold text-[#1c1626] tracking-[-0.02em] mb-1">Fundraising & Entry Fees</h2>
-      <p class="text-[14px] text-[#6f6880] mb-7">Will you be raising money through this show?</p>
+      <h2 class="text-[21px] font-extrabold text-[#1c1626] tracking-[-0.02em] mb-1">Entry Fees</h2>
+      <p class="text-[14px] text-[#6f6880] mb-7">Set your entry fee and fundraising display preferences.</p>
 
       <div class="flex items-center gap-4 mb-7">
         <label for="s8-currency" class="text-[13px] font-semibold text-[#4a4357] shrink-0">Currency</label>
@@ -387,61 +387,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         </select>
       </div>
 
-      <div class="grid grid-cols-3 gap-3 mb-6" id="fundraising-choice">
-        <button type="button" data-value="yes" class="yna flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white p-4 transition-all cursor-pointer">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-          <span class="text-[13px] font-bold text-[#1c1626]">Yes</span>
-        </button>
-        <button type="button" data-value="no" class="yna flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white p-4 transition-all cursor-pointer">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          <span class="text-[13px] font-bold text-[#1c1626]">No</span>
-        </button>
-        <button type="button" data-value="later" class="yna flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#e6dcfb] bg-white p-4 transition-all cursor-pointer">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          <span class="text-[13px] font-bold text-[#1c1626]">Add Later</span>
-        </button>
-      </div>
-
-      <div id="s8-fundraising-form" style="display:none" class="space-y-5 mb-6">
-        <div>
-          <p class="text-[13px] font-semibold text-[#4a4357] mb-2.5">Donation Options</p>
-          <div class="grid grid-cols-3 gap-2" id="donation-type-cards">
-            <button type="button" data-value="optional" class="sel-card rounded-[11px] border-2 border-[#e6dcfb] bg-white py-2.5 text-[12px] font-bold text-[#1c1626] transition-all cursor-pointer">Optional</button>
-            <button type="button" data-value="required" class="sel-card rounded-[11px] border-2 border-[#e6dcfb] bg-white py-2.5 text-[12px] font-bold text-[#1c1626] transition-all cursor-pointer">Required</button>
-            <button type="button" data-value="only" class="sel-card rounded-[11px] border-2 border-[#e6dcfb] bg-white py-2.5 text-[12px] font-bold text-[#1c1626] transition-all cursor-pointer">Donations Only</button>
-          </div>
-        </div>
-        <div>
-          <label for="s8-goal" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Fundraising Goal <span class="text-[#9b94a8] font-normal">(optional)</span></label>
-          <div class="relative">
-            <span id="s8-symbol-goal" class="absolute left-4 top-1/2 -translate-y-1/2 text-[15px] text-[#9b94a8] font-semibold">A$</span>
-            <input type="number" id="s8-goal" min="0" placeholder="0.00"
-              class="w-full border border-[#e6dcfb] rounded-[11px] pl-12 pr-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 border border-[#efebf5] rounded-[12px]">
-          <div>
-            <p class="text-[13.5px] font-bold text-[#1c1626]">Donation Receipts</p>
-            <p id="s8-receipts-note" class="text-[12px] text-[#9b94a8]">Automatically available for Registered Charities</p>
-          </div>
-          <button type="button" id="s8-receipts-toggle" data-on="false"
-            class="w-11 h-6 rounded-full bg-[#efebf5] transition-colors relative flex items-center px-0.5">
-            <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
-          </button>
-        </div>
-        <div class="flex items-center justify-between p-4 border border-[#efebf5] rounded-[12px]">
-          <div>
-            <p class="text-[13.5px] font-bold text-[#1c1626]">Display Fundraising Progress Publicly</p>
-            <p class="text-[12px] text-[#9b94a8]">Show a progress bar on the public show page</p>
-          </div>
-          <button type="button" id="s8-public-toggle" data-on="false"
-            class="w-11 h-6 rounded-full bg-[#efebf5] transition-colors relative flex items-center px-0.5">
-            <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
-          </button>
-        </div>
-      </div>
-
-      <div class="border-t border-[#efebf5] pt-6">
+      <div class="mb-6">
         <label for="s8-entry-fee" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Entry Fee per Entry</label>
         <p id="s8-fee-hint" class="text-[12px] text-[#9b94a8] mb-2">Set to A$0 for a free show.</p>
         <div class="flex items-center gap-5">
@@ -459,6 +405,17 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           <p class="text-[13px] text-[#4a4357]">Platform fee: <span id="s8-svc-amount" class="font-semibold">A$1.10</span> per entry — please allow for this in your pricing.</p>
           <p class="text-[12px] text-[#9b94a8] italic"><span id="s8-entrant-preview">Entry = A$1.10 (A$0.00 + A$1.10 platform fee)</span></p>
         </div>
+      </div>
+
+      <div class="flex items-center justify-between p-4 border border-[#efebf5] rounded-[12px]">
+        <div>
+          <p class="text-[13.5px] font-bold text-[#1c1626]">Display Fundraising Progress Publicly</p>
+          <p class="text-[12px] text-[#9b94a8]">Show a progress bar on the public show page</p>
+        </div>
+        <button type="button" id="s8-public-toggle" data-on="false"
+          class="w-11 h-6 rounded-full bg-[#efebf5] transition-colors relative flex items-center px-0.5">
+          <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
+        </button>
       </div>
     </div>
 
@@ -565,8 +522,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     judges: [],
     has_digital_certs: null, has_physical_prizes: null, prize_source: null,
     prizes: [],
-    is_fundraising: null, donation_type: null, fundraising_goal: '',
-    show_fundraising_publicly: null, donation_receipts: null,
+    is_fundraising: true,
+    show_fundraising_publicly: null,
     currency: 'AUD', entry_fee: 0,
     classes: [],
     wizard_step: 1,
@@ -798,8 +755,6 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       return true;
     }
     if (n === 8) {
-      const choice = getYNAValue('fundraising-choice');
-      if (!choice) return showError('Please make a selection.'), false;
       const fee = parseFloat(document.getElementById('s8-entry-fee').value);
       if (isNaN(fee) || fee < 0) return showError('Please enter a valid entry fee (0 for free).'), false;
       return true;
@@ -867,16 +822,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       if (choice !== 'yes') { show.has_digital_certs = null; show.has_physical_prizes = null; }
     }
     if (n === 8) {
-      const choice = getYNAValue('fundraising-choice');
-      show.is_fundraising = choice === 'yes' ? true : choice === 'no' ? false : null;
-      if (choice === 'yes') {
-        show.donation_type              = getSelectedCard('donation-type-cards');
-        show.fundraising_goal           = parseFloat(document.getElementById('s8-goal').value) || null;
-        show.donation_receipts          = document.getElementById('s8-receipts-toggle').dataset.on === 'true';
-        show.show_fundraising_publicly  = document.getElementById('s8-public-toggle').dataset.on === 'true';
-      }
-      show.currency  = document.getElementById('s8-currency').value || 'AUD';
-      show.entry_fee = parseFloat(document.getElementById('s8-entry-fee').value) || 0;
+      show.is_fundraising            = true;
+      show.show_fundraising_publicly = document.getElementById('s8-public-toggle').dataset.on === 'true';
+      show.currency                  = document.getElementById('s8-currency').value || 'AUD';
+      show.entry_fee                 = parseFloat(document.getElementById('s8-entry-fee').value) || 0;
     }
   }
 
@@ -1156,9 +1105,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           <p class="text-[12px] font-bold text-brand uppercase tracking-wide">Fundraising & Entry Fees</p>
         </div>
         <div class="px-5">
-          ${reviewRow('Fundraising', show.is_fundraising === true ? (show.donation_type || 'Yes') : show.is_fundraising === false ? 'No fundraising' : null, 8)}
           ${reviewRow('Currency', show.currency || 'AUD', 8)}
           ${reviewRow('Entry Fee', show.entry_fee === 0 ? 'Free' : `${CURRENCY_SYMBOLS[show.currency] || show.currency}${show.entry_fee}`, 8)}
+          ${reviewRow('Public Progress', show.show_fundraising_publicly ? 'Visible' : 'Hidden', 8)}
         </div>
       </div>`;
   }
@@ -1312,17 +1261,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       btn.addEventListener('click', () => { selectCard(document.getElementById('prize-source-cards'), btn.dataset.value); });
     });
     document.getElementById('s7-add-prize').addEventListener('click', addPrizeRow);
-    // Step 8: fundraising YNA + toggles + donation type
-    setupYNA('fundraising-choice', val => {
-      document.getElementById('s8-fundraising-form').style.display = val === 'yes' ? 'block' : 'none';
-    });
-    setupToggle('s8-receipts-toggle', on => { show.donation_receipts = on; });
+    // Step 8: public toggle + currency selector
     setupToggle('s8-public-toggle', on => { show.show_fundraising_publicly = on; });
-    document.getElementById('donation-type-cards').querySelectorAll('[data-value]').forEach(btn => {
-      btn.addEventListener('click', () => { selectCard(document.getElementById('donation-type-cards'), btn.dataset.value); });
-    });
-    // Auto-enable receipts for registered charity
-    if (show.org_type === 'registered_charity') setToggle('s8-receipts-toggle', true);
     // Currency selector
     document.getElementById('s8-currency').addEventListener('change', e => {
       applyCurrencySymbol(e.target.value);
