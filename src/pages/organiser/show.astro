@@ -679,11 +679,16 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       publishBtn.classList.replace('bg-brand', 'bg-[#f0fafa]');
       publishBtn.classList.replace('text-white', 'text-[#6f6880]');
       publishBtn.classList.remove('shadow-btn-primary');
+    } else {
+      publishBtn.textContent = 'Publish';
+      publishBtn.classList.replace('bg-[#f0fafa]', 'bg-brand');
+      publishBtn.classList.replace('text-[#6f6880]', 'text-white');
+      publishBtn.classList.add('shadow-btn-primary');
     }
-    document.getElementById('btn-back').addEventListener('click', () => {
+    document.getElementById('btn-back').onclick = () => {
       window.location.href = mgmtBase + 'organiser/shows';
-    });
-    publishBtn.addEventListener('click', handlePublish);
+    };
+    publishBtn.onclick = handlePublish;
   }
 
   function showStatus() {
