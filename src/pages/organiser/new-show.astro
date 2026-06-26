@@ -183,9 +183,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
       <div id="s3-breed-field" style="display:none" class="mb-4">
         <label for="s3-breed" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Breed Name <span class="text-red-400">*</span></label>
-        <input type="text" id="s3-breed" placeholder="e.g. Golden Retriever"
-          class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
-        <p class="text-[11.5px] text-[#9b94a8] mt-1.5">Breed selection dropdowns coming soon.</p>
+        <div class="relative">
+          <input type="text" id="s3-breed" placeholder="Search breeds…" autocomplete="off"
+            role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="s3-breed-listbox"
+            class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+          <ul id="s3-breed-listbox" role="listbox" aria-label="Dog breeds"
+            class="hidden absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-[#b8e4e0] rounded-[11px] shadow-[0_4px_16px_rgba(0,0,0,0.10)] max-h-52 overflow-y-auto"></ul>
+        </div>
       </div>
       <div id="s3-group-field" style="display:none">
         <label for="s3-group" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Group Name <span class="text-red-400">*</span></label>
@@ -255,8 +259,19 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           <input type="url" id="s5-sponsor-website" placeholder="https://example.com"
             class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
         </div>
-        <div class="rounded-[11px] border border-dashed border-[#b8e4e0] bg-[#f0fafa] px-4 py-3">
-          <p class="text-[13px] text-[#9b94a8]">🖼 Sponsor logo upload coming soon — you can add this from show settings later.</p>
+        <div>
+          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Sponsor Logo <span class="text-[#9b94a8] font-normal">(optional)</span></label>
+          <div id="s5-logo-widget">
+            <input type="file" class="upload-input hidden" accept="image/jpeg,image/png,image/webp" />
+            <div class="upload-trigger flex items-center gap-3 border-2 border-dashed border-[#b8e4e0] rounded-[11px] px-4 py-3 cursor-pointer hover:bg-brand-tint/50 transition-colors">
+              <img class="upload-preview hidden h-10 rounded object-contain shrink-0" />
+              <svg class="upload-icon shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <div>
+                <span class="upload-label block text-[13px] text-[#9b94a8]">Click to upload sponsor logo</span>
+                <span class="text-[11px] text-[#c4bed0]">JPG, PNG, WebP · max 2 MB</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -419,26 +434,53 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       </div>
     </div>
 
-    <!-- ─── Step 9: Branding (placeholder) ────────────────────────────────── -->
+    <!-- ─── Step 9: Branding ────────────────────────────────────────────────── -->
     <div id="step-9" style="display:none" class="bg-white rounded-card shadow-winner-card p-8">
       <h2 class="text-[21px] font-extrabold text-[#1c1626] tracking-[-0.02em] mb-1">Branding</h2>
       <p class="text-[14px] text-[#6f6880] mb-7">Give your show a distinctive look.</p>
 
-      <div class="bg-brand-tint/50 border border-brand/10 rounded-[14px] p-5 mb-6">
-        <p class="text-[13.5px] font-semibold text-[#1c1626] mb-1">Logo & banner upload coming soon</p>
-        <p class="text-[13px] text-[#6f6880]">You can continue and add your show's branding from the show settings page after publishing.</p>
+      <div class="grid grid-cols-2 gap-5 mb-5">
+        <!-- Show Logo -->
+        <div>
+          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Show Logo <span class="text-[#9b94a8] font-normal">(optional)</span></label>
+          <div id="s9-logo-widget">
+            <input type="file" class="upload-input hidden" accept="image/jpeg,image/png,image/webp" />
+            <div class="upload-trigger flex flex-col items-center gap-2 border-2 border-dashed border-[#b8e4e0] rounded-[14px] p-5 cursor-pointer hover:bg-brand-tint/50 transition-colors text-center min-h-[120px] justify-center">
+              <img class="upload-preview hidden max-h-20 rounded-lg object-contain mb-1" />
+              <svg class="upload-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <span class="upload-label text-[12px] text-[#9b94a8]">Click to upload</span>
+              <span class="text-[11px] text-[#c4bed0]">JPG, PNG, WebP · max 2 MB</span>
+            </div>
+          </div>
+        </div>
+        <!-- Org Logo -->
+        <div>
+          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Organisation Logo <span class="text-[#9b94a8] font-normal">(optional)</span></label>
+          <div id="s9-org-logo-widget">
+            <input type="file" class="upload-input hidden" accept="image/jpeg,image/png,image/webp" />
+            <div class="upload-trigger flex flex-col items-center gap-2 border-2 border-dashed border-[#b8e4e0] rounded-[14px] p-5 cursor-pointer hover:bg-brand-tint/50 transition-colors text-center min-h-[120px] justify-center">
+              <img class="upload-preview hidden max-h-20 rounded-lg object-contain mb-1" />
+              <svg class="upload-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <span class="upload-label text-[12px] text-[#9b94a8]">Click to upload</span>
+              <span class="text-[11px] text-[#c4bed0]">JPG, PNG, WebP · max 2 MB</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="grid grid-cols-2 gap-4">
-        <div class="border-2 border-dashed border-[#b8e4e0] rounded-[14px] p-6 flex flex-col items-center gap-2 opacity-40">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-          <p class="text-[12px] font-semibold text-[#9b94a8]">Organisation Logo</p>
-          <p class="text-[11px] text-[#c4bed0]">Coming soon</p>
-        </div>
-        <div class="border-2 border-dashed border-[#b8e4e0] rounded-[14px] p-6 flex flex-col items-center gap-2 opacity-40">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-          <p class="text-[12px] font-semibold text-[#9b94a8]">Show Banner</p>
-          <p class="text-[11px] text-[#c4bed0]">Coming soon</p>
+      <!-- Show Banner -->
+      <div>
+        <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Show Banner <span class="text-[#9b94a8] font-normal">(optional)</span></label>
+        <div id="s9-banner-widget">
+          <input type="file" class="upload-input hidden" accept="image/jpeg,image/png,image/webp" />
+          <div class="upload-trigger flex items-center gap-4 border-2 border-dashed border-[#b8e4e0] rounded-[14px] px-6 py-5 cursor-pointer hover:bg-brand-tint/50 transition-colors">
+            <img class="upload-preview hidden h-14 rounded-lg object-cover shrink-0" />
+            <svg class="upload-icon shrink-0" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <div>
+              <span class="upload-label block text-[13px] text-[#9b94a8] font-medium">Click to upload a banner image</span>
+              <span class="text-[11px] text-[#c4bed0]">JPG, PNG, WebP · max 2 MB · recommended 1600×400</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -488,6 +530,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 <script>
   import { getAuth } from '../../lib/auth.js';
   import { supabase } from '../../lib/supabase.js';
+  import { uploadImage } from '../../lib/storage.js';
 
   // ─── Constants ──────────────────────────────────────────────────────────────
   const STEP_NAMES = [
@@ -509,6 +552,79 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     'Best Dressed Owner and Dog', 'Looks Most Like Its Owner', 'Group Photo',
   ];
 
+  const DOG_BREEDS = [
+    'Affenpinscher','Afghan Hound','Airedale Terrier','Akita','Akita (Japanese)',
+    'Alaskan Malamute','American Hairless Terrier','American Staffordshire Terrier',
+    'Anatolian Shepherd Dog','Australasian Bosdog','Australian Cattle Dog',
+    'Australian Kelpie','Australian Shepherd','Australian Silky Terrier',
+    'Australian Stumpy Tail Cattle Dog','Australian Terrier','Azawakh','Basenji',
+    'Basset Fauve de Bretagne','Basset Hound','Bavarian Mountain Scent Hound',
+    'Beagle','Bearded Collie','Beauceron','Bedlington Terrier',
+    'Belgian Shepherd Dog (Groenendael)','Belgian Shepherd Dog (Laekenois)',
+    'Belgian Shepherd Dog (Malinois)','Belgian Shepherd Dog (Tervueren)',
+    'Bergamasco Shepherd Dog','Bernese Mountain Dog','Bichon Frise','Biewer Terrier',
+    'Black and Tan Coonhound','Bloodhound','Bluetick Coonhound','Bolognese',
+    'Border Collie','Border Terrier','Borzoi','Boston Terrier','Bouvier des Flandres',
+    'Boxer','Bracco Italiano','Briard','British Bulldog','Brittany','Bull Terrier',
+    'Bull Terrier (Miniature)','Bullmastiff','Cairn Terrier','Canaan Dog',
+    'Canadian Eskimo Dog','Cane Corso','Caucasian Shepherd Dog',
+    'Cavalier King Charles Spaniel','Central Asian Shepherd Dog','Cesky Terrier',
+    'Chesapeake Bay Retriever','Chihuahua (Long Coat)','Chihuahua (Smooth Coat)',
+    'Chinese Crested Dog','Chow Chow','Cirneco Dell\'Etna','Clumber Spaniel',
+    'Cocker Spaniel','Cocker Spaniel (American)','Collie (Rough)','Collie (Smooth)',
+    'Coton De Tulear','Curly Coated Retriever','Dachshund (Long Haired)',
+    'Dachshund (Miniature Long Haired)','Dachshund (Miniature Smooth Haired)',
+    'Dachshund (Miniature Wire Haired)','Dachshund (Rabbit Long Haired)',
+    'Dachshund (Rabbit Smooth Haired)','Dachshund (Rabbit Wire Haired)',
+    'Dachshund (Smooth Haired)','Dachshund (Wire Haired)','Dalmatian',
+    'Dandie Dinmont Terrier','Deerhound','Dobermann','Dogue de Bordeaux',
+    'Dutch Shepherd Dog','English Setter','English Springer Spaniel',
+    'English Toy Terrier (Black and Tan)','Estrela Mountain Dog','Eurasier',
+    'Field Spaniel','Finnish Lapphund','Finnish Spitz','Flat Coated Retriever',
+    'Fox Terrier (Smooth)','Fox Terrier (Wire)','Foxhound','French Bulldog',
+    'German Hunting Terrier','German Pinscher','German Shepherd Dog',
+    'German Shepherd Dog (Long Stock Coat)','German Shorthaired Pointer',
+    'German Spitz (Klein)','German Spitz (Mittel)','German Wirehaired Pointer',
+    'Glen of Imaal Terrier','Golden Retriever','Gordon Setter',
+    'Grand Basset Griffon Vendeen','Great Dane','Great Swiss Mountain Dog',
+    'Greyhound','Griffon Bruxellois','Hamiltonstovare','Harrier','Havanese',
+    'Hungarian Vizsla','Hungarian Wirehaired Vizsla','Ibizan Hound',
+    'Icelandic Sheepdog','Irish Red and White Setter','Irish Setter','Irish Terrier',
+    'Irish Water Spaniel','Irish Wolfhound','Italian Greyhound','Italian Spinone',
+    'Jack Russell Terrier','Japanese Chin','Japanese Spitz','Kangal Shepherd Dog',
+    'Karelian Bear Dog','Keeshond','Kerry Blue Terrier','King Charles Spaniel',
+    'Kleine Munsterlander','Komondor','Kuvasz','Labrador Retriever',
+    'Lagotto Romagnolo','Lakeland Terrier','Landseer (European Continental Type)',
+    'Large Munsterlander','Leonberger','Lhasa Apso','Lowchen','Maltese',
+    'Manchester Terrier','Maremma Sheepdog','Mastiff','Miniature American Shepherd',
+    'Miniature Pinscher','Mudi','Murray River Retriever','Neapolitan Mastiff',
+    'Newfoundland','Norfolk Terrier','Norwegian Buhund','Norwegian Elkhound',
+    'Norwich Terrier','Nova Scotia Duck Tolling Retriever','Old English Sheepdog',
+    'Otterhound','Papillon','Parson Russell Terrier','Pekingese',
+    'Peruvian Hairless Dog (Large)','Peruvian Hairless Dog (Medium)',
+    'Peruvian Hairless Dog (Small)','Petit Basset Griffon Vendeen','Pharaoh Hound',
+    'Pointer','Polish Lowland Sheepdog','Pomeranian','Poodle (Miniature)',
+    'Poodle (Standard)','Poodle (Toy)','Porcelaine',
+    'Portuguese Podengo (Large Smooth Haired)','Portuguese Podengo (Large Wire Haired)',
+    'Portuguese Podengo (Medium Smooth Haired)','Portuguese Podengo (Medium Wire Haired)',
+    'Portuguese Podengo (Small Smooth Haired)','Portuguese Podengo (Small Wire Haired)',
+    'Portuguese Water Dog','Prague Ratter','Pug','Puli','Pumi','Pyrenean Mastiff',
+    'Pyrenean Mountain Dog','Pyrenean Sheepdog Longhaired','Rhodesian Ridgeback',
+    'Rottweiler','Russian Black Terrier','Russian Toy (Long Haired)',
+    'Russian Toy (Smooth Haired)','Saluki','Samoyed','Schipperke','Schnauzer',
+    'Schnauzer (Giant)','Schnauzer (Miniature)','Scottish Terrier','Sealyham Terrier',
+    'Shar Pei','Shetland Sheepdog','Shiba Inu','Shih Tzu','Shikoku','Siberian Husky',
+    'Skye Terrier','Sloughi','Soft Coated Wheaten Terrier','Spanish Mastiff',
+    'Spanish Water Dog','St Bernard','Staffordshire Bull Terrier','Sussex Spaniel',
+    'Swedish Lapphund','Swedish Vallhund','Tatra Shepherd Dog','Tenterfield Terrier',
+    'Tibetan Mastiff','Tibetan Spaniel','Tibetan Terrier','Tornjak','Weimaraner',
+    'Weimaraner (Long-haired)','Welsh Corgi (Cardigan)','Welsh Corgi (Pembroke)',
+    'Welsh Springer Spaniel','Welsh Terrier','West Highland White Terrier','Whippet',
+    'White Swiss Shepherd Dog','Wirehaired Slovakian Pointer',
+    'Xoloitzcuintle (Intermediate)','Xoloitzcuintle (Miniature)',
+    'Xoloitzcuintle (Standard)','Yakutian Laika','Yorkshire Terrier',
+  ];
+
   // ─── State ──────────────────────────────────────────────────────────────────
   const show = {
     id: null,
@@ -517,7 +633,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     entry_open_date: '', entry_close_date: '', show_date: '',
     show_type: null, animal_type: 'dog',
     breed_scope: 'all', breed_filter: '', group_filter: '',
-    has_sponsor: null, sponsors: [{ name: '', website: '' }],
+    has_sponsor: null, sponsors: [{ name: '', website: '', logo_url: '' }],
     is_judged: null, judge_count: 1, judge_setup: 'later',
     judges: [],
     has_digital_certs: null, has_physical_prizes: null, prize_source: null,
@@ -526,6 +642,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     show_fundraising_publicly: null,
     currency: 'AUD', entry_fee: 0,
     classes: [],
+    logo_url: '', banner_url: '', org_logo_url: '',
     wizard_step: 1,
   };
 
@@ -827,6 +944,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           last_name:  document.getElementById(`judge-ln-${i}`)?.value.trim() || '',
           email:      document.getElementById(`judge-em-${i}`)?.value.trim() || '',
           phone:      document.getElementById(`judge-ph-${i}`)?.value.trim() || '',
+          photo_url:  show.judges[i]?.photo_url || '',
         }));
       }
     }
@@ -860,6 +978,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       prize_source: show.prize_source, is_fundraising: show.is_fundraising,
       donation_type: show.donation_type, fundraising_goal: show.fundraising_goal || null,
       show_fundraising_publicly: show.show_fundraising_publicly, donation_receipts: show.donation_receipts,
+      logo_url: show.logo_url || null, banner_url: show.banner_url || null, org_logo_url: show.org_logo_url || null,
       currency: show.currency, entry_fee: show.entry_fee, status: 'draft',
       wizard_step: completedStep + 1,
     };
@@ -1025,7 +1144,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const container = document.getElementById('s6-judge-panels');
     container.innerHTML = '';
     for (let i = 0; i < show.judge_count; i++) {
-      const j = show.judges[i] || { first_name: '', last_name: '', email: '', phone: '' };
+      const j = show.judges[i] || { first_name: '', last_name: '', email: '', phone: '', photo_url: '' };
       const panel = document.createElement('div');
       panel.className = 'border border-[#efebf5] rounded-[14px] p-4 space-y-3';
 
@@ -1073,6 +1192,16 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           <input type="checkbox" id="judge-save-${i}" class="w-4 h-4 accent-brand" />
           <span class="text-[12.5px] text-[#6f6880]">Save to my judge book</span>
         </label>
+        <div class="flex items-center gap-3 pt-2 border-t border-[#f5f3f8]">
+          <div class="w-10 h-10 rounded-full border-2 border-dashed border-[#b8e4e0] bg-[#f0fafa] flex items-center justify-center overflow-hidden judge-photo-circle shrink-0">
+            ${j.photo_url ? `<img src="${esc(j.photo_url)}" class="w-full h-full object-cover" />` : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c4bed0" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>`}
+          </div>
+          <div>
+            <p class="text-[12px] font-semibold text-[#4a4357]">Profile Photo <span class="text-[11px] text-[#9b94a8] font-normal">(optional)</span></p>
+            <button type="button" class="judge-photo-btn text-[12px] font-semibold text-brand hover:underline">${j.photo_url ? 'Replace photo' : 'Upload photo'}</button>
+            <input type="file" class="judge-photo-input hidden" accept="image/jpeg,image/png,image/webp" />
+          </div>
+        </div>
       `;
 
       const pickerBtn = panel.querySelector('.judge-picker-btn');
@@ -1095,6 +1224,24 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           });
         });
       }
+      // Judge photo upload
+      const photoBtn    = panel.querySelector('.judge-photo-btn');
+      const photoInput  = panel.querySelector('.judge-photo-input');
+      const photoCircle = panel.querySelector('.judge-photo-circle');
+      photoBtn.addEventListener('click', () => photoInput.click());
+      photoInput.addEventListener('change', async () => {
+        const file = photoInput.files[0];
+        if (!file || file.size > 2 * 1024 * 1024 || !show.id) return;
+        photoBtn.textContent = 'Uploading…';
+        try {
+          const url = await uploadImage(`judges/${show.id}/judge-${i}`, file);
+          if (!show.judges[i]) show.judges[i] = {};
+          show.judges[i].photo_url = url;
+          photoCircle.innerHTML = `<img src="${url}" class="w-full h-full object-cover" />`;
+          photoBtn.textContent = 'Replace photo';
+        } catch { photoBtn.textContent = 'Failed — try again'; }
+      });
+
       container.appendChild(panel);
     }
   }
@@ -1224,13 +1371,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       group_filter: data.group_filter || '',
       has_sponsor: data.has_sponsor,
       sponsors: sponsorData?.length > 0
-        ? sponsorData.map(s => ({ name: s.name || '', website: s.website || '' }))
-        : [{ name: '', website: '' }],
+        ? sponsorData.map(s => ({ name: s.name || '', website: s.website || '', logo_url: s.logo_url || '' }))
+        : [{ name: '', website: '', logo_url: '' }],
       is_judged: data.is_judged,
       judge_count: data.judge_count || 1,
       judge_setup: data.judge_setup || 'later',
       judges: judgesData?.length > 0
-        ? judgesData.map(j => ({ first_name: j.first_name || '', last_name: j.last_name || '', email: j.email || '', phone: j.phone || '' }))
+        ? judgesData.map(j => ({ first_name: j.first_name || '', last_name: j.last_name || '', email: j.email || '', phone: j.phone || '', photo_url: j.photo_url || '' }))
         : [],
       has_digital_certs: data.has_digital_certs,
       has_physical_prizes: data.has_physical_prizes,
@@ -1241,7 +1388,16 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       show_fundraising_publicly: data.show_fundraising_publicly,
       currency: data.currency || 'AUD',
       entry_fee: data.entry_fee || 0,
+      logo_url: data.logo_url || '',
+      banner_url: data.banner_url || '',
+      org_logo_url: data.org_logo_url || '',
     });
+
+    // Restore upload previews
+    if (show.logo_url)     restoreUploadPreview(document.getElementById('s9-logo-widget'),     show.logo_url);
+    if (show.banner_url)   restoreUploadPreview(document.getElementById('s9-banner-widget'),   show.banner_url);
+    if (show.org_logo_url) restoreUploadPreview(document.getElementById('s9-org-logo-widget'), show.org_logo_url);
+    if (show.sponsors[0]?.logo_url) restoreUploadPreview(document.getElementById('s5-logo-widget'), show.sponsors[0].logo_url);
 
     // Step 1
     document.getElementById('s1-title').value         = show.title;
@@ -1331,6 +1487,43 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     }
 
     goToStep(Math.min(data.wizard_step || 1, 10));
+  }
+
+  // ─── Upload widget helpers ────────────────────────────────────────────────────
+  function initUploadWidget(el, getPath, onUrl) {
+    if (!el) return;
+    const input   = el.querySelector('.upload-input');
+    const trigger = el.querySelector('.upload-trigger');
+    const preview = el.querySelector('.upload-preview');
+    const label   = el.querySelector('.upload-label');
+    const icon    = el.querySelector('.upload-icon');
+    trigger.addEventListener('click', () => input.click());
+    input.addEventListener('change', async () => {
+      const file = input.files[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) { label.textContent = 'File too large (max 2 MB)'; return; }
+      const path = getPath();
+      if (!path) { label.textContent = 'Save show progress first'; return; }
+      label.textContent = 'Uploading…';
+      try {
+        const url = await uploadImage(path, file);
+        preview.src = url;
+        preview.classList.remove('hidden');
+        if (icon) icon.classList.add('hidden');
+        label.textContent = 'Click to replace';
+        onUrl(url);
+      } catch { label.textContent = 'Upload failed — try again'; }
+    });
+  }
+
+  function restoreUploadPreview(el, url) {
+    if (!el || !url) return;
+    const preview = el.querySelector('.upload-preview');
+    const label   = el.querySelector('.upload-label');
+    const icon    = el.querySelector('.upload-icon');
+    if (preview) { preview.src = url; preview.classList.remove('hidden'); }
+    if (icon)    icon.classList.add('hidden');
+    if (label)   label.textContent = 'Click to replace';
   }
 
   // ─── Misc helpers ────────────────────────────────────────────────────────────
@@ -1425,13 +1618,34 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     });
     // Step 8: public toggle + currency selector
     setupToggle('s8-public-toggle', on => { show.show_fundraising_publicly = on; });
-    // Currency selector
     document.getElementById('s8-currency').addEventListener('change', e => {
       applyCurrencySymbol(e.target.value);
     });
     document.getElementById('s8-entry-fee').addEventListener('input', () => {
       updateFeeBreakdown(document.getElementById('s8-currency')?.value || 'AUD');
     });
+    // Step 5: sponsor logo
+    initUploadWidget(
+      document.getElementById('s5-logo-widget'),
+      () => show.id ? `sponsors/${show.id}/sponsor-0` : null,
+      url => { show.sponsors[0].logo_url = url; }
+    );
+    // Step 9: branding widgets
+    initUploadWidget(
+      document.getElementById('s9-logo-widget'),
+      () => show.id ? `shows/${show.id}/logo` : null,
+      url => { show.logo_url = url; }
+    );
+    initUploadWidget(
+      document.getElementById('s9-org-logo-widget'),
+      () => show.id ? `shows/${show.id}/org-logo` : null,
+      url => { show.org_logo_url = url; }
+    );
+    initUploadWidget(
+      document.getElementById('s9-banner-widget'),
+      () => show.id ? `shows/${show.id}/banner` : null,
+      url => { show.banner_url = url; }
+    );
   }
 
   function updateFeeBreakdown(code) {
@@ -1495,4 +1709,65 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       draftShow = null;
     });
   }
+
+  // ─── Breed combobox ─────────────────────────────────────────────────────────
+  (function() {
+    const input   = document.getElementById('s3-breed');
+    const listbox = document.getElementById('s3-breed-listbox');
+    let activeIdx = -1;
+
+    function getMatches(q) {
+      if (!q) return DOG_BREEDS.slice(0, 8);
+      const lq = q.toLowerCase();
+      return DOG_BREEDS.filter(b => b.toLowerCase().includes(lq)).slice(0, 60);
+    }
+
+    function renderList(matches) {
+      listbox.innerHTML = matches.length
+        ? matches.map((b, i) =>
+            `<li role="option" data-idx="${i}" class="px-4 py-2.5 text-[14px] text-[#1c1626] cursor-pointer hover:bg-[#e8f7f6]">${b}</li>`
+          ).join('')
+        : `<li class="px-4 py-3 text-[14px] text-[#9b94a8]">No breeds found</li>`;
+    }
+
+    function openList(q) {
+      renderList(getMatches(q));
+      listbox.classList.remove('hidden');
+      input.setAttribute('aria-expanded', 'true');
+      activeIdx = -1;
+    }
+
+    function closeList() {
+      listbox.classList.add('hidden');
+      input.setAttribute('aria-expanded', 'false');
+      activeIdx = -1;
+    }
+
+    function setActive(idx) {
+      const items = listbox.querySelectorAll('[role="option"]');
+      items.forEach((el, i) => el.classList.toggle('bg-[#e8f7f6]', i === idx));
+      activeIdx = idx;
+      if (items[idx]) items[idx].scrollIntoView({ block: 'nearest' });
+    }
+
+    input.addEventListener('input',  () => openList(input.value.trim()));
+    input.addEventListener('focus',  () => openList(input.value.trim()));
+
+    input.addEventListener('keydown', e => {
+      const items = listbox.querySelectorAll('[role="option"]');
+      if      (e.key === 'ArrowDown')              { e.preventDefault(); setActive(Math.min(activeIdx + 1, items.length - 1)); }
+      else if (e.key === 'ArrowUp')                { e.preventDefault(); setActive(Math.max(activeIdx - 1, 0)); }
+      else if (e.key === 'Enter' && activeIdx >= 0){ e.preventDefault(); input.value = items[activeIdx].textContent; closeList(); }
+      else if (e.key === 'Escape')                 { closeList(); }
+    });
+
+    listbox.addEventListener('mousedown', e => {
+      const li = e.target.closest('[role="option"]');
+      if (li) { input.value = li.textContent; closeList(); }
+    });
+
+    document.addEventListener('click', e => {
+      if (!input.contains(e.target) && !listbox.contains(e.target)) closeList();
+    });
+  })();
 </script>

@@ -474,19 +474,28 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       </div>
 
       <!-- Panel: Branding -->
-      <div id="panel-branding" style="display:none" class="p-6">
-        <div class="bg-brand-tint/50 border border-brand/10 rounded-[12px] p-4 mb-4">
-          <p class="text-[13px] font-semibold text-[#1c1626] mb-1">Logo &amp; banner upload coming soon</p>
-          <p class="text-[12.5px] text-[#6f6880]">You'll be able to add your show's branding once file uploads are available.</p>
-        </div>
-        <div class="flex gap-3">
-          <div class="flex-1 h-24 rounded-[11px] border-2 border-dashed border-[#b8e4e0] bg-[#f0fafa] flex items-center justify-center opacity-50">
-            <p class="text-[11px] text-[#9b94a8] font-semibold">Show Logo</p>
+      <div id="panel-branding" style="display:none" class="p-6 space-y-4">
+        <div class="grid grid-cols-2 gap-4" id="branding-logo-row">
+          <div>
+            <p class="text-[12px] font-semibold text-[#4a4357] mb-1.5">Show Logo</p>
+            <div id="branding-show-logo" class="h-24 rounded-[11px] border-2 border-dashed border-[#b8e4e0] bg-[#f0fafa] flex items-center justify-center overflow-hidden">
+              <p class="text-[11px] text-[#c4bed0]">Not uploaded</p>
+            </div>
           </div>
-          <div class="flex-1 h-24 rounded-[11px] border-2 border-dashed border-[#b8e4e0] bg-[#f0fafa] flex items-center justify-center opacity-50">
-            <p class="text-[11px] text-[#9b94a8] font-semibold">Show Banner</p>
+          <div>
+            <p class="text-[12px] font-semibold text-[#4a4357] mb-1.5">Organisation Logo</p>
+            <div id="branding-org-logo" class="h-24 rounded-[11px] border-2 border-dashed border-[#b8e4e0] bg-[#f0fafa] flex items-center justify-center overflow-hidden">
+              <p class="text-[11px] text-[#c4bed0]">Not uploaded</p>
+            </div>
           </div>
         </div>
+        <div>
+          <p class="text-[12px] font-semibold text-[#4a4357] mb-1.5">Show Banner</p>
+          <div id="branding-banner" class="h-20 rounded-[11px] border-2 border-dashed border-[#b8e4e0] bg-[#f0fafa] flex items-center justify-center overflow-hidden">
+            <p class="text-[11px] text-[#c4bed0]">Not uploaded</p>
+          </div>
+        </div>
+        <p class="text-[12px] text-[#9b94a8]">To update branding, use the <span class="font-semibold">Edit Show</span> wizard.</p>
       </div>
 
     </div><!-- end drawer body -->
@@ -668,6 +677,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
   // setHeader(id, dot, statusText, title, rows, actionLabel)
   // rows = array of [label, value] pairs shown below the title
+  function populateBrandingSlot(id, url, fit) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = `<img src="${url}" class="w-full h-full object-${fit}" />`;
+  }
+
   function setHeader(id, dot, statusText, title, rows, actionLabel) {
     const el = document.getElementById(`hdr-${id}`);
     if (!el) return;
@@ -820,10 +835,19 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       ], 'Set Up');
     }
 
-    setHeader('branding', '#fbbf24', 'Coming soon', 'Branding', [
-      ['Logo',   'Not uploaded'],
-      ['Banner', 'Not uploaded'],
+    const hasLogo   = !!(show.logo_url || show.org_logo_url);
+    const hasBanner = !!show.banner_url;
+    const brandingStatus = hasLogo || hasBanner ? 'Uploaded' : 'Not uploaded';
+    const brandingColor  = hasLogo || hasBanner ? '#1ba89a' : '#9b94a8';
+    setHeader('branding', brandingColor, brandingStatus, 'Branding', [
+      ['Show Logo',   show.logo_url     ? 'Uploaded' : 'Not uploaded'],
+      ['Org Logo',    show.org_logo_url ? 'Uploaded' : 'Not uploaded'],
+      ['Banner',      show.banner_url   ? 'Uploaded' : 'Not uploaded'],
     ], 'Preview');
+    // Populate branding panel images
+    if (show.logo_url)     populateBrandingSlot('branding-show-logo', show.logo_url, 'contain');
+    if (show.org_logo_url) populateBrandingSlot('branding-org-logo',  show.org_logo_url, 'contain');
+    if (show.banner_url)   populateBrandingSlot('branding-banner',    show.banner_url, 'cover');
   }
 
   // ── Populate forms ───────────────────────────────────────────────────────────
