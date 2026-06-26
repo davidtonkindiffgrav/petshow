@@ -710,6 +710,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     setupEventListeners();
     initCardGroups();
+    initBreedCombobox();
 
     const urlId = new URLSearchParams(window.location.search).get('id');
     if (urlId) {
@@ -1663,9 +1664,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
   function applyCurrencySymbol(code) {
     const sym = CURRENCY_SYMBOLS[code] || code;
-    document.getElementById('s8-symbol-goal').textContent = sym;
-    document.getElementById('s8-symbol-fee').textContent  = sym;
-    document.getElementById('s8-fee-hint').textContent    = `Set to ${sym}0 for a free show.`;
+    document.getElementById('s8-symbol-fee').textContent = sym;
+    document.getElementById('s8-fee-hint').textContent   = `Set to ${sym}0 for a free show.`;
     updateFeeBreakdown(code);
   }
 
@@ -1711,9 +1711,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   }
 
   // ─── Breed combobox ─────────────────────────────────────────────────────────
-  (function() {
+  function initBreedCombobox() {
     const input   = document.getElementById('s3-breed');
     const listbox = document.getElementById('s3-breed-listbox');
+    if (!input || !listbox) return;
+
     let activeIdx = -1;
 
     function getMatches(q) {
@@ -1769,5 +1771,5 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.addEventListener('click', e => {
       if (!input.contains(e.target) && !listbox.contains(e.target)) closeList();
     });
-  })();
+  }
 </script>
