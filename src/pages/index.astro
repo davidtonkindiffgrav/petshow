@@ -10,11 +10,19 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   <!-- ═══════════════════════════════════════════════════
        1. HERO
   ════════════════════════════════════════════════════ -->
-  <section id="why" class="max-w-container mx-auto px-4 min-[600px]:px-7 pt-10 min-[900px]:pt-[54px] pb-6 min-[900px]:pb-7">
-    <div class="grid grid-cols-1 min-[900px]:grid-cols-[0.9fr_1.18fr] items-center gap-6 min-[900px]:gap-10">
+  <section id="why" class="relative overflow-hidden max-w-container mx-auto px-4 min-[600px]:px-7 pt-10 min-[900px]:pt-[54px] pb-6 min-[900px]:pb-7">
 
-      <!-- LEFT: copy -->
-      <div>
+    <!-- Fade: white on left (covers image bleed), fades to transparent at ~60% so image shows fully on right -->
+    <div
+      class="absolute inset-0 pointer-events-none hidden min-[900px]:block"
+      style="background:linear-gradient(to right,#ffffff 0%,#ffffff 30%,rgba(255,255,255,0.5) 45%,transparent 62%);z-index:1"
+      aria-hidden="true"
+    ></div>
+
+    <div class="relative grid grid-cols-1 min-[900px]:grid-cols-[0.9fr_1.18fr] items-center gap-6 min-[900px]:gap-10">
+
+      <!-- LEFT: copy — z-index keeps it above image and fade overlay -->
+      <div class="relative" style="z-index:2">
         <!-- Eyebrow pill -->
         <div class="inline-flex items-center gap-2 bg-brand-tint rounded-full px-[15px] py-2 mb-6">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="#f07050" aria-hidden="true">
@@ -102,78 +110,56 @@ const base = raw.endsWith('/') ? raw : raw + '/';
         </div>
       </div>
 
-      <!-- RIGHT: outer wrapper — overflow visible so the "Perfect for" card can hang left -->
-      <div class="relative">
+      <!-- RIGHT: height set by aspect-ratio anchor; image bleeds left under left column -->
+      <div class="hidden min-[900px]:block relative">
 
-        <!-- Image frame — overflow hidden only here, for border-radius crop -->
-        <div
-          class="relative w-full rounded-3xl min-[900px]:rounded-[0_24px_24px_0] shadow-hero-frame max-[900px]:shadow-none"
-          style="aspect-ratio:3/2;overflow:hidden"
-        >
-          <img
-            src={`${base}hero-dog.jpg`}
-            alt="A happy dog ready for the show"
-            class="w-full h-full object-cover object-center"
-            loading="eager"
-          />
-
-          <!-- Left-edge fade overlay (desktop only) -->
+        <!-- Aspect-ratio anchor — same 3/2 size as original image frame -->
+        <div style="position:relative;aspect-ratio:3/2">
+          <!-- Image frame: positioned to extend left past this column, clipped by section overflow -->
           <div
-            class="hidden min-[900px]:block absolute inset-0 pointer-events-none"
-            style="background:linear-gradient(90deg,#ffffff 0%,#ffffff 24%,rgba(255,255,255,0.88) 40%,rgba(255,255,255,0.35) 57%,rgba(255,255,255,0) 72%)"
-            aria-hidden="true"
-          ></div>
-
-          <!-- Floating decorations (clipped by image frame — intentional) -->
-          <div class="ps-float animate-floaty absolute top-[8%] right-[-8px]" style="--deco-r:-8deg" aria-hidden="true">
-            <svg width="42" height="42" viewBox="0 0 24 24" fill="#f07050" style="filter:drop-shadow(0 6px 10px rgba(240,112,80,0.35))" aria-hidden="true">
-              <path d="M12 21C12 21 3.5 15.5 3.5 9A4.5 4.5 0 0 1 12 6.1 4.5 4.5 0 0 1 20.5 9C20.5 15.5 12 21 12 21z"/>
-            </svg>
+            class="rounded-[0_24px_24px_0]"
+            style="position:absolute;top:0;bottom:0;right:0;left:calc(-100vw);overflow:hidden"
+          >
+            <img
+              id="hero-img"
+              src={`${base}hero-1.jpg`}
+              alt="A happy dog ready for the show"
+              style="position:absolute;top:50%;right:0;height:100%;width:auto;transform:translateY(-50%)"
+              loading="eager"
+            />
+            <script is:inline define:vars={{ hero1: `${base}hero-1.jpg`, hero2: `${base}hero-2.jpg` }}>
+              document.getElementById('hero-img').src = Math.random() < 0.5 ? hero1 : hero2;
+            </script>
           </div>
-          <div class="ps-float animate-floaty2 absolute bottom-[12%] right-[16px]" style="--deco-r:6deg" aria-hidden="true">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="#9b6ba8" style="filter:drop-shadow(0 4px 8px rgba(155,107,168,0.3))" aria-hidden="true">
-              <path d="M12 21C12 21 3.5 15.5 3.5 9A4.5 4.5 0 0 1 12 6.1 4.5 4.5 0 0 1 20.5 9C20.5 15.5 12 21 12 21z"/>
-            </svg>
-          </div>
-          <div class="ps-float animate-floaty3 absolute top-[28%] right-[-4px] w-[12px] h-[12px] rounded-[3px] bg-[#fbbf24]" style="--deco-r:15deg;filter:drop-shadow(0 2px 6px rgba(251,191,36,0.4))" aria-hidden="true"></div>
-          <div class="ps-float animate-floaty4 absolute bottom-[32%] right-[10px] w-[11px] h-[11px] rounded-[3px] bg-[#20b7ac]" style="--deco-r:-10deg;filter:drop-shadow(0 2px 6px rgba(45,212,191,0.4))" aria-hidden="true"></div>
         </div>
 
-        <!-- Outer left-fade: extends past the image frame's left edge to cover box-shadow bleed (desktop only) -->
+        <!-- Perfect for strip — unchanged, sits below the image -->
         <div
-          class="hidden min-[900px]:block absolute inset-y-0 pointer-events-none"
-          style="left:-56px;right:50%;background:linear-gradient(90deg,#ffffff 0%,#ffffff 32%,rgba(255,255,255,0) 100%)"
-          aria-hidden="true"
-        ></div>
-
-        <!-- "Perfect for:" card — outside overflow:hidden, hangs over left edge freely -->
-        <div
-          class="hidden min-[900px]:block absolute top-1/2 -translate-y-1/2 w-[234px] bg-[#fffdf7] rounded-card-sm border border-[#f3eee2] shadow-card-float"
-          style="left:-22px;padding:18px 20px"
+          class="hidden min-[900px]:flex mt-3 flex-wrap items-center gap-x-5 gap-y-2 bg-[#fffdf7] rounded-card-sm border border-[#f3eee2] shadow-card-float"
+          style="padding:11px 16px"
           aria-label="Perfect for these use cases"
         >
-          <div class="flex items-center gap-2 mb-3">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="#f07050" aria-hidden="true">
+          <div class="flex items-center gap-1.5 shrink-0">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#f07050" aria-hidden="true">
               <path d="M12 21C12 21 3.5 15.5 3.5 9A4.5 4.5 0 0 1 12 6.1 4.5 4.5 0 0 1 20.5 9C20.5 15.5 12 21 12 21z"/>
             </svg>
-            <span class="text-[15px] font-extrabold text-[#1c1626]">Perfect for:</span>
+            <span class="text-[13.5px] font-extrabold text-[#1c1626]">Perfect for:</span>
           </div>
           {['Charity Fundraisers','Community Events','Shelter Support','Special Occasions','Fun Competitions'].map(item => (
-            <div class="flex items-center gap-2.5 mb-2">
-              <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+            <div class="flex items-center gap-1.5">
+              <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
                 <circle cx="12" cy="12" r="10" fill="#1ba89a"/>
                 <polyline points="8 12 11 15 16 9" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              <span class="text-[13.5px] font-semibold text-[#403a4d]">{item}</span>
+              <span class="text-[13px] font-semibold text-[#403a4d]">{item}</span>
             </div>
           ))}
-          <p class="font-hand text-[21px] font-bold text-brand mt-3 leading-tight">
-            Big hearts. Happy pets.<br />Stronger communities.
-          </p>
         </div>
 
       </div>
+
     </div>
+
   </section>
 
 
