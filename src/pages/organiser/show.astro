@@ -266,13 +266,31 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
       <!-- Panel: Classes -->
       <div id="panel-classes" style="display:none" class="p-6">
-        <p class="text-[13px] font-semibold text-[#4a4357] mb-3">Competition Classes</p>
-        <div id="mgmt-class-list" class="space-y-2 mb-3"></div>
-        <button type="button" id="mgmt-add-class"
-          class="flex items-center gap-1.5 text-[13px] font-semibold text-brand hover:text-brand-dark transition-colors">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Add Class
-        </button>
+
+        <!-- Fun Stakes chip grid -->
+        <div id="mgmt-classes-fun" style="display:none">
+          <p class="text-[13px] font-semibold text-[#4a4357] mb-3">Competition Categories</p>
+          <div id="mgmt-fun-grid" class="grid grid-cols-2 gap-2 mb-3"></div>
+          <button type="button" id="mgmt-add-fun"
+            class="flex items-center gap-1.5 text-[13px] font-semibold text-brand hover:text-brand-dark transition-colors mt-1">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Custom Category
+          </button>
+          <div id="mgmt-fun-custom" class="space-y-2 mt-3"></div>
+        </div>
+
+        <!-- Standard toggle rows -->
+        <div id="mgmt-classes-std" style="display:none">
+          <p class="text-[13px] font-semibold text-[#4a4357] mb-3">Competition Classes</p>
+          <div id="mgmt-std-list" class="space-y-2 mb-3"></div>
+          <button type="button" id="mgmt-add-std"
+            class="flex items-center gap-1.5 text-[13px] font-semibold text-brand hover:text-brand-dark transition-colors mt-1">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Custom Class
+          </button>
+          <div id="mgmt-std-custom" class="space-y-2 mt-3"></div>
+        </div>
+
         <p class="panel-error text-[12px] text-red-500 mt-2" style="display:none"></p>
         <div class="drawer-actions flex justify-end gap-3 mt-6 pb-2">
           <button class="cancel-btn text-[13px] font-semibold text-[#9b94a8] hover:text-[#1c1626] px-3 py-2 transition-colors">Cancel</button>
@@ -563,6 +581,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   import { getAuth } from '../../lib/auth.js';
   import { supabase } from '../../lib/supabase.js';
   import { uploadImage } from '../../lib/storage.js';
+  import { FUN_STAKES, STANDARD_CLASSES } from '../../lib/show-categories.js';
 
   // ── State ────────────────────────────────────────────────────────────────────
   let show        = null;
@@ -577,6 +596,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   let serviceFees    = {};
   let savedJudges    = [];
   let maxUploadMb    = 5;
+  let mgmtClasses    = []; // { name, description, enabled, custom }
   let pendingBranding = { logo: null, orgLogo: null, banner: null };
 
   const SHOW_TYPE_LABELS  = { beauty_contest: 'Beauty Contest', fun_stakes: 'Fun Stakes', memorial: 'Memorial Show', other: 'Other' };
@@ -736,7 +756,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     // Scroll drawer body to top
     drawer.querySelector('.flex-1.overflow-y-auto').scrollTop = 0;
 
-    // Init branding upload widgets each time the panel opens
+    // Re-init panels that need fresh state each open
+    if (id === 'classes')  initClassesPanel();
     if (id === 'branding') {
       initBrandingWidget('branding-logo-widget',   'logo');
       initBrandingWidget('branding-org-widget',    'orgLogo');
@@ -986,7 +1007,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     }
 
     const sym     = CURRENCY_SYMBOLS[show.currency] || 'A$';
-    const feeText = show.entry_fee > 0 ? `${sym}${show.entry_fee}` : `${sym}0 (free)`;
+    const svcFee  = serviceFees[`service_fee_${show.currency || 'AUD'}`] ?? 1.10;
+    const feeTotal = (show.entry_fee || 0) + svcFee;
+    const feeText = show.entry_fee > 0
+      ? `${sym}${feeTotal.toFixed(2)} (${sym}${Number(show.entry_fee).toFixed(2)} + ${sym}${svcFee.toFixed(2)} platform fee)`
+      : 'Free';
     if (show.is_fundraising === true) {
       setHeader('fundraising', '#22c55e', 'Configured', 'Fundraising & Fees', [
         ['Status',    'Fundraising active'],
@@ -1053,7 +1078,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           ${bannerMiddle}
         </div>
         <div style="padding:16px 14px;flex-shrink:0;display:flex;align-items:flex-start;">
-          <button class="action-btn" data-panel="branding" style="font-size:13px;font-weight:700;color:#1ba89a;background:none;border:none;cursor:pointer;padding:0;font-family:inherit;">Edit</button>
+          <button class="action-btn text-[13px] font-bold text-brand hover:underline" data-panel="branding" style="background:none;border:none;cursor:pointer;padding:0;font-family:inherit;">Edit</button>
         </div>
       </div>
       <div style="padding:0 16px 16px;display:flex;flex-direction:column;gap:8px;border-top:1px solid #f5f3fa;margin-top:0;padding-top:12px;">
@@ -1088,8 +1113,6 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.getElementById('mgmt-breed').value = show.breed_filter || '';
     document.getElementById('mgmt-group').value = show.group_filter || '';
     updateBreedFields();
-
-    rebuildClassList();
 
     if (show.has_sponsor === true) {
       setYN('mgmt-sponsor-yn', 'yes');
@@ -1191,8 +1214,17 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     });
     initMgmtBreedCombobox();
 
-    // Classes
-    document.getElementById('mgmt-add-class').addEventListener('click', () => addClassRow(''));
+    // Classes — custom add buttons
+    document.getElementById('mgmt-add-fun').addEventListener('click', () => {
+      const cat = { name: '', description: '', enabled: true, custom: true };
+      mgmtClasses.push(cat);
+      document.getElementById('mgmt-fun-custom').appendChild(buildCustomRow(cat));
+    });
+    document.getElementById('mgmt-add-std').addEventListener('click', () => {
+      const cat = { name: '', description: '', enabled: true, custom: true };
+      mgmtClasses.push(cat);
+      document.getElementById('mgmt-std-custom').appendChild(buildCustomRow(cat));
+    });
 
     // Sponsorship
     setupYN('mgmt-sponsor-yn', val => {
@@ -1202,6 +1234,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     // Judging
     setupYN('mgmt-judging-yn', val => {
       document.getElementById('mgmt-judge-form').style.display = val === 'yes' ? 'block' : 'none';
+      if (val === 'yes' && document.getElementById('mgmt-judge-panels').children.length === 0) {
+        rebuildJudgePanels();
+      }
     });
     document.getElementById('mgmt-judge-minus').addEventListener('click', () => {
       if (judgeCount > 1) { judgeCount--; document.getElementById('mgmt-judge-count').textContent = String(judgeCount); rebuildJudgePanels(); }
@@ -1384,12 +1419,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   }
 
   async function saveClasses() {
-    const names = Array.from(document.querySelectorAll('#mgmt-class-list .class-row input'))
-      .map(i => i.value.trim()).filter(Boolean);
-    if (names.length === 0) return showPanelError('classes', 'Please add at least one class.');
+    const enabled = mgmtClasses.filter(c => c.enabled && c.name.trim());
+    if (enabled.length === 0) return showPanelError('classes', 'Please enable at least one class.');
     await saveSection('classes', {}, async () => {
       await supabase.from('show_categories').delete().eq('show_id', showId);
-      await supabase.from('show_categories').insert(names.map(n => ({ show_id: showId, name: n })));
+      await supabase.from('show_categories').insert(
+        enabled.map(c => ({ show_id: showId, name: c.name.trim(), description: c.description || null }))
+      );
       const { data } = await supabase.from('show_categories').select('*').eq('show_id', showId);
       categories = data || [];
     });
@@ -1420,12 +1456,26 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (!val) return showPanelError('judging', 'Please make a selection.');
     if (val === 'yes') {
       const panels = Array.from(document.querySelectorAll('#mgmt-judge-panels .judge-panel'));
+      // Check for judge book duplicates before saving
+      let hasDuplicates = false;
+      for (const p of panels) {
+        if (p.dataset.savedId) continue; // came from picker or already resolved
+        const em = p.querySelector('.j-email').value.trim().toLowerCase();
+        if (!em) continue;
+        const match = savedJudges.find(sj => sj.email?.toLowerCase() === em);
+        if (!match) continue;
+        showDuplicatePrompt(p, match);
+        hasDuplicates = true;
+      }
+      if (hasDuplicates) return;
+
       const newJudges = panels.map(p => ({
-        show_id: showId,
+        show_id:    showId,
         first_name: p.querySelector('.j-first').value.trim(),
         last_name:  p.querySelector('.j-last').value.trim(),
         email:      p.querySelector('.j-email').value.trim(),
         phone:      p.querySelector('.j-phone').value.trim() || null,
+        photo_url:  p.querySelector('.j-photo-url').value || null,
       }));
       // Save ticked judges to saved_judges (skip duplicates by email)
       for (const p of panels) {
@@ -1434,10 +1484,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         const ln = p.querySelector('.j-last').value.trim();
         const em = p.querySelector('.j-email').value.trim() || null;
         const ph = p.querySelector('.j-phone').value.trim() || null;
+        const pu = p.querySelector('.j-photo-url').value || null;
         if (!fn || !ln) continue;
         if (em && savedJudges.some(sj => sj.email?.toLowerCase() === em.toLowerCase())) continue;
         const { data: newSJ } = await supabase.from('saved_judges')
-          .insert({ organiser_id: show.created_by, first_name: fn, last_name: ln, email: em, phone: ph })
+          .insert({ organiser_id: show.created_by, first_name: fn, last_name: ln, email: em, phone: ph, photo_url: pu })
           .select().single();
         if (newSJ) savedJudges.push(newSJ);
       }
@@ -1574,31 +1625,182 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.getElementById('mgmt-group-field').style.display = scope === 'group_specific'  ? 'block' : 'none';
   }
 
-  function rebuildClassList() {
-    const container = document.getElementById('mgmt-class-list');
-    container.innerHTML = '';
-    categories.forEach(c => addClassRow(c.name));
+  // ─── Category tooltip ────────────────────────────────────────────────────────
+  const _tip = document.createElement('div');
+  _tip.style.cssText = 'display:none;position:fixed;z-index:9999;background:#1c1626;color:#fff;font-size:12px;line-height:1.5;border-radius:8px;padding:7px 11px;max-width:220px;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,0.22);';
+  document.body.appendChild(_tip);
+
+  function _posTip(e) {
+    const x = e.clientX + 14, y = e.clientY + 16;
+    _tip.style.left = Math.min(x, window.innerWidth  - _tip.offsetWidth  - 8) + 'px';
+    _tip.style.top  = Math.min(y, window.innerHeight - _tip.offsetHeight - 8) + 'px';
   }
 
-  function addClassRow(name) {
-    const container = document.getElementById('mgmt-class-list');
+  function attachTooltip(el, desc) {
+    if (!desc) return;
+    el.addEventListener('mouseenter', e => { _tip.textContent = desc; _tip.style.display = 'block'; _posTip(e); });
+    el.addEventListener('mousemove', _posTip);
+    el.addEventListener('mouseleave', () => { _tip.style.display = 'none'; });
+  }
+
+  // ─── Classes panel ───────────────────────────────────────────────────────────
+  function initClassesPanel() {
+    const isFun = show.show_type === 'fun_stakes';
+    document.getElementById('mgmt-classes-fun').style.display = isFun ? 'block' : 'none';
+    document.getElementById('mgmt-classes-std').style.display = isFun ? 'none'  : 'block';
+
+    const existingMap = new Map(categories.map(c => [c.name, c.description || '']));
+    const presets     = isFun ? FUN_STAKES : STANDARD_CLASSES;
+    const presetNames = new Set(presets.map(c => c.name));
+    const defaultAll  = categories.length === 0 && !isFun;
+
+    mgmtClasses = presets.map(cat => ({
+      name:        cat.name,
+      description: cat.description,
+      enabled:     defaultAll || existingMap.has(cat.name),
+      custom:      false,
+    }));
+
+    categories.filter(c => !presetNames.has(c.name)).forEach(c => {
+      mgmtClasses.push({ name: c.name, description: c.description || '', enabled: true, custom: true });
+    });
+
+    if (isFun) renderFunPanel(); else renderStdPanel();
+  }
+
+  function renderFunPanel() {
+    const grid      = document.getElementById('mgmt-fun-grid');
+    const customDiv = document.getElementById('mgmt-fun-custom');
+    grid.innerHTML = '';
+    customDiv.innerHTML = '';
+
+    mgmtClasses.filter(c => !c.custom).forEach(cat => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'text-left rounded-[11px] border-2 px-3 py-2.5 text-[12.5px] font-semibold transition-all cursor-pointer';
+      btn.style.borderColor = cat.enabled ? '#1ba89a' : '#b8e4e0';
+      btn.style.background  = cat.enabled ? '#f0fafa' : 'white';
+      btn.style.color       = cat.enabled ? '#1c1626' : '#9b94a8';
+      btn.textContent = cat.name;
+      attachTooltip(btn, cat.description);
+      btn.addEventListener('click', () => {
+        cat.enabled = !cat.enabled;
+        btn.style.borderColor = cat.enabled ? '#1ba89a' : '#b8e4e0';
+        btn.style.background  = cat.enabled ? '#f0fafa' : 'white';
+        btn.style.color       = cat.enabled ? '#1c1626' : '#9b94a8';
+      });
+      grid.appendChild(btn);
+    });
+
+    mgmtClasses.filter(c => c.custom).forEach(cat => customDiv.appendChild(buildCustomRow(cat)));
+  }
+
+  function renderStdPanel() {
+    const list      = document.getElementById('mgmt-std-list');
+    const customDiv = document.getElementById('mgmt-std-custom');
+    list.innerHTML = '';
+    customDiv.innerHTML = '';
+
+    mgmtClasses.filter(c => !c.custom).forEach(cat => {
+      const row = document.createElement('div');
+      row.className = 'flex items-center gap-3 p-3 border border-[#efebf5] rounded-[11px]';
+      row.innerHTML = `
+        <button type="button" class="cls-toggle w-10 h-6 rounded-full ${cat.enabled ? 'bg-brand' : 'bg-[#efebf5]'} transition-colors relative flex items-center px-0.5 shrink-0">
+          <span class="w-5 h-5 rounded-full bg-white shadow transition-transform ${cat.enabled ? 'translate-x-4' : ''}"></span>
+        </button>
+        <span class="text-[13.5px] font-semibold flex-1 ${cat.enabled ? 'text-[#1c1626]' : 'text-[#9b94a8] line-through'}">${cat.name}</span>
+      `;
+      attachTooltip(row, cat.description);
+      row.querySelector('.cls-toggle').addEventListener('click', () => {
+        cat.enabled = !cat.enabled;
+        renderStdPanel();
+      });
+      list.appendChild(row);
+    });
+
+    mgmtClasses.filter(c => c.custom).forEach(cat => customDiv.appendChild(buildCustomRow(cat)));
+  }
+
+  function buildCustomRow(cat) {
     const row = document.createElement('div');
-    row.className = 'class-row flex items-center gap-2';
-    row.innerHTML = `
-      <input type="text" value="${escAttr(name)}" placeholder="Class name"
-        class="flex-1 border border-[#b8e4e0] rounded-[10px] px-3 py-2 text-[13px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" />
-      <button type="button" class="rm-class text-[#c4bed0] hover:text-red-400 transition-colors p-1">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>`;
-    row.querySelector('.rm-class').addEventListener('click', () => row.remove());
-    container.appendChild(row);
+    row.className = 'space-y-1.5';
+
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.value = cat.name;
+    nameInput.placeholder = 'Category name';
+    nameInput.className = 'w-full border border-[#b8e4e0] rounded-[11px] px-3 py-2.5 text-[13px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors';
+    nameInput.addEventListener('input', e => { cat.name = e.target.value; });
+
+    const descInput = document.createElement('input');
+    descInput.type = 'text';
+    descInput.value = cat.description || '';
+    descInput.placeholder = 'Description (shown as tooltip to entrants)';
+    descInput.className = 'w-full border border-[#efebf5] rounded-[11px] px-3 py-2 text-[12.5px] text-[#6f6880] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors';
+    descInput.addEventListener('input', e => { cat.description = e.target.value; });
+
+    const rmBtn = document.createElement('button');
+    rmBtn.type = 'button';
+    rmBtn.className = 'shrink-0 text-[#c4bed0] hover:text-red-400 transition-colors p-1';
+    rmBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+    rmBtn.addEventListener('click', () => {
+      const i = mgmtClasses.indexOf(cat);
+      if (i > -1) mgmtClasses.splice(i, 1);
+      row.remove();
+    });
+
+    const header = document.createElement('div');
+    header.className = 'flex items-center gap-2';
+    header.appendChild(nameInput);
+    header.appendChild(rmBtn);
+    row.appendChild(header);
+    row.appendChild(descInput);
+    return row;
+  }
+
+  function showDuplicatePrompt(panel, match) {
+    if (panel.querySelector('.j-dup-prompt')) return;
+    const emailInput  = panel.querySelector('.j-email');
+    const photoCircle = panel.querySelector('.judge-photo-circle');
+    const photoBtn    = panel.querySelector('.judge-photo-btn');
+    const prompt = document.createElement('div');
+    prompt.className = 'j-dup-prompt rounded-[10px] p-3 flex items-start gap-3 flex-wrap';
+    prompt.style.cssText = 'background:#fffbeb;border:1px solid #fde68a;margin-top:4px;';
+    prompt.innerHTML = `
+      <div class="flex-1 min-w-0">
+        <p class="text-[12.5px] font-semibold" style="color:#92400e">${esc(match.first_name)} ${esc(match.last_name)} is already in your judge book.</p>
+        <p class="text-[12px] mt-0.5" style="color:#b45309">Would you like to reuse their saved details?</p>
+      </div>
+      <div class="flex gap-2 shrink-0">
+        <button type="button" class="j-dup-yes text-[12px] font-bold text-white bg-brand px-3 py-1.5 rounded-btn hover:bg-brand-dark transition-colors">Yes, reuse</button>
+        <button type="button" class="j-dup-no text-[12px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-3 py-1.5 rounded-btn hover:bg-[#f0fafa] transition-colors">No</button>
+      </div>`;
+    prompt.querySelector('.j-dup-yes').addEventListener('click', () => {
+      panel.querySelector('.j-first').value     = match.first_name;
+      panel.querySelector('.j-last').value      = match.last_name;
+      emailInput.value                           = match.email || '';
+      panel.querySelector('.j-phone').value     = match.phone || '';
+      panel.querySelector('.j-photo-url').value = match.photo_url || '';
+      if (match.photo_url && photoCircle) {
+        photoCircle.innerHTML = `<img src="${match.photo_url}" class="w-full h-full object-cover" />`;
+        if (photoBtn) photoBtn.textContent = 'Replace photo';
+      }
+      panel.dataset.savedId = match.id;
+      prompt.remove();
+    });
+    prompt.querySelector('.j-dup-no').addEventListener('click', () => {
+      emailInput.value = '';
+      emailInput.focus();
+      prompt.remove();
+    });
+    emailInput.after(prompt);
   }
 
   function rebuildJudgePanels() {
     const container = document.getElementById('mgmt-judge-panels');
     container.innerHTML = '';
     for (let i = 0; i < judgeCount; i++) {
-      const j = judges[i] || { first_name: '', last_name: '', email: '', phone: '' };
+      const j = judges[i] || { first_name: '', last_name: '', email: '', phone: '', photo_url: '' };
       const p = document.createElement('div');
       p.className = 'judge-panel border border-[#efebf5] rounded-[12px] p-4 space-y-3';
 
@@ -1613,6 +1815,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           </div>
         </div>` : '';
 
+      const photoPreview = j.photo_url
+        ? `<img src="${escAttr(j.photo_url)}" class="w-full h-full object-cover" />`
+        : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c4bed0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>`;
+
       p.innerHTML = `
         <div class="flex items-center justify-between">
           <p class="text-[12px] font-bold text-[#6f6880] uppercase tracking-wide">Judge ${i + 1}</p>
@@ -1624,10 +1830,21 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         </div>
         <input type="email" class="j-email w-full border border-[#b8e4e0] rounded-[10px] px-3 py-2 text-[13px] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" placeholder="Email address" value="${escAttr(j.email)}" />
         <input type="tel"   class="j-phone w-full border border-[#b8e4e0] rounded-[10px] px-3 py-2 text-[13px] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" placeholder="Phone (optional)" value="${escAttr(j.phone || '')}" />
+        <input type="hidden" class="j-photo-url" value="${escAttr(j.photo_url || '')}" />
         <label class="flex items-center gap-2 pt-1 cursor-pointer select-none">
           <input type="checkbox" class="j-save w-4 h-4 accent-brand" />
           <span class="text-[12px] text-[#9b94a8]">Save to my judge book</span>
-        </label>`;
+        </label>
+        <div class="flex items-center gap-3 pt-2 border-t border-[#f5f3f8]">
+          <div class="w-10 h-10 rounded-full border-2 border-dashed border-[#b8e4e0] bg-[#f0fafa] flex items-center justify-center overflow-hidden judge-photo-circle shrink-0 cursor-pointer">
+            ${photoPreview}
+          </div>
+          <div>
+            <p class="text-[12px] font-semibold text-[#4a4357]">Profile Photo <span class="text-[11px] text-[#9b94a8] font-normal">(optional)</span></p>
+            <button type="button" class="judge-photo-btn text-[12px] font-semibold text-brand hover:underline">${j.photo_url ? 'Replace photo' : 'Upload photo'}</button>
+            <input type="file" class="judge-photo-input hidden" accept="image/jpeg,image/png,image/webp" />
+          </div>
+        </div>`;
 
       const pickerBtn = p.querySelector('.judge-picker-btn');
       const dropdown  = p.querySelector('.judge-picker-dropdown');
@@ -1645,10 +1862,35 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
             p.querySelector('.j-last').value  = sj.last_name;
             p.querySelector('.j-email').value = sj.email || '';
             p.querySelector('.j-phone').value = sj.phone || '';
+            p.dataset.savedId = sj.id;
             dropdown.style.display = 'none';
           });
         });
       }
+
+      const photoBtn     = p.querySelector('.judge-photo-btn');
+      const photoInput   = p.querySelector('.judge-photo-input');
+      const photoCircle  = p.querySelector('.judge-photo-circle');
+      const photoUrlInput = p.querySelector('.j-photo-url');
+
+      async function processJudgePhoto(file) {
+        if (!file || file.size > maxUploadMb * 1024 * 1024) return;
+        photoBtn.textContent = 'Uploading…';
+        try {
+          const url = await uploadImage(`judges/${showId}/judge-${i}`, file);
+          photoUrlInput.value = url;
+          photoCircle.innerHTML = `<img src="${url}" class="w-full h-full object-cover" />`;
+          photoBtn.textContent = 'Replace photo';
+        } catch { photoBtn.textContent = 'Failed — try again'; }
+      }
+
+      photoBtn.addEventListener('click', () => photoInput.click());
+      photoInput.addEventListener('change', () => processJudgePhoto(photoInput.files[0]));
+      photoCircle.addEventListener('click', () => photoInput.click());
+      photoCircle.addEventListener('dragover', e => { e.preventDefault(); photoCircle.style.borderColor = '#1ba89a'; photoCircle.style.background = 'rgba(27,168,154,0.10)'; });
+      photoCircle.addEventListener('dragleave', () => { photoCircle.style.borderColor = ''; photoCircle.style.background = ''; });
+      photoCircle.addEventListener('drop', e => { e.preventDefault(); photoCircle.style.borderColor = ''; photoCircle.style.background = ''; processJudgePhoto(e.dataTransfer.files[0]); });
+
       container.appendChild(p);
     }
   }
@@ -1766,6 +2008,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (!el) return null;
     const active = el.querySelector('[data-selected="true"]');
     return active ? active.dataset.value : null;
+  }
+
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
   function escAttr(s) {

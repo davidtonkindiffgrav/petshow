@@ -1,0 +1,736 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+---
+
+<DashboardLayout title="Judging" activePage="judging">
+
+  <button slot="actions" id="btn-add-judge" style="display:none"
+    class="inline-flex items-center gap-2 bg-brand text-white text-[13.5px] font-bold px-4 py-2.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+    Add Judge
+  </button>
+
+  <!-- Loading -->
+  <div id="state-loading" class="flex items-center justify-center h-64">
+    <div class="w-8 h-8 border-[3px] border-brand/20 border-t-brand rounded-full animate-spin"></div>
+  </div>
+
+  <!-- Content -->
+  <div id="state-content" style="display:none">
+
+    <!-- Tab bar -->
+    <div class="flex border-b border-[#efebf5] mb-6 -mt-2">
+      <button id="tab-shows" data-active="true"
+        class="px-4 py-2.5 text-[13.5px] font-bold text-brand border-b-2 border-brand transition-colors">
+        Show Status
+      </button>
+      <button id="tab-book" data-active="false"
+        class="px-4 py-2.5 text-[13.5px] font-semibold text-[#9b94a8] border-b-2 border-transparent hover:text-[#4a4357] transition-colors">
+        Judge Book
+      </button>
+    </div>
+
+    <!-- Show Status panel -->
+    <div id="panel-shows">
+      <div id="shows-container" class="space-y-3"></div>
+      <div id="shows-empty" style="display:none" class="flex items-center justify-center min-h-[50vh]">
+        <div class="text-center max-w-[380px]">
+          <div class="w-16 h-16 rounded-full bg-brand-tint flex items-center justify-center mx-auto mb-5">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+          </div>
+          <h2 class="text-[20px] font-extrabold text-[#1c1626] tracking-[-0.01em] mb-2">No shows yet</h2>
+          <p class="text-[14px] text-[#6f6880] leading-relaxed mb-6">Create a show to start managing judging and see results status here.</p>
+          <a id="link-go-shows" href="#"
+            class="inline-flex items-center gap-1.5 bg-brand text-white text-[14px] font-bold px-6 py-3 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">
+            Go to Shows
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Judge Book panel -->
+    <div id="panel-book" style="display:none">
+      <div class="flex items-center gap-3 mb-4">
+        <h2 class="text-[15px] font-extrabold text-[#1c1626]">Your Judge Book</h2>
+        <span id="book-count" class="text-[12px] font-bold text-[#9b94a8] bg-[#f5f3fa] px-2.5 py-0.5 rounded-full">0</span>
+      </div>
+      <div id="book-list"></div>
+      <div id="book-empty" style="display:none" class="flex items-center justify-center min-h-[40vh]">
+        <div class="text-center max-w-[360px]">
+          <div class="w-16 h-16 rounded-full bg-brand-tint flex items-center justify-center mx-auto mb-5">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </div>
+          <h2 class="text-[18px] font-extrabold text-[#1c1626] tracking-[-0.01em] mb-2">Your judge book is empty</h2>
+          <p class="text-[14px] text-[#6f6880] leading-relaxed mb-5">Add judges here to reuse them across multiple shows without re-entering their details.</p>
+          <button id="btn-add-first"
+            class="inline-flex items-center gap-2 bg-brand text-white text-[14px] font-bold px-6 py-3 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Add a Judge
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Backdrop -->
+  <div id="drawer-backdrop"
+    class="fixed inset-0 bg-black/30 z-40 transition-opacity duration-300 opacity-0 pointer-events-none"></div>
+
+  <!-- Edit Drawer -->
+  <div id="edit-drawer"
+    class="fixed top-0 right-0 h-full w-full max-w-[440px] bg-white shadow-2xl z-50 flex flex-col transition-transform duration-300 ease-in-out"
+    style="transform:translateX(100%)">
+
+    <!-- Drawer header -->
+    <div class="flex items-center justify-between px-6 py-4 border-b border-[#efebf5] shrink-0 bg-white">
+      <div>
+        <p id="drawer-label" class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider mb-0.5">Adding</p>
+        <h3 id="drawer-title" class="text-[17px] font-extrabold text-[#1c1626]">New Judge</h3>
+      </div>
+      <button id="drawer-close"
+        class="w-8 h-8 rounded-full bg-[#f0fafa] flex items-center justify-center text-[#6f6880] hover:bg-brand/10 hover:text-brand transition-colors">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Drawer body -->
+    <div class="flex-1 overflow-y-auto p-6 space-y-4">
+      <p id="drawer-error" style="display:none"
+        class="text-[13px] text-red-600 bg-red-50 border border-red-100 rounded-[11px] px-4 py-3"></p>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">First Name <span class="text-red-400">*</span></label>
+          <input type="text" id="f-first" placeholder="Jane" autocomplete="off"
+            class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[14px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        </div>
+        <div>
+          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Last Name <span class="text-red-400">*</span></label>
+          <input type="text" id="f-last" placeholder="Smith" autocomplete="off"
+            class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[14px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        </div>
+      </div>
+      <div>
+        <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Email Address <span class="text-red-400">*</span></label>
+        <input type="email" id="f-email" placeholder="jane@example.com" autocomplete="off"
+          class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[14px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+      </div>
+      <div>
+        <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">
+          Phone <span class="text-[#c4bed0] font-normal">(optional)</span>
+        </label>
+        <input type="tel" id="f-phone" placeholder="+44 7700 900000" autocomplete="off"
+          class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[14px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+      </div>
+    </div>
+
+    <!-- Drawer footer -->
+    <div class="shrink-0 px-6 py-4 border-t border-[#efebf5] flex items-center justify-end gap-3 bg-white">
+      <button id="drawer-cancel"
+        class="text-[13.5px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-5 py-2.5 rounded-btn hover:bg-[#f0fafa] transition-colors">
+        Cancel
+      </button>
+      <button id="drawer-save"
+        class="bg-brand text-white text-[13.5px] font-bold px-5 py-2.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">
+        Save Judge
+      </button>
+    </div>
+
+  </div>
+
+</DashboardLayout>
+
+<script>
+  import { getAuth } from '../../lib/auth.js';
+  import { supabase } from '../../lib/supabase.js';
+
+  const MOCK_VOTES = [23, 41, 17, 35, 28, 19, 44, 31];
+
+  let base = '';
+  let uid  = '';
+  let allShows     = [];
+  let savedJudges  = [];
+  let judgesByShow = {};
+  let catsByShow   = {};
+  let currentEditJudge = null;
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function inits(first, last) {
+    return ((first?.[0] || '') + (last?.[0] || '')).toUpperCase() || '?';
+  }
+
+  function avatar(first, last, photoUrl, size = '8') {
+    const px = size === '9' ? 'w-9 h-9 text-[12px]' : 'w-8 h-8 text-[11px]';
+    return photoUrl
+      ? `<div class="${px} rounded-full overflow-hidden shrink-0"><img src="${esc(photoUrl)}" class="w-full h-full object-cover" /></div>`
+      : `<div class="${px} rounded-full bg-brand flex items-center justify-center text-white font-extrabold shrink-0">${inits(first, last)}</div>`;
+  }
+
+  function fmtDate(d) {
+    return d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Date not set';
+  }
+
+  function derivedStatus(show) {
+    if (show.status !== 'published') return { label: 'Draft', color: '#6f6880', bg: '#f5f3fa' };
+    const now       = Date.now();
+    const openTime  = show.entry_open_date  ? new Date(show.entry_open_date).getTime()  : null;
+    const closeTime = show.entry_close_date ? new Date(show.entry_close_date).getTime() : null;
+    const showTime  = show.show_date        ? new Date(show.show_date).getTime()        : null;
+    if (openTime && openTime > now)     return { label: 'Scheduled',        color: '#2563eb', bg: '#eff6ff' };
+    if (!closeTime || closeTime >= now) return { label: 'Open for Entries', color: '#16a34a', bg: '#f0fdf4' };
+    if (showTime && showTime >= now)    return { label: 'Entries Closed',   color: '#d97706', bg: '#fffbeb' };
+    return                                     { label: 'Ended',            color: '#6b7280', bg: '#f9fafb' };
+  }
+
+  function showToast(msg) {
+    let toast = document.getElementById('jdg-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'jdg-toast';
+      Object.assign(toast.style, {
+        position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
+        background: '#1c1626', color: 'white', padding: '10px 20px', borderRadius: '11px',
+        fontSize: '13px', fontWeight: '600', zIndex: '200', transition: 'opacity 0.3s',
+        whiteSpace: 'nowrap', opacity: '0', pointerEvents: 'none',
+      });
+      document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.style.opacity = '1';
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => { toast.style.opacity = '0'; }, 3000);
+  }
+
+  // ── Render: Show Status ───────────────────────────────────────────────────────
+
+  function renderShowStatus() {
+    const container = document.getElementById('shows-container');
+    const emptyEl   = document.getElementById('shows-empty');
+    if (allShows.length === 0) {
+      container.innerHTML = '';
+      emptyEl.style.display = 'flex';
+      return;
+    }
+    emptyEl.style.display = 'none';
+    const sorted = [...allShows].sort((a, b) => {
+      const aPub = a.status === 'published' ? 0 : 1;
+      const bPub = b.status === 'published' ? 0 : 1;
+      if (aPub !== bPub) return aPub - bPub;
+      const aDate = a.show_date ? new Date(a.show_date).getTime() : Infinity;
+      const bDate = b.show_date ? new Date(b.show_date).getTime() : Infinity;
+      return aDate - bDate;
+    });
+    container.innerHTML = sorted.map(renderShowCard).join('');
+  }
+
+  function renderShowCard(show) {
+    const status   = derivedStatus(show);
+    const judges   = judgesByShow[show.id] || [];
+    const cats     = catsByShow[show.id]   || [];
+    const isExpert = show.is_judged === true;
+    const isPublic = show.is_judged === false;
+    const isUnset  = show.is_judged === null || show.is_judged === undefined;
+
+    let typeBadge = '';
+    if (isExpert) {
+      typeBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700">Expert Judges · ${show.judge_count || 1}</span>`;
+    } else if (isPublic) {
+      typeBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold" style="background:#f5f3ff;color:#7c3aed">Public Voting</span>`;
+    } else {
+      typeBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#f5f3fa] text-[#9b94a8]">Judging not configured</span>`;
+    }
+
+    let bodyHTML = '';
+
+    if (isUnset) {
+      bodyHTML = `
+        <div class="mt-3 pt-3 border-t border-[#f5f3fa]">
+          <p class="text-[13px] text-[#9b94a8]">No judging type has been set for this show yet.</p>
+          <a href="${base}organiser/show?id=${esc(show.id)}" class="inline-block mt-1.5 text-[12px] font-semibold text-brand hover:text-brand-dark transition-colors">
+            Configure judging in show settings →
+          </a>
+        </div>`;
+
+    } else if (isExpert) {
+      const judgeRows = judges.length > 0
+        ? judges.map(j => `
+            <div class="flex items-center gap-3 py-2.5 border-b border-[#f5f3fa] last:border-0">
+              ${avatar(j.first_name, j.last_name, j.photo_url)}
+              <div class="flex-1 min-w-0">
+                <p class="text-[13px] font-semibold text-[#1c1626]">${esc(j.first_name)} ${esc(j.last_name)}</p>
+                <p class="text-[11px] text-[#9b94a8]">${esc(j.email || '—')}</p>
+              </div>
+              <span class="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#9b94a8] bg-[#f5f3fa] px-2.5 py-1 rounded-full shrink-0">
+                <span class="w-1.5 h-1.5 rounded-full bg-[#c4bed0]"></span>Not Sent
+              </span>
+            </div>`).join('')
+        : `<p class="text-[13px] text-[#9b94a8] py-1.5">No judges assigned yet.
+            <a class="text-brand font-semibold hover:text-brand-dark" href="${base}organiser/show?id=${esc(show.id)}">Add judges in show settings →</a>
+           </p>`;
+
+      const catRows = cats.length > 0
+        ? cats.map(c => `
+            <div class="flex items-center justify-between py-2 border-b border-[#f5f3fa] last:border-0">
+              <p class="text-[13px] text-[#1c1626]">${esc(c.name)}</p>
+              <span class="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#9b94a8] bg-[#f5f3fa] px-2.5 py-1 rounded-full">
+                <span class="w-1.5 h-1.5 rounded-full bg-[#c4bed0]"></span>Pending
+              </span>
+            </div>`).join('')
+        : `<p class="text-[13px] text-[#9b94a8]">No classes configured for this show.</p>`;
+
+      bodyHTML = `
+        <div class="mt-4 pt-4 border-t border-[#efebf5]">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider">Judges</p>
+            <button disabled title="Invitations — coming soon"
+              class="text-[12px] font-bold text-[#c4bed0] border border-[#efebf5] px-3 py-1.5 rounded-btn cursor-not-allowed select-none">
+              Send Invitations
+            </button>
+          </div>
+          ${judgeRows}
+        </div>
+        <div class="mt-4 pt-4 border-t border-[#efebf5]">
+          <button class="cat-toggle flex items-center justify-between w-full" data-target="cats-${show.id}">
+            <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider">Results Status</p>
+            <svg class="cat-chevron transition-transform duration-200" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div id="cats-${show.id}" style="display:none" class="mt-2">
+            ${catRows}
+          </div>
+        </div>`;
+
+    } else if (isPublic) {
+      const catBars = cats.length > 0
+        ? cats.map((c, i) => {
+            const votes = MOCK_VOTES[i % MOCK_VOTES.length];
+            const pct   = Math.round((votes / 50) * 100);
+            return `
+              <div class="mb-2.5">
+                <div class="flex justify-between mb-1">
+                  <span class="text-[12px] text-[#5b21b6]">${esc(c.name)}</span>
+                  <span class="text-[12px] font-bold text-[#7c3aed]">${votes}</span>
+                </div>
+                <div class="h-2 rounded-full overflow-hidden" style="background:#ede9fe">
+                  <div class="h-full rounded-full" style="width:${pct}%;background:#8b5cf6"></div>
+                </div>
+              </div>`;
+          }).join('')
+        : `<p class="text-[12px] text-[#7c3aed] opacity-70 mb-1">No classes configured yet — add them in show settings.</p>`;
+
+      bodyHTML = `
+        <div class="mt-4 pt-4 border-t border-[#efebf5]">
+          <div class="rounded-[11px] p-4" style="background:#faf5ff;border:1px solid #e9d5ff">
+            <div class="flex items-center justify-between mb-1">
+              <div class="flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full" style="background:#8b5cf6"></div>
+                <p class="text-[13px] font-bold" style="color:#5b21b6">Public Voting</p>
+              </div>
+              <span class="text-[10px] font-bold text-[#9b94a8] bg-[#f5f3fa] px-2 py-0.5 rounded-full uppercase tracking-wide">Preview layout</span>
+            </div>
+            <p class="text-[12px] mb-2" style="color:#7c3aed">Votes are counted as participants share the show link with friends and family.</p>
+            <button class="cat-toggle flex items-center justify-between w-full mb-1" data-target="cats-${show.id}">
+              <span class="text-[11px] font-bold uppercase tracking-wider" style="color:#7c3aed">Vote Counts</span>
+              <svg class="cat-chevron transition-transform duration-200" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+            <div id="cats-${show.id}" style="display:none">
+              ${catBars}
+            </div>
+            <button disabled title="Coming soon"
+              class="mt-3 w-full text-[12px] font-bold text-[#c4bed0] border border-[#efebf5] px-3 py-2 rounded-btn cursor-not-allowed text-center select-none">
+              Voting: Open / Closed — Coming soon
+            </button>
+          </div>
+        </div>`;
+    }
+
+    return `
+      <div class="bg-white rounded-card border border-[#b8e4e0] p-5">
+        <div class="flex items-start justify-between gap-3 flex-wrap">
+          <div class="min-w-0">
+            <div class="flex items-center gap-2 flex-wrap mb-1">
+              <h3 class="text-[15px] font-extrabold text-[#1c1626]">${esc(show.title || 'Untitled Show')}</h3>
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold"
+                style="background:${status.bg};color:${status.color}">${status.label}</span>
+              ${typeBadge}
+            </div>
+            <p class="text-[13px] text-[#6f6880]">${fmtDate(show.show_date)}</p>
+          </div>
+          <a href="${base}organiser/show?id=${esc(show.id)}"
+            class="text-[12px] font-semibold text-brand hover:text-brand-dark transition-colors shrink-0">
+            Show settings →
+          </a>
+        </div>
+        ${bodyHTML}
+      </div>`;
+  }
+
+  function attachShowStatusListeners() {
+    document.getElementById('shows-container')?.addEventListener('click', e => {
+      const btn = e.target.closest('.cat-toggle');
+      if (!btn) return;
+      const panel   = document.getElementById(btn.dataset.target);
+      const chevron = btn.querySelector('.cat-chevron');
+      if (!panel) return;
+      const open = panel.style.display !== 'none';
+      panel.style.display = open ? 'none' : 'block';
+      if (chevron) chevron.style.transform = open ? '' : 'rotate(180deg)';
+    });
+  }
+
+  // ── Render: Judge Book ────────────────────────────────────────────────────────
+
+  function renderJudgeBook() {
+    const listEl    = document.getElementById('book-list');
+    const emptyEl   = document.getElementById('book-empty');
+    const countEl   = document.getElementById('book-count');
+
+    if (countEl) countEl.textContent = String(savedJudges.length);
+
+    if (savedJudges.length === 0) {
+      listEl.innerHTML = '';
+      emptyEl.style.display = 'flex';
+      return;
+    }
+
+    emptyEl.style.display = 'none';
+    listEl.innerHTML = `
+      <div class="bg-white rounded-card border border-[#b8e4e0]">
+        ${savedJudges.map(renderJudgeRow).join('')}
+      </div>`;
+
+    attachBookListeners();
+  }
+
+  function renderJudgeRow(j) {
+    const showOptions = allShows.map(s => `
+      <button class="assign-to-show w-full text-left px-4 py-2.5 text-[13px] text-[#1c1626] hover:bg-[#f0fafa] transition-colors"
+        data-judge-id="${j.id}" data-show-id="${esc(s.id)}" data-show-title="${esc(s.title || 'Untitled')}">
+        ${esc(s.title || 'Untitled Show')}
+      </button>`).join('');
+
+    const assignBtn = allShows.length > 0 ? `
+      <div class="relative">
+        <button class="assign-btn text-[12px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-2.5 py-1.5 rounded-btn hover:bg-[#f0fafa] transition-colors"
+          data-judge-id="${j.id}">
+          Assign ▾
+        </button>
+        <div class="assign-dropdown hidden absolute right-0 top-full mt-1 w-56 bg-white border border-[#b8e4e0] rounded-[11px] shadow-lg z-10 py-1 max-h-48 overflow-y-auto"
+          id="assign-dd-${j.id}">
+          ${showOptions}
+        </div>
+      </div>` : '';
+
+    return `
+      <div class="judge-row" data-id="${j.id}">
+        <div class="flex items-center gap-3 px-5 py-3.5 border-b border-[#f5f3fa]">
+          ${avatar(j.first_name, j.last_name, j.photo_url, '9')}
+          <div class="flex-1 min-w-0">
+            <p class="text-[14px] font-semibold text-[#1c1626]">${esc(j.first_name)} ${esc(j.last_name)}</p>
+            <p class="text-[12px] text-[#9b94a8]">${esc(j.email || '—')}${j.phone ? ' · ' + esc(j.phone) : ''}</p>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            ${assignBtn}
+            <button class="edit-btn text-[12px] font-semibold text-brand hover:text-brand-dark transition-colors"
+              data-judge-id="${j.id}">Edit</button>
+            <button class="remove-btn text-[12px] font-semibold text-[#9b94a8] hover:text-red-500 transition-colors"
+              data-judge-id="${j.id}">Remove</button>
+          </div>
+        </div>
+        <div class="remove-confirm hidden px-5 py-3 bg-red-50 border-b border-red-100" id="confirm-${j.id}">
+          <div class="flex items-center justify-between gap-3">
+            <p class="text-[13px] text-red-700">Remove <strong>${esc(j.first_name)} ${esc(j.last_name)}</strong> from your judge book?</p>
+            <div class="flex gap-2 shrink-0">
+              <button class="cancel-remove text-[12px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-3 py-1.5 rounded-btn hover:bg-white transition-colors"
+                data-judge-id="${j.id}">Cancel</button>
+              <button class="confirm-remove text-[12px] font-bold text-white bg-red-500 px-3 py-1.5 rounded-btn hover:bg-red-600 transition-colors"
+                data-judge-id="${j.id}">Remove</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function attachBookListeners() {
+    const listEl = document.getElementById('book-list');
+
+    listEl.addEventListener('click', async e => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      const judgeId = btn.dataset.judgeId;
+
+      if (btn.classList.contains('assign-btn')) {
+        e.stopPropagation();
+        const dd = document.getElementById(`assign-dd-${judgeId}`);
+        document.querySelectorAll('.assign-dropdown').forEach(d => { if (d !== dd) d.classList.add('hidden'); });
+        dd?.classList.toggle('hidden');
+        return;
+      }
+
+      if (btn.classList.contains('assign-to-show')) {
+        const showId    = btn.dataset.showId;
+        const showTitle = btn.dataset.showTitle;
+        const j = savedJudges.find(x => x.id === judgeId);
+        if (j && showId) await assignJudgeToShow(j, showId, showTitle);
+        document.querySelectorAll('.assign-dropdown').forEach(d => d.classList.add('hidden'));
+        return;
+      }
+
+      if (btn.classList.contains('edit-btn')) {
+        const j = savedJudges.find(x => x.id === judgeId);
+        if (j) openDrawer(j);
+        return;
+      }
+
+      if (btn.classList.contains('remove-btn')) {
+        document.getElementById(`confirm-${judgeId}`)?.classList.remove('hidden');
+        return;
+      }
+
+      if (btn.classList.contains('cancel-remove')) {
+        document.getElementById(`confirm-${judgeId}`)?.classList.add('hidden');
+        return;
+      }
+
+      if (btn.classList.contains('confirm-remove')) {
+        await deleteJudge(judgeId);
+        return;
+      }
+    });
+  }
+
+  async function deleteJudge(id) {
+    const { error } = await supabase.from('saved_judges').delete().eq('id', id);
+    if (!error) {
+      savedJudges = savedJudges.filter(j => j.id !== id);
+      renderJudgeBook();
+    }
+  }
+
+  async function assignJudgeToShow(judge, showId, showTitle) {
+    const already = (judgesByShow[showId] || []).find(j =>
+      j.email?.toLowerCase() === judge.email?.toLowerCase()
+    );
+    if (already) {
+      showToast(`${judge.first_name} is already assigned to ${showTitle}`);
+      return;
+    }
+    const { error } = await supabase.from('show_judges').insert({
+      show_id:    showId,
+      first_name: judge.first_name,
+      last_name:  judge.last_name,
+      email:      judge.email,
+      phone:      judge.phone || null,
+    });
+    if (!error) {
+      if (!judgesByShow[showId]) judgesByShow[showId] = [];
+      judgesByShow[showId].push({
+        show_id: showId, first_name: judge.first_name,
+        last_name: judge.last_name, email: judge.email, phone: judge.phone,
+      });
+      const show = allShows.find(s => s.id === showId);
+      if (show && show.is_judged == null) {
+        await supabase.from('shows').update({ is_judged: true }).eq('id', showId);
+        show.is_judged = true;
+      }
+      showToast(`${judge.first_name} ${judge.last_name} assigned to ${showTitle}`);
+      if (document.getElementById('panel-shows').style.display !== 'none') {
+        renderShowStatus();
+      }
+    }
+  }
+
+  // ── Drawer ────────────────────────────────────────────────────────────────────
+
+  function openDrawer(judge = null) {
+    currentEditJudge = judge;
+    document.getElementById('drawer-label').textContent  = judge ? 'Editing' : 'Adding';
+    document.getElementById('drawer-title').textContent  = judge ? `${judge.first_name} ${judge.last_name}` : 'New Judge';
+    document.getElementById('f-first').value = judge?.first_name || '';
+    document.getElementById('f-last').value  = judge?.last_name  || '';
+    document.getElementById('f-email').value = judge?.email      || '';
+    document.getElementById('f-phone').value = judge?.phone      || '';
+    document.getElementById('drawer-error').style.display = 'none';
+    const backdrop = document.getElementById('drawer-backdrop');
+    backdrop.style.opacity = '1';
+    backdrop.style.pointerEvents = 'auto';
+    document.getElementById('edit-drawer').style.transform = 'translateX(0)';
+    document.getElementById('f-first').focus();
+  }
+
+  function closeDrawer() {
+    const backdrop = document.getElementById('drawer-backdrop');
+    backdrop.style.opacity = '0';
+    backdrop.style.pointerEvents = 'none';
+    document.getElementById('edit-drawer').style.transform = 'translateX(100%)';
+    currentEditJudge = null;
+  }
+
+  async function saveJudge() {
+    const first = document.getElementById('f-first').value.trim();
+    const last  = document.getElementById('f-last').value.trim();
+    const email = document.getElementById('f-email').value.trim();
+    const phone = document.getElementById('f-phone').value.trim() || null;
+    const errEl = document.getElementById('drawer-error');
+
+    if (!first || !last || !email) {
+      errEl.textContent = 'First name, last name, and email are required.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    errEl.style.display = 'none';
+    const saveBtn = document.getElementById('drawer-save');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+
+    if (currentEditJudge) {
+      const { data, error } = await supabase.from('saved_judges')
+        .update({ first_name: first, last_name: last, email, phone })
+        .eq('id', currentEditJudge.id)
+        .select().single();
+      if (!error && data) {
+        const idx = savedJudges.findIndex(j => j.id === currentEditJudge.id);
+        if (idx >= 0) savedJudges[idx] = data;
+      }
+    } else {
+      const { data, error } = await supabase.from('saved_judges')
+        .insert({ organiser_id: uid, first_name: first, last_name: last, email, phone })
+        .select().single();
+      if (!error && data) {
+        savedJudges.push(data);
+        savedJudges.sort((a, b) => (a.last_name || '').localeCompare(b.last_name || ''));
+      }
+    }
+
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save Judge';
+    closeDrawer();
+    renderJudgeBook();
+  }
+
+  // ── Tabs ──────────────────────────────────────────────────────────────────────
+
+  function setupTabs() {
+    const tabShows   = document.getElementById('tab-shows');
+    const tabBook    = document.getElementById('tab-book');
+    const panelShows = document.getElementById('panel-shows');
+    const panelBook  = document.getElementById('panel-book');
+    const addBtn     = document.getElementById('btn-add-judge');
+
+    function activateTab(name) {
+      const isShows = name === 'shows';
+      tabShows.className = isShows
+        ? 'px-4 py-2.5 text-[13.5px] font-bold text-brand border-b-2 border-brand transition-colors'
+        : 'px-4 py-2.5 text-[13.5px] font-semibold text-[#9b94a8] border-b-2 border-transparent hover:text-[#4a4357] transition-colors';
+      tabBook.className = isShows
+        ? 'px-4 py-2.5 text-[13.5px] font-semibold text-[#9b94a8] border-b-2 border-transparent hover:text-[#4a4357] transition-colors'
+        : 'px-4 py-2.5 text-[13.5px] font-bold text-brand border-b-2 border-brand transition-colors';
+      panelShows.style.display = isShows ? 'block' : 'none';
+      panelBook.style.display  = isShows ? 'none'  : 'block';
+      addBtn.style.display     = isShows ? 'none'  : 'inline-flex';
+    }
+
+    tabShows.addEventListener('click', () => activateTab('shows'));
+    tabBook.addEventListener('click',  () => activateTab('book'));
+    activateTab('shows');
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────────
+
+  (async () => {
+    const auth = await getAuth();
+    base = auth.base;
+
+    if (!auth.session) {
+      window.location.replace(base + 'login');
+      return;
+    }
+
+    uid = auth.session.user.id;
+
+    const name     = auth.profile?.display_name || auth.session.user.email?.split('@')[0] || 'Organiser';
+    const avatarEl = document.getElementById('sidebar-avatar');
+    const nameEl   = document.getElementById('sidebar-username');
+    const badgeEl  = document.getElementById('sidebar-role-badge');
+    if (avatarEl) avatarEl.textContent = name.charAt(0).toUpperCase();
+    if (nameEl)   nameEl.textContent   = name;
+    if (badgeEl)  badgeEl.textContent  = auth.profile?.organiser_type === 'club' ? 'Club Organiser' : 'Organiser';
+    document.getElementById('sidebar-signout')?.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = base + 'login';
+    });
+
+    const goShowsLink = document.getElementById('link-go-shows');
+    if (goShowsLink) goShowsLink.href = base + 'organiser/shows';
+
+    const [showsRes, savedRes] = await Promise.all([
+      supabase.from('shows').select('*').eq('created_by', uid).order('created_at', { ascending: false }),
+      supabase.from('saved_judges').select('*').eq('organiser_id', uid).order('last_name'),
+    ]);
+
+    allShows    = showsRes.data  || [];
+    savedJudges = savedRes.data  || [];
+
+    if (allShows.length > 0) {
+      const showIds = allShows.map(s => s.id);
+      const [judgesRes, catsRes] = await Promise.all([
+        supabase.from('show_judges').select('*').in('show_id', showIds),
+        supabase.from('show_categories').select('*').in('show_id', showIds),
+      ]);
+      for (const j of (judgesRes.data || [])) {
+        if (!judgesByShow[j.show_id]) judgesByShow[j.show_id] = [];
+        judgesByShow[j.show_id].push(j);
+      }
+      for (const c of (catsRes.data || [])) {
+        if (!catsByShow[c.show_id]) catsByShow[c.show_id] = [];
+        catsByShow[c.show_id].push(c);
+      }
+    }
+
+    document.getElementById('state-loading').style.display = 'none';
+    document.getElementById('state-content').style.display = 'block';
+
+    renderShowStatus();
+    renderJudgeBook();
+    setupTabs();
+    attachShowStatusListeners();
+
+    // Drawer wiring
+    document.getElementById('drawer-backdrop')?.addEventListener('click', closeDrawer);
+    document.getElementById('drawer-close')?.addEventListener('click', closeDrawer);
+    document.getElementById('drawer-cancel')?.addEventListener('click', closeDrawer);
+    document.getElementById('drawer-save')?.addEventListener('click', saveJudge);
+    document.getElementById('btn-add-judge')?.addEventListener('click', () => openDrawer());
+    document.getElementById('btn-add-first')?.addEventListener('click', () => openDrawer());
+
+    // Close assign dropdowns on outside click
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.assign-dropdown').forEach(d => d.classList.add('hidden'));
+    });
+  })();
+</script>
