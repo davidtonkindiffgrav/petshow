@@ -72,12 +72,187 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   import { getAuth } from '../../lib/auth.js';
   import { supabase } from '../../lib/supabase.js';
 
-  const { session, profile, base } = await getAuth();
+  // Module-level state so helpers can access it as closures
+  let show        = null;
+  let entryCount  = 0;
+  let totalRaised = 0;
+  let base        = '';
 
-  if (!session) {
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+
+  function derivedStatus() {
+    if (!show || show.status !== 'published') return { label: 'Draft', color: '#6f6880', bg: '#f5f3fa' };
+    const now       = Date.now();
+    const openTime  = show.entry_open_date  ? new Date(show.entry_open_date).getTime()  : null;
+    const closeTime = show.entry_close_date ? new Date(show.entry_close_date).getTime() : null;
+    const showTime  = show.show_date        ? new Date(show.show_date).getTime()        : null;
+    if (openTime && openTime > now)     return { label: 'Scheduled',        color: '#2563eb', bg: '#eff6ff' };
+    if (!closeTime || closeTime >= now) return { label: 'Open for Entries',  color: '#16a34a', bg: '#f0fdf4' };
+    if (showTime && showTime >= now)    return { label: 'Entries Closed',   color: '#d97706', bg: '#fffbeb' };
+    return                                     { label: 'Ended',            color: '#6b7280', bg: '#f9fafb' };
+  }
+
+  function fmtDate(d) {
+    return d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
+  }
+
+  function fmtShort(d) {
+    return d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'TBC';
+  }
+
+  function fmtMoney(amount) {
+    try {
+      return new Intl.NumberFormat('en', { style: 'currency', currency: show?.currency || 'AUD', maximumFractionDigits: 2 }).format(amount);
+    } catch { return `$${Number(amount).toFixed(2)}`; }
+  }
+
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function renderHeader() {
+    const el      = document.getElementById('dash-header');
+    const status  = derivedStatus();
+    const hasLogo = !!show.logo_url;
+    const bannerStyle = show.banner_url
+      ? `background:url('${show.banner_url}') center/cover no-repeat`
+      : 'background:linear-gradient(135deg,#1ba89a 0%,#002d6b 100%)';
+
+    el.innerHTML = `
+      <div class="bg-white rounded-card border border-[#b8e4e0] overflow-hidden">
+        <div style="height:130px;${bannerStyle};position:relative;">
+          <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 35%,rgba(0,0,0,0.5));"></div>
+          ${hasLogo ? `<img src="${esc(show.logo_url)}" style="position:absolute;bottom:-18px;left:20px;width:44px;height:44px;border-radius:50%;object-fit:contain;background:white;border:2.5px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.15);" alt="" />` : ''}
+          <div style="position:absolute;bottom:11px;left:${hasLogo ? '76px' : '20px'};right:100px;">
+            <p style="font-size:19px;font-weight:800;color:white;line-height:1.2;text-shadow:0 1px 3px rgba(0,0,0,0.45);">${esc(show.title || 'Untitled Show')}</p>
+            ${show.host_org ? `<p style="font-size:12px;color:rgba(255,255,255,0.8);margin-top:2px;">${esc(show.host_org)}</p>` : ''}
+          </div>
+          <span style="position:absolute;bottom:13px;right:16px;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;background:${status.bg};color:${status.color};">${esc(status.label)}</span>
+        </div>
+        ${hasLogo ? '<div style="height:20px;"></div>' : ''}
+        <div style="padding:12px 20px 14px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;border-top:1px solid #f5f3fa;">
+          ${show.show_date        ? `<span style="font-size:13px;color:#6f6880;display:inline-flex;align-items:center;gap:5px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Show Day: ${fmtDate(show.show_date)}</span>` : ''}
+          ${show.entry_open_date  ? `<span style="font-size:13px;color:#6f6880;">Entries open: ${fmtDate(show.entry_open_date)}</span>` : ''}
+          ${show.entry_close_date ? `<span style="font-size:13px;color:#6f6880;">Close: ${fmtDate(show.entry_close_date)}</span>` : ''}
+          <button onclick="window.location.href='${base}organiser/show/?id=${esc(show.id)}'" style="margin-left:auto;font-size:12.5px;font-weight:600;color:#1ba89a;background:none;border:none;cursor:pointer;padding:0;font-family:inherit;">Settings →</button>
+        </div>
+      </div>`;
+  }
+
+  function renderStats() {
+    const el      = document.getElementById('dash-stats');
+    const hasGoal = !!(show.is_fundraising && show.fundraising_goal);
+    const goal    = hasGoal ? parseFloat(show.fundraising_goal) : 0;
+    const pct     = hasGoal && goal > 0 ? Math.min(100, Math.round((totalRaised / goal) * 100)) : 0;
+
+    el.style.gridTemplateColumns = hasGoal ? 'repeat(3,1fr)' : 'repeat(2,1fr)';
+
+    function statCard(title, value, sub) {
+      return `<div class="bg-white rounded-card border border-[#b8e4e0] p-5">
+        <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#9b94a8;margin-bottom:8px;">${title}</p>
+        <p style="font-size:28px;font-weight:800;color:#1c1626;line-height:1;">${value}</p>
+        <p style="font-size:12px;color:#9b94a8;margin-top:5px;">${sub}</p>
+      </div>`;
+    }
+
+    const goalCard = `<div class="bg-white rounded-card border border-[#b8e4e0] p-5">
+      <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#9b94a8;margin-bottom:8px;">Fundraising Goal</p>
+      <p style="font-size:28px;font-weight:800;color:#1c1626;line-height:1;">${pct}%</p>
+      <p style="font-size:12px;color:#9b94a8;margin-top:5px;">${fmtMoney(totalRaised)} of ${fmtMoney(goal)}</p>
+      <div style="margin-top:10px;height:6px;background:#efebf5;border-radius:99px;overflow:hidden;">
+        <div style="height:100%;width:${pct}%;background:#1ba89a;border-radius:99px;"></div>
+      </div>
+    </div>`;
+
+    el.innerHTML =
+      statCard('Total Entries', String(entryCount), 'entries submitted') +
+      statCard('Total Raised',  fmtMoney(totalRaised), 'entry fees collected') +
+      (hasGoal ? goalCard : '');
+  }
+
+  function renderTimeline() {
+    const el        = document.getElementById('dash-timeline');
+    const openDate  = show.entry_open_date  ? new Date(show.entry_open_date)  : null;
+    const closeDate = show.entry_close_date ? new Date(show.entry_close_date) : null;
+    const showDate  = show.show_date        ? new Date(show.show_date)        : null;
+    const today     = new Date();
+
+    if (!openDate || !showDate) {
+      el.innerHTML = `
+        <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#9b94a8;margin-bottom:12px;">Show Timeline</p>
+        <p style="font-size:13px;color:#9b94a8;">Set your entry open date and show date to see the timeline.</p>`;
+      return;
+    }
+
+    const span = showDate - openDate;
+
+    function toPct(d) {
+      if (!d) return null;
+      return Math.max(0, Math.min(100, ((d - openDate) / span) * 100));
+    }
+
+    const todayPct = span > 0 ? toPct(today) : 100;
+    const closePct = toPct(closeDate);
+    const filledPct = Math.max(0, Math.min(100, todayPct ?? 0));
+
+    const markers = [
+      { pct: 0,        label: 'Entries Open',  date: fmtShort(openDate),  past: today >= openDate  },
+      closePct != null ? { pct: closePct, label: 'Entries Close', date: fmtShort(closeDate), past: today > closeDate } : null,
+      { pct: 100,      label: 'Show Day',       date: fmtShort(showDate),  past: today > showDate   },
+    ].filter(Boolean);
+
+    const todayDot = todayPct >= 0 && todayPct <= 100
+      ? `<div style="position:absolute;left:${todayPct}%;top:50%;transform:translate(-50%,-50%);width:10px;height:10px;background:#002d6b;border:2px solid white;border-radius:50%;box-shadow:0 0 0 2px #002d6b;z-index:3;"></div>`
+      : '';
+
+    const markerDots = markers.map(m => {
+      const xform   = m.pct === 0   ? 'translateY(-50%)'         : m.pct === 100 ? 'translateY(-50%)'         : 'translate(-50%,-50%)';
+      const leftPos = m.pct === 100 ? 'right:0;left:auto'        : `left:${m.pct}%`;
+      const align   = m.pct === 0   ? 'flex-start' : m.pct === 100 ? 'flex-end' : 'center';
+      const tAlign  = m.pct === 0   ? 'left' : m.pct === 100 ? 'right' : 'center';
+      const col     = m.past ? '#1ba89a' : '#b8e4e0';
+      const lblCol  = m.past ? '#1ba89a' : '#9b94a8';
+      return `
+        <div style="position:absolute;${leftPos};top:50%;transform:${xform};display:flex;flex-direction:column;align-items:${align};">
+          <div style="width:12px;height:12px;border-radius:50%;background:${m.past ? '#1ba89a' : 'white'};border:2px solid ${col};z-index:2;position:relative;"></div>
+          <span style="position:absolute;top:16px;text-align:${tAlign};font-size:10.5px;font-weight:700;color:${lblCol};white-space:nowrap;">${m.label}</span>
+          <span style="position:absolute;top:29px;text-align:${tAlign};font-size:10px;color:#9b94a8;white-space:nowrap;">${m.date}</span>
+        </div>`;
+    }).join('');
+
+    el.innerHTML = `
+      <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#9b94a8;margin-bottom:24px;">Show Timeline</p>
+      <div style="position:relative;height:4px;margin:0 0 52px;">
+        <div style="position:absolute;inset:0;background:#efebf5;border-radius:99px;"></div>
+        <div style="position:absolute;left:0;top:0;height:100%;width:${filledPct}%;background:#1ba89a;border-radius:99px;"></div>
+        ${todayDot}
+        ${markerDots}
+      </div>`;
+  }
+
+  function renderRecentEntries() {
+    const el = document.getElementById('dash-entries');
+    el.innerHTML = `
+      <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#9b94a8;margin-bottom:16px;">Recent Entries</p>
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 0;gap:8px;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#c4bed0" stroke-width="1.5" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <p style="font-size:14px;font-weight:600;color:#4a4357;margin:0;">No entries yet</p>
+        <p style="font-size:13px;color:#9b94a8;text-align:center;max-width:280px;margin:0;">Share your show link to start collecting entries.</p>
+      </div>`;
+  }
+
+  // ── Init ─────────────────────────────────────────────────────────────────────
+
+  const auth = await getAuth();
+  base = auth.base;
+
+  if (!auth.session) {
     window.location.replace(base + 'login');
   } else {
-    const name = profile?.display_name || session.user.email?.split('@')[0] || 'Organiser';
+    const session = auth.session;
+    const profile = auth.profile;
+    const name    = profile?.display_name || session.user.email?.split('@')[0] || 'Organiser';
+
     const avatarEl = document.getElementById('sidebar-avatar');
     const nameEl   = document.getElementById('sidebar-username');
     const badgeEl  = document.getElementById('sidebar-role-badge');
@@ -89,17 +264,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       window.location.href = base + 'login';
     });
 
-    document.getElementById('btn-go-shows').onclick      = () => { window.location.href = base + 'organiser/shows'; };
-    document.getElementById('btn-go-shows-2').onclick    = () => { window.location.href = base + 'organiser/shows'; };
-    document.getElementById('btn-create-first').onclick  = () => { window.location.href = base + 'organiser/new-show'; };
+    document.getElementById('btn-go-shows').onclick     = () => { window.location.href = base + 'organiser/shows'; };
+    document.getElementById('btn-go-shows-2').onclick   = () => { window.location.href = base + 'organiser/shows'; };
+    document.getElementById('btn-create-first').onclick = () => { window.location.href = base + 'organiser/new-show'; };
 
     const uid      = session.user.id;
     const params   = new URLSearchParams(window.location.search);
     const override = params.get('show');
-
-    let show        = null;
-    let entryCount  = 0;
-    let totalRaised = 0;
 
     if (override) {
       const { data } = await supabase.from('shows').select('*').eq('id', override).eq('created_by', uid).single();
@@ -127,182 +298,6 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       renderStats();
       renderTimeline();
       renderRecentEntries();
-    }
-
-    // ── Helpers ────────────────────────────────────────────────────────────────
-
-    function derivedStatus() {
-      if (show.status !== 'published') return { label: 'Draft', color: '#6f6880', bg: '#f5f3fa' };
-      const now       = Date.now();
-      const openTime  = show.entry_open_date  ? new Date(show.entry_open_date).getTime()  : null;
-      const closeTime = show.entry_close_date ? new Date(show.entry_close_date).getTime() : null;
-      const showTime  = show.show_date        ? new Date(show.show_date).getTime()        : null;
-      if (openTime && openTime > now)       return { label: 'Scheduled',       color: '#2563eb', bg: '#eff6ff' };
-      if (!closeTime || closeTime >= now)   return { label: 'Open for Entries', color: '#16a34a', bg: '#f0fdf4' };
-      if (showTime && showTime >= now)      return { label: 'Entries Closed',  color: '#d97706', bg: '#fffbeb' };
-      return                                       { label: 'Ended',           color: '#6b7280', bg: '#f9fafb' };
-    }
-
-    function fmtDate(d) {
-      return d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
-    }
-
-    function fmtShort(d) {
-      return d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'TBC';
-    }
-
-    function fmtMoney(amount) {
-      try {
-        return new Intl.NumberFormat('en', { style: 'currency', currency: show.currency || 'AUD', maximumFractionDigits: 2 }).format(amount);
-      } catch { return `$${Number(amount).toFixed(2)}`; }
-    }
-
-    function esc(s) {
-      return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
-
-    // ── Render: Show header ────────────────────────────────────────────────────
-
-    function renderHeader() {
-      const el     = document.getElementById('dash-header');
-      const status = derivedStatus();
-      const hasLogo   = !!show.logo_url;
-      const hasBanner = !!show.banner_url;
-      const bannerStyle = hasBanner
-        ? `background:url('${show.banner_url}') center/cover no-repeat`
-        : 'background:linear-gradient(135deg,#1ba89a 0%,#002d6b 100%)';
-
-      el.innerHTML = `
-        <div class="bg-white rounded-card border border-[#b8e4e0] overflow-hidden">
-          <!-- Banner strip -->
-          <div style="height:130px;${bannerStyle};position:relative;">
-            <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 35%,rgba(0,0,0,0.5));"></div>
-            ${hasLogo ? `<img src="${esc(show.logo_url)}" style="position:absolute;bottom:-18px;left:20px;width:44px;height:44px;border-radius:50%;object-fit:contain;background:white;border:2.5px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.15);" alt="" />` : ''}
-            <div style="position:absolute;bottom:11px;left:${hasLogo ? '76px' : '20px'};right:100px;">
-              <p style="font-size:19px;font-weight:800;color:white;line-height:1.2;text-shadow:0 1px 3px rgba(0,0,0,0.45);">${esc(show.title || 'Untitled Show')}</p>
-              ${show.host_org ? `<p style="font-size:12px;color:rgba(255,255,255,0.8);margin-top:2px;">${esc(show.host_org)}</p>` : ''}
-            </div>
-            <span style="position:absolute;bottom:13px;right:16px;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;background:${status.bg};color:${status.color};">${esc(status.label)}</span>
-          </div>
-          ${hasLogo ? '<div style="height:20px;"></div>' : ''}
-          <!-- Meta row -->
-          <div style="padding:12px 20px 14px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;border-top:1px solid #f5f3fa;">
-            ${show.show_date ? `<span style="font-size:13px;color:#6f6880;display:inline-flex;align-items:center;gap:5px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Show Day: ${fmtDate(show.show_date)}</span>` : ''}
-            ${show.entry_open_date ? `<span style="font-size:13px;color:#6f6880;">Entries open: ${fmtDate(show.entry_open_date)}</span>` : ''}
-            ${show.entry_close_date ? `<span style="font-size:13px;color:#6f6880;">Close: ${fmtDate(show.entry_close_date)}</span>` : ''}
-            <button onclick="window.location.href='${base}organiser/show/?id=${esc(show.id)}'" style="margin-left:auto;font-size:12.5px;font-weight:600;color:#1ba89a;background:none;border:none;cursor:pointer;padding:0;font-family:inherit;">Settings →</button>
-          </div>
-        </div>`;
-    }
-
-    // ── Render: Stats row ──────────────────────────────────────────────────────
-
-    function renderStats() {
-      const el     = document.getElementById('dash-stats');
-      const hasGoal = !!(show.is_fundraising && show.fundraising_goal);
-      const goal    = hasGoal ? parseFloat(show.fundraising_goal) : 0;
-      const pct     = hasGoal && goal > 0 ? Math.min(100, Math.round((totalRaised / goal) * 100)) : 0;
-
-      el.style.gridTemplateColumns = hasGoal ? 'repeat(3,1fr)' : 'repeat(2,1fr)';
-
-      function statCard(title, value, sub) {
-        return `<div class="bg-white rounded-card border border-[#b8e4e0] p-5">
-          <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#9b94a8;margin-bottom:8px;">${title}</p>
-          <p style="font-size:28px;font-weight:800;color:#1c1626;line-height:1;">${value}</p>
-          <p style="font-size:12px;color:#9b94a8;margin-top:5px;">${sub}</p>
-        </div>`;
-      }
-
-      const goalCard = `<div class="bg-white rounded-card border border-[#b8e4e0] p-5">
-        <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#9b94a8;margin-bottom:8px;">Fundraising Goal</p>
-        <p style="font-size:28px;font-weight:800;color:#1c1626;line-height:1;">${pct}%</p>
-        <p style="font-size:12px;color:#9b94a8;margin-top:5px;">${fmtMoney(totalRaised)} of ${fmtMoney(goal)}</p>
-        <div style="margin-top:10px;height:6px;background:#efebf5;border-radius:99px;overflow:hidden;">
-          <div style="height:100%;width:${pct}%;background:#1ba89a;border-radius:99px;"></div>
-        </div>
-      </div>`;
-
-      el.innerHTML =
-        statCard('Total Entries', String(entryCount), 'entries submitted') +
-        statCard('Total Raised', fmtMoney(totalRaised), 'entry fees collected') +
-        (hasGoal ? goalCard : '');
-    }
-
-    // ── Render: Timeline ───────────────────────────────────────────────────────
-
-    function renderTimeline() {
-      const el        = document.getElementById('dash-timeline');
-      const openDate  = show.entry_open_date  ? new Date(show.entry_open_date)  : null;
-      const closeDate = show.entry_close_date ? new Date(show.entry_close_date) : null;
-      const showDate  = show.show_date        ? new Date(show.show_date)        : null;
-      const today     = new Date();
-
-      const tStart = openDate;
-      const tEnd   = showDate;
-
-      function toPct(d) {
-        if (!tStart || !tEnd || !d) return null;
-        const span = tEnd - tStart;
-        if (span <= 0) return 100;
-        return Math.max(0, Math.min(100, ((d - tStart) / span) * 100));
-      }
-
-      const todayPct = toPct(today);
-      const closePct = toPct(closeDate);
-
-      const markers = [
-        { pct: 0,        label: 'Entries Open',  date: fmtShort(openDate),  past: openDate  && today >= openDate  },
-        closePct != null ? { pct: closePct, label: 'Entries Close', date: fmtShort(closeDate), past: closeDate && today > closeDate } : null,
-        { pct: 100,      label: 'Show Day',       date: fmtShort(showDate),  past: showDate  && today > showDate   },
-      ].filter(Boolean);
-
-      if (!tStart || !tEnd) {
-        el.innerHTML = `
-          <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#9b94a8;margin-bottom:12px;">Show Timeline</p>
-          <p style="font-size:13px;color:#9b94a8;">Set your entry open date and show date to see the timeline.</p>`;
-        return;
-      }
-
-      const filledPct = todayPct !== null ? Math.max(0, Math.min(100, todayPct)) : 0;
-
-      const todayDot = todayPct !== null && todayPct >= 0 && todayPct <= 100
-        ? `<div style="position:absolute;left:${todayPct}%;top:50%;transform:translate(-50%,-50%);width:10px;height:10px;background:#002d6b;border:2px solid white;border-radius:50%;box-shadow:0 0 0 2px #002d6b;z-index:3;"></div>`
-        : '';
-
-      const markerDots = markers.map(m => {
-        const align = m.pct === 0 ? 'left:0;transform:none' : m.pct === 100 ? 'right:0;left:auto;transform:none' : `left:${m.pct}%;transform:translateX(-50%)`;
-        const textAlign = m.pct === 0 ? 'text-align:left' : m.pct === 100 ? 'text-align:right' : 'text-align:center';
-        const col = m.past ? '#1ba89a' : '#b8e4e0';
-        const labelCol = m.past ? '#1ba89a' : '#9b94a8';
-        return `
-          <div style="position:absolute;${align};top:50%;transform:${m.pct === 0 ? 'translateY(-50%)' : m.pct === 100 ? 'translateY(-50%)' : 'translate(-50%,-50%)'};display:flex;flex-direction:column;align-items:${m.pct === 0 ? 'flex-start' : m.pct === 100 ? 'flex-end' : 'center'};">
-            <div style="width:12px;height:12px;border-radius:50%;background:${m.past ? '#1ba89a' : 'white'};border:2px solid ${col};z-index:2;position:relative;"></div>
-            <span style="position:absolute;top:16px;${textAlign};font-size:10.5px;font-weight:700;color:${labelCol};white-space:nowrap;">${m.label}</span>
-            <span style="position:absolute;top:29px;${textAlign};font-size:10px;color:#9b94a8;white-space:nowrap;">${m.date}</span>
-          </div>`;
-      }).join('');
-
-      el.innerHTML = `
-        <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#9b94a8;margin-bottom:24px;">Show Timeline</p>
-        <div style="position:relative;height:4px;margin:0 0 52px;">
-          <div style="position:absolute;inset:0;background:#efebf5;border-radius:99px;"></div>
-          <div style="position:absolute;left:0;top:0;height:100%;width:${filledPct}%;background:#1ba89a;border-radius:99px;"></div>
-          ${todayDot}
-          ${markerDots}
-        </div>`;
-    }
-
-    // ── Render: Recent entries ─────────────────────────────────────────────────
-
-    function renderRecentEntries() {
-      const el = document.getElementById('dash-entries');
-      el.innerHTML = `
-        <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#9b94a8;margin-bottom:16px;">Recent Entries</p>
-        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 0;gap:8px;">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#c4bed0" stroke-width="1.5" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          <p style="font-size:14px;font-weight:600;color:#4a4357;margin:0;">No entries yet</p>
-          <p style="font-size:13px;color:#9b94a8;text-align:center;max-width:280px;margin:0;">Share your show link to start collecting entries.</p>
-        </div>`;
     }
   }
 </script>
