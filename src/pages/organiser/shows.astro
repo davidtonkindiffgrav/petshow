@@ -153,6 +153,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   }
 
   function buildRow(show, catCount) {
+    const showUrl    = `${window.location.origin}${base}show?id=${show.id}`;
+    const previewUrl = `${base}show?id=${show.id}&preview=1`;
     const status   = showStatus(show);
     const showDate = show.show_date
       ? new Date(show.show_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -203,6 +205,18 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
             : `<button class="btn-wizard inline-flex items-center gap-2 bg-brand text-white text-[13px] font-bold px-4 py-2 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Continue in Wizard</button>`
           }
           <button class="btn-manage text-[13px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-4 py-2 rounded-btn hover:bg-[#f0fafa] transition-colors">Settings</button>
+          ${show.status === 'published'
+            ? `<a href="${showUrl}" target="_blank" class="btn-view-show text-[13px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-4 py-2 rounded-btn hover:bg-[#f0fafa] transition-colors" style="text-decoration:none">View Show ↗</a>
+               <button class="btn-copy-url text-[13px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-4 py-2 rounded-btn hover:bg-[#f0fafa] transition-colors">Copy URL</button>`
+            : `<a href="${previewUrl}" target="_blank" class="btn-preview text-[13px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-4 py-2 rounded-btn hover:bg-[#f0fafa] transition-colors" style="text-decoration:none">Preview →</a>`
+          }
+          <div class="ml-auto flex items-center gap-1.5 text-[#9b94a8]">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span class="text-[11px]">Image templates:</span>
+            <a href="${base}images/LogoTemplate.jpg" download="LogoTemplate.jpg" class="text-[11px] font-bold text-[#1ba89a] hover:underline">Logo</a>
+            <span class="text-[11px]">·</span>
+            <a href="${base}images/BannerTemplate.jpg" download="BannerTemplate.jpg" class="text-[11px] font-bold text-[#1ba89a] hover:underline">Banner</a>
+          </div>
         </div>
       </div>
     `;
@@ -226,6 +240,14 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     row.querySelector('.btn-wizard')?.addEventListener('click', e => {
       e.stopPropagation();
       window.location.href = base + `organiser/new-show?id=${show.id}`;
+    });
+    row.querySelector('.btn-copy-url')?.addEventListener('click', e => {
+      e.stopPropagation();
+      const url = `${window.location.origin}${base}show?id=${show.id}`;
+      navigator.clipboard.writeText(url);
+      const btn = e.currentTarget;
+      btn.textContent = 'Copied! ✓';
+      setTimeout(() => { btn.textContent = 'Copy URL'; }, 1800);
     });
 
     return row;

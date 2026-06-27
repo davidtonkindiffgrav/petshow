@@ -445,7 +445,18 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     <!-- ─── Step 9: Branding ────────────────────────────────────────────────── -->
     <div id="step-9" style="display:none" class="bg-white rounded-card shadow-winner-card p-8">
       <h2 class="text-[21px] font-extrabold text-[#1c1626] tracking-[-0.02em] mb-1">Branding</h2>
-      <p class="text-[14px] text-[#6f6880] mb-7">Give your show a distinctive look.</p>
+      <p class="text-[14px] text-[#6f6880] mb-5">Give your show a distinctive look.</p>
+
+      <div class="flex items-center justify-between gap-4 bg-[#F0F7F5] border border-[#b8e4e0] rounded-[10px] px-4 py-3 mb-6">
+        <div class="flex items-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span class="text-[12px] font-semibold text-[#4a7a74]">Download size templates to prep your images before uploading</span>
+        </div>
+        <div class="flex items-center gap-4 shrink-0">
+          <a href={`${import.meta.env.BASE_URL}images/LogoTemplate.jpg`} download="LogoTemplate.jpg" class="text-[12px] font-bold text-[#1ba89a] hover:underline whitespace-nowrap">Logo template (500×500) ↓</a>
+          <a href={`${import.meta.env.BASE_URL}images/BannerTemplate.jpg`} download="BannerTemplate.jpg" class="text-[12px] font-bold text-[#1ba89a] hover:underline whitespace-nowrap">Banner template (1400×600) ↓</a>
+        </div>
+      </div>
 
       <div class="grid grid-cols-2 gap-5 mb-5">
         <!-- Show Logo -->
@@ -473,6 +484,27 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
               <span class="upload-size-hint text-[11px] text-[#c4bed0]">JPG, PNG, WebP · max 2 MB</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Logo source selector -->
+      <div class="mb-1">
+        <p class="text-[13px] font-semibold text-[#4a4357] mb-2">Which logo appears on the public show page?</p>
+        <div class="grid grid-cols-2 gap-3" id="s9-logo-source-cards">
+          <button type="button" data-value="show" class="sel-card flex items-center gap-2.5 rounded-[11px] border-2 border-[#b8e4e0] bg-white px-4 py-3 text-left transition-all cursor-pointer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <div>
+              <p class="text-[12px] font-bold text-[#1c1626]">Show Logo</p>
+              <p class="text-[11px] text-[#9b94a8]">Specific to this event</p>
+            </div>
+          </button>
+          <button type="button" data-value="club" class="sel-card flex items-center gap-2.5 rounded-[11px] border-2 border-[#b8e4e0] bg-white px-4 py-3 text-left transition-all cursor-pointer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <div>
+              <p class="text-[12px] font-bold text-[#1c1626]">Club Logo</p>
+              <p class="text-[11px] text-[#9b94a8]">Your organisation logo</p>
+            </div>
+          </button>
         </div>
       </div>
 
@@ -650,7 +682,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     show_fundraising_publicly: null,
     currency: 'AUD', entry_fee: 0,
     classes: [],
-    logo_url: '', banner_url: '', org_logo_url: '',
+    logo_url: '', banner_url: '', org_logo_url: '', logo_source: 'show',
     wizard_step: 1,
   };
 
@@ -977,6 +1009,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       show.currency                  = document.getElementById('s8-currency').value || 'AUD';
       show.entry_fee                 = parseFloat(document.getElementById('s8-entry-fee').value) || 0;
     }
+    if (n === 9) {
+      show.logo_source = getSelectedCard('s9-logo-source-cards') || 'show';
+    }
   }
 
   // ─── Supabase save ───────────────────────────────────────────────────────────
@@ -995,6 +1030,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       donation_type: show.donation_type, fundraising_goal: show.fundraising_goal || null,
       show_fundraising_publicly: show.show_fundraising_publicly, donation_receipts: show.donation_receipts,
       logo_url: show.logo_url || null, banner_url: show.banner_url || null, org_logo_url: show.org_logo_url || null,
+      logo_source: show.logo_source || 'show',
       currency: show.currency, entry_fee: show.entry_fee, status: 'draft',
       wizard_step: completedStep + 1,
     };
@@ -1425,12 +1461,14 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       logo_url: data.logo_url || '',
       banner_url: data.banner_url || '',
       org_logo_url: data.org_logo_url || '',
+      logo_source: data.logo_source || 'show',
     });
 
     // Restore upload previews
     if (show.logo_url)     restoreUploadPreview(document.getElementById('s9-logo-widget'),     show.logo_url);
     if (show.banner_url)   restoreUploadPreview(document.getElementById('s9-banner-widget'),   show.banner_url);
     if (show.org_logo_url) restoreUploadPreview(document.getElementById('s9-org-logo-widget'), show.org_logo_url);
+    selectCard(document.getElementById('s9-logo-source-cards'), show.logo_source || 'show');
     if (show.sponsors[0]?.logo_url) restoreUploadPreview(document.getElementById('s5-logo-widget'), show.sponsors[0].logo_url);
 
     // Step 1
@@ -1682,6 +1720,14 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       () => show.id ? `sponsors/${show.id}/sponsor-0` : null,
       url => { show.sponsors[0].logo_url = url; }
     );
+    // Step 9: logo source toggle
+    document.getElementById('s9-logo-source-cards').querySelectorAll('[data-value]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectCard(document.getElementById('s9-logo-source-cards'), btn.dataset.value);
+        show.logo_source = btn.dataset.value;
+      });
+    });
+    selectCard(document.getElementById('s9-logo-source-cards'), show.logo_source || 'show');
     // Step 9: branding widgets
     initUploadWidget(
       document.getElementById('s9-logo-widget'),

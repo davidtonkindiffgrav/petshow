@@ -26,6 +26,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           class="text-[13px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-3 py-2 rounded-btn hover:bg-[#f0fafa] transition-colors">
           ← All Shows
         </button>
+        <div id="show-action-links" class="flex items-center gap-2"></div>
         <button id="btn-publish"
           class="bg-brand text-white text-[13px] font-bold px-4 py-2 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">
           Publish Now
@@ -233,15 +234,28 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           </div>
         </div>
         <div id="mgmt-breed-field" style="display:none">
-          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Breed Name</label>
-          <input type="text" id="mgmt-breed" placeholder="e.g. Golden Retriever"
-            class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
-          <p class="text-[11px] text-[#9b94a8] mt-1">Breed dropdowns coming soon.</p>
+          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Breed Name <span class="text-red-400">*</span></label>
+          <div class="relative">
+            <input type="text" id="mgmt-breed" placeholder="Search breeds…" autocomplete="off"
+              role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="mgmt-breed-listbox"
+              class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[14px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+            <ul id="mgmt-breed-listbox" role="listbox" aria-label="Dog breeds"
+              class="hidden absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-[#b8e4e0] rounded-[11px] shadow-[0_4px_16px_rgba(0,0,0,0.10)] max-h-52 overflow-y-auto"></ul>
+          </div>
         </div>
         <div id="mgmt-group-field" style="display:none">
-          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Group Name</label>
-          <input type="text" id="mgmt-group" placeholder="e.g. Gundog Group"
-            class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Group <span class="text-red-400">*</span></label>
+          <select id="mgmt-group"
+            class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[14px] text-[#1c1626] bg-white focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors">
+            <option value="">— Select a group —</option>
+            <option value="Toy Dogs">Toy Dogs</option>
+            <option value="Terriers">Terriers</option>
+            <option value="Gundogs">Gundogs</option>
+            <option value="Hounds">Hounds</option>
+            <option value="Working Dogs">Working Dogs</option>
+            <option value="Utility Dogs">Utility Dogs</option>
+            <option value="Non-Sporting">Non-Sporting</option>
+          </select>
         </div>
         <p class="panel-error text-[12px] text-red-500" style="display:none"></p>
         <div class="drawer-actions flex justify-end gap-3 pt-2 pb-2">
@@ -411,30 +425,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         </div>
         <div id="mgmt-fundraising-form" style="display:none" class="space-y-4 mb-4">
           <div>
-            <p class="text-[13px] font-semibold text-[#4a4357] mb-2">Donation Options</p>
-            <div class="grid grid-cols-3 gap-2" id="mgmt-donation-type-cards">
-              <button type="button" data-value="optional" class="sel-card rounded-[10px] border-2 border-[#b8e4e0] bg-white py-2 text-[12px] font-bold text-[#1c1626] transition-all cursor-pointer">Optional</button>
-              <button type="button" data-value="required" class="sel-card rounded-[10px] border-2 border-[#b8e4e0] bg-white py-2 text-[12px] font-bold text-[#1c1626] transition-all cursor-pointer">Required</button>
-              <button type="button" data-value="only" class="sel-card rounded-[10px] border-2 border-[#b8e4e0] bg-white py-2 text-[12px] font-bold text-[#1c1626] transition-all cursor-pointer">Donations Only</button>
-            </div>
-          </div>
-          <div>
             <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Fundraising Goal <span class="text-[#9b94a8] font-normal">(optional)</span></label>
             <div class="relative max-w-[200px]">
               <span id="mgmt-sym-goal" class="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-[#9b94a8] font-semibold">A$</span>
               <input type="number" id="mgmt-fund-goal" min="0" placeholder="0.00"
                 class="w-full border border-[#b8e4e0] rounded-[11px] pl-11 pr-4 py-2.5 text-[14px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
             </div>
-          </div>
-          <div class="flex items-center justify-between p-3 border border-[#efebf5] rounded-[11px]">
-            <div>
-              <p class="text-[13px] font-bold text-[#1c1626]">Donation Receipts</p>
-              <p class="text-[11.5px] text-[#9b94a8]">Auto-available for Registered Charities</p>
-            </div>
-            <button type="button" id="mgmt-receipts-toggle" data-on="false"
-              class="w-11 h-6 rounded-full bg-[#efebf5] transition-colors relative flex items-center px-0.5 shrink-0">
-              <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
-            </button>
           </div>
           <div class="flex items-center justify-between p-3 border border-[#efebf5] rounded-[11px]">
             <div>
@@ -476,6 +472,17 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       <!-- Panel: Branding -->
       <div id="panel-branding" style="display:none" class="p-6 space-y-4">
 
+        <div class="flex flex-col gap-1.5 bg-[#F0F7F5] border border-[#b8e4e0] rounded-[10px] px-3.5 py-3">
+          <div class="flex items-center gap-2">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span class="text-[11.5px] font-semibold text-[#4a7a74]">Size templates</span>
+          </div>
+          <div class="flex gap-4 pl-[20px]">
+            <a href={`${import.meta.env.BASE_URL}images/LogoTemplate.jpg`} download="LogoTemplate.jpg" class="text-[11.5px] font-bold text-[#1ba89a] hover:underline">Logo (500×500) ↓</a>
+            <a href={`${import.meta.env.BASE_URL}images/BannerTemplate.jpg`} download="BannerTemplate.jpg" class="text-[11.5px] font-bold text-[#1ba89a] hover:underline">Banner (1400×600) ↓</a>
+          </div>
+        </div>
+
         <div class="grid grid-cols-2 gap-4">
           <!-- Show Logo -->
           <div>
@@ -500,6 +507,27 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
                 <span class="upload-label text-[11.5px] text-[#9b94a8]">Click to upload</span>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Logo source selector -->
+        <div>
+          <p class="text-[12px] font-semibold text-[#4a4357] mb-2">Which logo appears on the public page?</p>
+          <div class="grid grid-cols-2 gap-2" id="branding-logo-source-cards">
+            <button type="button" data-value="show" class="sel-card flex items-center gap-2 rounded-[10px] border-2 border-[#b8e4e0] bg-white px-3 py-2.5 text-left transition-all cursor-pointer">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <div>
+                <p class="text-[11.5px] font-bold text-[#1c1626]">Show Logo</p>
+                <p class="text-[10.5px] text-[#9b94a8]">This event only</p>
+              </div>
+            </button>
+            <button type="button" data-value="club" class="sel-card flex items-center gap-2 rounded-[10px] border-2 border-[#b8e4e0] bg-white px-3 py-2.5 text-left transition-all cursor-pointer">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <div>
+                <p class="text-[11.5px] font-bold text-[#1c1626]">Club Logo</p>
+                <p class="text-[10.5px] text-[#9b94a8]">Organisation logo</p>
+              </div>
+            </button>
           </div>
         </div>
 
@@ -560,6 +588,79 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     classes: 'Classes', sponsorship: 'Sponsorship', judging: 'Judging',
     awards: 'Awards & Prizes', fundraising: 'Fundraising & Fees', branding: 'Branding',
   };
+
+  const DOG_BREEDS = [
+    'Affenpinscher','Afghan Hound','Airedale Terrier','Akita','Akita (Japanese)',
+    'Alaskan Malamute','American Hairless Terrier','American Staffordshire Terrier',
+    'Anatolian Shepherd Dog','Australasian Bosdog','Australian Cattle Dog',
+    'Australian Kelpie','Australian Shepherd','Australian Silky Terrier',
+    'Australian Stumpy Tail Cattle Dog','Australian Terrier','Azawakh','Basenji',
+    'Basset Fauve de Bretagne','Basset Hound','Bavarian Mountain Scent Hound',
+    'Beagle','Bearded Collie','Beauceron','Bedlington Terrier',
+    'Belgian Shepherd Dog (Groenendael)','Belgian Shepherd Dog (Laekenois)',
+    'Belgian Shepherd Dog (Malinois)','Belgian Shepherd Dog (Tervueren)',
+    'Bergamasco Shepherd Dog','Bernese Mountain Dog','Bichon Frise','Biewer Terrier',
+    'Black and Tan Coonhound','Bloodhound','Bluetick Coonhound','Bolognese',
+    'Border Collie','Border Terrier','Borzoi','Boston Terrier','Bouvier des Flandres',
+    'Boxer','Bracco Italiano','Briard','British Bulldog','Brittany','Bull Terrier',
+    'Bull Terrier (Miniature)','Bullmastiff','Cairn Terrier','Canaan Dog',
+    'Canadian Eskimo Dog','Cane Corso','Caucasian Shepherd Dog',
+    'Cavalier King Charles Spaniel','Central Asian Shepherd Dog','Cesky Terrier',
+    'Chesapeake Bay Retriever','Chihuahua (Long Coat)','Chihuahua (Smooth Coat)',
+    'Chinese Crested Dog','Chow Chow','Cirneco Dell\'Etna','Clumber Spaniel',
+    'Cocker Spaniel','Cocker Spaniel (American)','Collie (Rough)','Collie (Smooth)',
+    'Coton De Tulear','Curly Coated Retriever','Dachshund (Long Haired)',
+    'Dachshund (Miniature Long Haired)','Dachshund (Miniature Smooth Haired)',
+    'Dachshund (Miniature Wire Haired)','Dachshund (Rabbit Long Haired)',
+    'Dachshund (Rabbit Smooth Haired)','Dachshund (Rabbit Wire Haired)',
+    'Dachshund (Smooth Haired)','Dachshund (Wire Haired)','Dalmatian',
+    'Dandie Dinmont Terrier','Deerhound','Dobermann','Dogue de Bordeaux',
+    'Dutch Shepherd Dog','English Setter','English Springer Spaniel',
+    'English Toy Terrier (Black and Tan)','Estrela Mountain Dog','Eurasier',
+    'Field Spaniel','Finnish Lapphund','Finnish Spitz','Flat Coated Retriever',
+    'Fox Terrier (Smooth)','Fox Terrier (Wire)','Foxhound','French Bulldog',
+    'German Hunting Terrier','German Pinscher','German Shepherd Dog',
+    'German Shepherd Dog (Long Stock Coat)','German Shorthaired Pointer',
+    'German Spitz (Klein)','German Spitz (Mittel)','German Wirehaired Pointer',
+    'Glen of Imaal Terrier','Golden Retriever','Gordon Setter',
+    'Grand Basset Griffon Vendeen','Great Dane','Great Swiss Mountain Dog',
+    'Greyhound','Griffon Bruxellois','Hamiltonstovare','Harrier','Havanese',
+    'Hungarian Vizsla','Hungarian Wirehaired Vizsla','Ibizan Hound',
+    'Icelandic Sheepdog','Irish Red and White Setter','Irish Setter','Irish Terrier',
+    'Irish Water Spaniel','Irish Wolfhound','Italian Greyhound','Italian Spinone',
+    'Jack Russell Terrier','Japanese Chin','Japanese Spitz','Kangal Shepherd Dog',
+    'Karelian Bear Dog','Keeshond','Kerry Blue Terrier','King Charles Spaniel',
+    'Kleine Munsterlander','Komondor','Kuvasz','Labrador Retriever',
+    'Lagotto Romagnolo','Lakeland Terrier','Landseer (European Continental Type)',
+    'Large Munsterlander','Leonberger','Lhasa Apso','Lowchen','Maltese',
+    'Manchester Terrier','Maremma Sheepdog','Mastiff','Miniature American Shepherd',
+    'Miniature Pinscher','Mudi','Murray River Retriever','Neapolitan Mastiff',
+    'Newfoundland','Norfolk Terrier','Norwegian Buhund','Norwegian Elkhound',
+    'Norwich Terrier','Nova Scotia Duck Tolling Retriever','Old English Sheepdog',
+    'Otterhound','Papillon','Parson Russell Terrier','Pekingese',
+    'Peruvian Hairless Dog (Large)','Peruvian Hairless Dog (Medium)',
+    'Peruvian Hairless Dog (Small)','Petit Basset Griffon Vendeen','Pharaoh Hound',
+    'Pointer','Polish Lowland Sheepdog','Pomeranian','Poodle (Miniature)',
+    'Poodle (Standard)','Poodle (Toy)','Porcelaine',
+    'Portuguese Podengo (Large Smooth Haired)','Portuguese Podengo (Large Wire Haired)',
+    'Portuguese Podengo (Medium Smooth Haired)','Portuguese Podengo (Medium Wire Haired)',
+    'Portuguese Podengo (Small Smooth Haired)','Portuguese Podengo (Small Wire Haired)',
+    'Portuguese Water Dog','Prague Ratter','Pug','Puli','Pumi','Pyrenean Mastiff',
+    'Pyrenean Mountain Dog','Pyrenean Sheepdog Longhaired','Rhodesian Ridgeback',
+    'Rottweiler','Russian Black Terrier','Russian Toy (Long Haired)',
+    'Russian Toy (Smooth Haired)','Saluki','Samoyed','Schipperke','Schnauzer',
+    'Schnauzer (Giant)','Schnauzer (Miniature)','Scottish Terrier','Sealyham Terrier',
+    'Shar Pei','Shetland Sheepdog','Shiba Inu','Shih Tzu','Shikoku','Siberian Husky',
+    'Skye Terrier','Sloughi','Soft Coated Wheaten Terrier','Spanish Mastiff',
+    'Spanish Water Dog','St Bernard','Staffordshire Bull Terrier','Sussex Spaniel',
+    'Swedish Lapphund','Swedish Vallhund','Tatra Shepherd Dog','Tenterfield Terrier',
+    'Tibetan Mastiff','Tibetan Spaniel','Tibetan Terrier','Tornjak','Weimaraner',
+    'Weimaraner (Long-haired)','Welsh Corgi (Cardigan)','Welsh Corgi (Pembroke)',
+    'Welsh Springer Spaniel','Welsh Terrier','West Highland White Terrier','Whippet',
+    'White Swiss Shepherd Dog','Wirehaired Slovakian Pointer',
+    'Xoloitzcuintle (Intermediate)','Xoloitzcuintle (Miniature)',
+    'Xoloitzcuintle (Standard)','Yakutian Laika','Yorkshire Terrier',
+  ];
 
   // ── Init ─────────────────────────────────────────────────────────────────────
   (async () => {
@@ -640,6 +741,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       initBrandingWidget('branding-logo-widget',   'logo');
       initBrandingWidget('branding-org-widget',    'orgLogo');
       initBrandingWidget('branding-banner-widget', 'banner');
+      selectCard(document.getElementById('branding-logo-source-cards'), show.logo_source || 'show');
     }
 
     // Highlight the active card
@@ -690,6 +792,25 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       window.location.href = mgmtBase + 'organiser/shows';
     };
     publishBtn.onclick = handlePublish;
+
+    const actionLinks = document.getElementById('show-action-links');
+    const previewUrl  = `${mgmtBase}show?id=${showId}&preview=1`;
+    let linksHtml = `<a href="${previewUrl}" target="_blank" class="text-[13px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-3 py-2 rounded-btn hover:bg-[#f0fafa] transition-colors" style="text-decoration:none">Preview →</a>`;
+    if (show.status === 'published') {
+      const showUrl = `${window.location.origin}${mgmtBase}show?id=${showId}`;
+      linksHtml += `<a href="${showUrl}" target="_blank" class="text-[13px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-3 py-2 rounded-btn hover:bg-[#f0fafa] transition-colors" style="text-decoration:none">View Show ↗</a>`;
+      linksHtml += `<button id="btn-copy-url" class="text-[13px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-3 py-2 rounded-btn hover:bg-[#f0fafa] transition-colors">Copy URL</button>`;
+    }
+    actionLinks.innerHTML = linksHtml;
+    if (show.status === 'published') {
+      document.getElementById('btn-copy-url').onclick = () => {
+        const url = `${window.location.origin}${mgmtBase}show?id=${showId}`;
+        navigator.clipboard.writeText(url);
+        const btn = document.getElementById('btn-copy-url');
+        btn.textContent = 'Copied! ✓';
+        setTimeout(() => { btn.textContent = 'Copy URL'; }, 1800);
+      };
+    }
   }
 
   function showStatus() {
@@ -1009,9 +1130,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (show.is_fundraising === true) {
       setYN('mgmt-fundraising-yn', 'yes');
       document.getElementById('mgmt-fundraising-form').style.display = 'block';
-      if (show.donation_type) selectCard(document.getElementById('mgmt-donation-type-cards'), show.donation_type);
       if (show.fundraising_goal) document.getElementById('mgmt-fund-goal').value = show.fundraising_goal;
-      setToggle('mgmt-receipts-toggle', show.donation_receipts === true);
       setToggle('mgmt-public-toggle', show.show_fundraising_publicly === true);
     } else if (show.is_fundraising === false) {
       setYN('mgmt-fundraising-yn', 'no');
@@ -1070,6 +1189,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         updateBreedFields();
       });
     });
+    initMgmtBreedCombobox();
 
     // Classes
     document.getElementById('mgmt-add-class').addEventListener('click', () => addClassRow(''));
@@ -1110,12 +1230,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     setupYN('mgmt-fundraising-yn', val => {
       document.getElementById('mgmt-fundraising-form').style.display = val === 'yes' ? 'block' : 'none';
     });
-    setupToggle('mgmt-receipts-toggle', () => {});
     setupToggle('mgmt-public-toggle', () => {});
-    document.getElementById('mgmt-donation-type-cards').querySelectorAll('[data-value]').forEach(btn => {
-      btn.addEventListener('click', () => selectCard(document.getElementById('mgmt-donation-type-cards'), btn.dataset.value));
-    });
     document.getElementById('mgmt-currency').addEventListener('change', e => applyCurrencySymbol(e.target.value));
+
+    // Branding: logo source toggle
+    document.getElementById('branding-logo-source-cards').querySelectorAll('[data-value]').forEach(btn => {
+      btn.addEventListener('click', () => selectCard(document.getElementById('branding-logo-source-cards'), btn.dataset.value));
+    });
     document.getElementById('mgmt-entry-fee')?.addEventListener('input', () => {
       updateFeeBreakdown(document.getElementById('mgmt-currency')?.value || 'AUD');
     });
@@ -1203,11 +1324,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
     if (saveBtn) { saveBtn.textContent = 'Saving…'; saveBtn.disabled = true; }
     try {
-      const updates = {};
+      const updates = { logo_source: getSelectedCard('branding-logo-source-cards') || 'show' };
       if (pendingBranding.logo)    updates.logo_url     = await uploadImage(`shows/${showId}/logo`,     pendingBranding.logo);
       if (pendingBranding.orgLogo) updates.org_logo_url = await uploadImage(`shows/${showId}/org-logo`, pendingBranding.orgLogo);
       if (pendingBranding.banner)  updates.banner_url   = await uploadImage(`shows/${showId}/banner`,   pendingBranding.banner);
-      if (Object.keys(updates).length > 0) {
+      {
         const { error } = await supabase.from('shows').update(updates).eq('id', showId);
         if (error) throw error;
         Object.assign(show, updates);
@@ -1365,9 +1486,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (val === 'yes') {
       Object.assign(payload, {
         is_fundraising: true,
-        donation_type: getSelectedCard('mgmt-donation-type-cards'),
         fundraising_goal: parseFloat(document.getElementById('mgmt-fund-goal').value) || null,
-        donation_receipts: document.getElementById('mgmt-receipts-toggle').dataset.on === 'true',
         show_fundraising_publicly: document.getElementById('mgmt-public-toggle').dataset.on === 'true',
       });
     } else {
@@ -1385,6 +1504,68 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   function showPageError(msg) {
     const el = document.getElementById('page-error');
     if (el) { el.textContent = msg; el.style.display = 'block'; }
+  }
+
+  function initMgmtBreedCombobox() {
+    const input   = document.getElementById('mgmt-breed');
+    const listbox = document.getElementById('mgmt-breed-listbox');
+    if (!input || !listbox) return;
+
+    let activeIdx = -1;
+
+    function getMatches(q) {
+      if (!q) return DOG_BREEDS.slice(0, 8);
+      const lq = q.toLowerCase();
+      return DOG_BREEDS.filter(b => b.toLowerCase().includes(lq)).slice(0, 60);
+    }
+
+    function renderList(matches) {
+      listbox.innerHTML = matches.length
+        ? matches.map((b, i) =>
+            `<li role="option" data-idx="${i}" class="px-4 py-2.5 text-[14px] text-[#1c1626] cursor-pointer hover:bg-[#e8f7f6]">${b}</li>`
+          ).join('')
+        : `<li class="px-4 py-3 text-[14px] text-[#9b94a8]">No breeds found</li>`;
+    }
+
+    function openList(q) {
+      renderList(getMatches(q));
+      listbox.classList.remove('hidden');
+      input.setAttribute('aria-expanded', 'true');
+      activeIdx = -1;
+    }
+
+    function closeList() {
+      listbox.classList.add('hidden');
+      input.setAttribute('aria-expanded', 'false');
+      activeIdx = -1;
+    }
+
+    function setActive(idx) {
+      const items = listbox.querySelectorAll('[role="option"]');
+      items.forEach((el, i) => el.classList.toggle('bg-[#e8f7f6]', i === idx));
+      activeIdx = idx;
+      if (items[idx]) items[idx].scrollIntoView({ block: 'nearest' });
+    }
+
+    input.addEventListener('input',  () => openList(input.value.trim()));
+    input.addEventListener('focus',  () => openList(input.value.trim()));
+
+    input.addEventListener('keydown', e => {
+      const items = listbox.querySelectorAll('[role="option"]');
+      if      (e.key === 'ArrowDown')               { e.preventDefault(); setActive(Math.min(activeIdx + 1, items.length - 1)); }
+      else if (e.key === 'ArrowUp')                 { e.preventDefault(); setActive(Math.max(activeIdx - 1, 0)); }
+      else if (e.key === 'Enter' && activeIdx >= 0) { e.preventDefault(); input.value = items[activeIdx].textContent; closeList(); }
+      else if (e.key === 'Escape')                  { closeList(); }
+    });
+
+    listbox.addEventListener('mousedown', e => {
+      const li = e.target.closest('[role="option"]');
+      if (li) { input.value = li.textContent; closeList(); }
+    });
+
+    document.addEventListener('click', e => {
+      if (!input.contains(e.target) && !listbox.contains(e.target)) closeList();
+    });
   }
 
   function updateBreedFields() {
