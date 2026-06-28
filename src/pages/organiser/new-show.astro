@@ -1203,10 +1203,6 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     });
   }
 
-  function esc(s) {
-    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
   // ─── Judge panels ────────────────────────────────────────────────────────────
   function updateJudgePanels() {
     const container = document.getElementById('s6-judge-panels');

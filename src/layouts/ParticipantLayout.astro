@@ -1,0 +1,108 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  displayName?: string;
+  userInitial?: string;
+  dualRole?: boolean;
+}
+
+const { title, displayName = '', userInitial = '?', dualRole = false } = Astro.props;
+
+const raw = import.meta.env.BASE_URL;
+const base = raw.endsWith('/') ? raw : raw + '/';
+
+const pawSvg = `<svg width="22" height="22" viewBox="0 0 48 48" fill="#fff" aria-hidden="true"><ellipse cx="24" cy="31" rx="11" ry="9"/><ellipse cx="11" cy="22" rx="4.6" ry="6"/><ellipse cx="37" cy="22" rx="4.6" ry="6"/><ellipse cx="17.5" cy="13" rx="4.3" ry="5.6"/><ellipse cx="30.5" cy="13" rx="4.3" ry="5.6"/></svg>`;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} — Fur to Feathers</title>
+    <link rel="icon" type="image/x-icon" href={`${base}images/favicon.ico`} />
+    <link rel="icon" type="image/png" sizes="32x32" href={`${base}images/favicon-32x32.png`} />
+    <link rel="icon" type="image/png" sizes="16x16" href={`${base}images/favicon-16x16.png`} />
+    <link rel="apple-touch-icon" sizes="180x180" href={`${base}images/apple-touch-icon.png`} />
+    <link rel="manifest" href={`${base}images/site.webmanifest`} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500;1,600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="font-sans antialiased" style="background:#eef3f4;color:#0a1f44;min-height:100vh;">
+
+    <!-- Top bar -->
+    <header style="background:#fff;border-bottom:1px solid #e7eef0;position:sticky;top:0;z-index:40;">
+      <div style="max-width:1080px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;justify-content:space-between;gap:18px;">
+
+        <!-- Logo -->
+        <a href={base} style="display:flex;align-items:center;gap:10px;text-decoration:none;flex:none;">
+          <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#1ba89a,#002d6b);display:flex;align-items:center;justify-content:center;flex:none;">
+            <Fragment set:html={pawSvg} />
+          </div>
+          <div style="line-height:1.05;">
+            <div style="font-size:17px;font-weight:800;letter-spacing:-0.01em;color:#002d6b;">Fur to Feathers</div>
+            <div style="font-size:11px;font-weight:600;color:#1ba89a;">Online pet shows</div>
+          </div>
+        </a>
+
+        <!-- Center nav (hidden on mobile) -->
+        <nav id="hub-nav" style="display:flex;align-items:center;gap:22px;font-size:14.5px;font-weight:600;" class="hidden min-[700px]:flex">
+          <a href={`${base}participant`} style="color:#002d6b;font-weight:800;text-decoration:none;">My Show Hub</a>
+          <a href={base} style="color:#48586a;text-decoration:none;" class="hover:text-[#002d6b] transition-colors">Browse Shows</a>
+          <a href={`${base}#how-it-works`} style="color:#48586a;text-decoration:none;" class="hover:text-[#002d6b] transition-colors">How It Works</a>
+        </nav>
+
+        <!-- Right: role switcher slot + avatar -->
+        <div style="display:flex;align-items:center;gap:12px;flex:none;">
+          <div id="hub-nav-actions"></div>
+          <!-- Avatar + chevron -->
+          <div id="hub-avatar-btn" style="display:flex;align-items:center;gap:7px;cursor:pointer;">
+            <div style="width:38px;height:38px;border-radius:50%;background:#002d6b;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;" id="hub-avatar-initial">
+              {userInitial}
+            </div>
+            <svg width="13" height="13" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="#6b7c89" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Avatar dropdown -->
+      <div id="hub-avatar-menu" style="display:none;position:absolute;right:22px;top:68px;background:#fff;border:1px solid #e7eef0;border-radius:13px;box-shadow:0 8px 24px rgba(10,31,68,0.10);padding:6px;min-width:160px;z-index:50;">
+        {displayName && <div style="padding:8px 12px 6px;font-size:13px;font-weight:700;color:#0a1f44;border-bottom:1px solid #f0f4f5;margin-bottom:4px;">{displayName}</div>}
+        <button id="hub-signout" style="width:100%;text-align:left;background:none;border:none;padding:9px 12px;font-size:13.5px;font-weight:600;color:#6b7c89;cursor:pointer;border-radius:9px;font-family:inherit;" class="hover:bg-[#f5f8f9]">Sign out</button>
+      </div>
+    </header>
+
+    <!-- Page content -->
+    <main>
+      <slot />
+    </main>
+
+  </body>
+</html>
+
+<script>
+  import { supabase } from '../lib/supabase.js';
+
+  const avatarBtn  = document.getElementById('hub-avatar-btn');
+  const avatarMenu = document.getElementById('hub-avatar-menu');
+
+  avatarBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const hidden = avatarMenu.style.display === 'none';
+    avatarMenu.style.display = hidden ? 'block' : 'none';
+  });
+  document.addEventListener('click', () => { if (avatarMenu) avatarMenu.style.display = 'none'; });
+
+  document.getElementById('hub-signout')?.addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    const raw = import.meta.env.BASE_URL;
+    const base = raw.endsWith('/') ? raw : raw + '/';
+    window.location.href = base + 'login';
+  });
+</script>

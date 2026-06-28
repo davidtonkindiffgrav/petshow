@@ -1,0 +1,210 @@
+---
+import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
+const raw = import.meta.env.BASE_URL;
+const base = raw.endsWith('/') ? raw : raw + '/';
+---
+
+<ParticipantLayout title="Entry Detail" userInitial="?" dualRole={false}>
+  <div id="entry-root" style="max-width:920px;margin:0 auto;padding:24px 22px 70px;">
+    <p style="color:#6b7c89;font-size:15px;">Loading…</p>
+  </div>
+</ParticipantLayout>
+
+<style>
+  @media (max-width: 640px) {
+    .entry-grid { grid-template-columns: 1fr !important; }
+  }
+</style>
+
+<script>
+  import { getAuth } from '../../lib/auth.js';
+  import { supabase } from '../../lib/supabase.js';
+
+  const { session, profile, base } = await getAuth();
+  if (!session) { window.location.replace(base + 'login'); throw 0; }
+
+  const dualRole     = profile?.roles?.includes('organiser') ?? false;
+  const displayName  = profile?.display_name || session.user.email || '';
+  const userInitial  = (displayName[0] || '?').toUpperCase();
+
+  const avatarEl = document.getElementById('hub-avatar-initial');
+  if (avatarEl) avatarEl.textContent = userInitial;
+
+  // Inject role switcher for dual-role
+  if (dualRole) {
+    const slot = document.getElementById('hub-nav-actions');
+    if (slot) {
+      slot.innerHTML = `<a href="${base}organiser" style="display:inline-flex;align-items:center;gap:7px;font-size:13.5px;font-weight:700;color:#1ba89a;border:1.5px solid #cfeae6;border-radius:10px;padding:8px 13px;text-decoration:none;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h10" stroke="#1ba89a" stroke-width="2" stroke-linecap="round"/></svg>
+        Organiser View
+      </a>`;
+    }
+  }
+
+  const entryId = new URL(window.location.href).searchParams.get('id');
+  if (!entryId) { window.location.replace(base + 'participant'); throw 0; }
+
+  const { data: entry, error } = await supabase
+    .from('show_entries')
+    .select(`*, shows(*), show_categories(name)`)
+    .eq('id', entryId)
+    .eq('user_id', session.user.id)
+    .single();
+
+  const root = document.getElementById('entry-root');
+
+  if (error || !entry) {
+    root.innerHTML = `<p style="color:#e53e3e;font-size:15px;">Entry not found or you don't have permission to view it.</p><a href="${base}participant" style="color:#1ba89a;font-weight:700;">← Back to My Show Hub</a>`;
+    throw 0;
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function formatDate(iso) {
+    if (!iso) return '';
+    return new Date(iso).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  const currSymbols = { AUD:'$', NZD:'$', USD:'$', GBP:'£', EUR:'€', CAD:'$', ZAR:'R', SGD:'$' };
+
+  function entryKind(e) {
+    if (e.shows?.results_published_at) return e.result_place ? 'won' : 'noplace';
+    const now = new Date();
+    if (e.shows?.entry_close_date && new Date(e.shows.entry_close_date) > now) return 'open';
+    return 'judging';
+  }
+
+  function placeLabel(n) {
+    if (!n) return '';
+    const s = ['th','st','nd','rd'];
+    const v = n % 100;
+    return n + (s[(v-20)%10] || s[v] || s[0]) + ' Place';
+  }
+
+  const kind    = entryKind(entry);
+  const show    = entry.shows || {};
+  const cat     = entry.show_categories?.name || '';
+  const sym     = currSymbols[show.currency] || '$';
+  const host    = show.host_org || show.organisation_name || '';
+  const entryNo = entry.entry_number ? `#FTF-${entry.entry_number}` : `#${entry.id.slice(0,8).toUpperCase()}`;
+
+  const statusPills = {
+    open:    { text: '✓ ENTRIES OPEN',     bg: '#e3f5f2', color: '#117e72' },
+    judging: { text: '⏳ AWAITING JUDGING', bg: '#fef3d6', color: '#b67d12' },
+    won:     { text: '🏆 RESULTS IN',       bg: '#e6f7ec', color: '#1d8a4e' },
+    noplace: { text: '📋 RESULTS IN',       bg: '#eef1f4', color: '#6b7c89' },
+  };
+  const pill = statusPills[kind];
+
+  // Timeline node HTML
+  function timelineNode({ done, current, label, sub }) {
+    let dot, line;
+    if (done) {
+      dot = `<div style="width:22px;height:22px;border-radius:50%;background:#1ba89a;display:flex;align-items:center;justify-content:center;flex:none;"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3.5 8l3 3 6-6.5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`;
+      line = `<div style="width:2px;flex:1;background:#dfe7e9;min-height:18px;"></div>`;
+    } else if (current) {
+      dot = `<div style="width:22px;height:22px;border-radius:50%;background:#fef3d6;border:2px solid #f0a92b;display:flex;align-items:center;justify-content:center;flex:none;"><div style="width:7px;height:7px;border-radius:50%;background:#f0a92b;"></div></div>`;
+      line = `<div style="width:2px;flex:1;background:#dfe7e9;min-height:18px;"></div>`;
+    } else {
+      dot = `<div style="width:22px;height:22px;border-radius:50%;background:#eef2f3;display:flex;align-items:center;justify-content:center;flex:none;"><div style="width:7px;height:7px;border-radius:50%;background:#c2ccd2;"></div></div>`;
+      line = '';
+    }
+    const labelColor  = (!done && !current) ? '#9aa8b4' : '#0a1f44';
+    const subColor    = (!done && !current) ? '#9aa8b4' : '#6b7c89';
+    return `
+    <div style="display:flex;gap:12px;">
+      <div style="display:flex;flex-direction:column;align-items:center;">${dot}${line}</div>
+      <div style="padding-bottom:${line ? '14px' : '0'};"><div style="font-size:14px;font-weight:700;color:${labelColor};">${esc(label)}</div>${sub ? `<div style="font-size:12.5px;color:${subColor};">${esc(sub)}</div>` : ''}</div>
+    </div>`;
+  }
+
+  const node1Done    = true;
+  const node2Done    = kind === 'won' || kind === 'noplace';
+  const node2Current = kind === 'judging';
+  const node3Done    = kind === 'won' || kind === 'noplace';
+
+  const timeline = [
+    timelineNode({ done: node1Done,    current: false,        label: 'Entry submitted',       sub: formatDate(entry.created_at) }),
+    timelineNode({ done: node2Done,    current: node2Current, label: 'Judging in progress',   sub: node2Done ? 'Judging complete' : node2Current ? 'Expert judges scoring now' : 'Begins after entry closes' }),
+    timelineNode({ done: node3Done,    current: false,        label: 'Results published',      sub: show.results_published_at ? formatDate(show.results_published_at) : show.show_date ? 'Expected ' + formatDate(show.show_date) : 'Date TBC' }),
+  ].join('');
+
+  const petPhoto = entry.photo_url
+    ? `<div style="width:84px;height:84px;border-radius:18px;overflow:hidden;flex:none;"><img src="${esc(entry.photo_url)}" style="width:100%;height:100%;object-fit:cover;" alt="${esc(entry.animal_name)}" /></div>`
+    : `<div style="width:84px;height:84px;border-radius:18px;background:linear-gradient(135deg,#1ba89a,#0f6f8f);display:flex;align-items:center;justify-content:center;flex:none;color:#fff;font-size:32px;font-weight:800;">${esc((entry.animal_name||'?')[0].toUpperCase())}</div>`;
+
+  const paidAmount = entry.entry_fee_paid ? `${sym}${Number(entry.entry_fee_paid).toFixed(2)}` : 'Free';
+
+  root.innerHTML = `
+  <a href="${base}participant" style="display:inline-flex;align-items:center;gap:7px;background:none;border:none;color:#48586a;font-size:14px;font-weight:600;cursor:pointer;padding:0;margin-bottom:18px;text-decoration:none;">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="#48586a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Back to My Show Hub
+  </a>
+
+  <!-- Hero -->
+  <div style="position:relative;overflow:hidden;background:linear-gradient(115deg,#002d6b,#0b4a8f);border-radius:20px;padding:24px 26px;margin-bottom:18px;">
+    <svg style="position:absolute;right:-10px;bottom:-30px;opacity:0.13;" width="160" height="160" viewBox="0 0 48 48" fill="#fff" aria-hidden="true"><ellipse cx="24" cy="31" rx="11" ry="9"/><ellipse cx="11" cy="22" rx="4.6" ry="6"/><ellipse cx="37" cy="22" rx="4.6" ry="6"/><ellipse cx="17.5" cy="13" rx="4.3" ry="5.6"/><ellipse cx="30.5" cy="13" rx="4.3" ry="5.6"/></svg>
+    <span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;color:${pill.color};background:${pill.bg};padding:5px 11px;border-radius:99px;margin-bottom:12px;">${pill.text}</span>
+    <h1 style="font-size:27px;font-weight:800;color:#fff;margin:0 0 7px;letter-spacing:-0.01em;">${esc(show.title || 'Untitled Show')}</h1>
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;color:#bcd2f0;font-size:13.5px;font-weight:600;">
+      ${host ? `<span style="display:flex;align-items:center;gap:6px;">Hosted by ${esc(host)}<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" fill="#1ba89a"/><path d="M8 12l2.5 2.5L16 9" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span style="opacity:.5;">•</span>` : ''}
+      <span>📅 Show Day · ${esc(formatDate(show.show_date))}</span>
+    </div>
+  </div>
+
+  <!-- Two-column grid -->
+  <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;" class="entry-grid">
+
+    <!-- Your Entry -->
+    <div style="background:#fff;border:1px solid #e7eef0;border-radius:18px;padding:20px;box-shadow:0 6px 18px rgba(10,31,68,0.04);">
+      <div style="font-size:13px;font-weight:700;color:#6b7c89;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:14px;">Your Entry</div>
+      <div style="display:flex;gap:15px;align-items:center;margin-bottom:18px;">
+        ${petPhoto}
+        <div>
+          <div style="font-size:22px;font-weight:800;color:#0a1f44;">${esc(entry.animal_name || '—')}</div>
+          <div style="font-size:14px;color:#6b7c89;">${esc(entry.breed || '')}</div>
+          ${cat ? `<div style="display:inline-block;margin-top:7px;font-size:12px;font-weight:700;color:#1ba89a;background:#e3f5f2;padding:4px 11px;border-radius:99px;">${esc(cat)}</div>` : ''}
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:11px;border-top:1px solid #eef2f3;padding-top:15px;">
+        <div style="display:flex;justify-content:space-between;font-size:14px;"><span style="color:#6b7c89;">Entry ID</span><span style="font-weight:700;color:#0a1f44;">${esc(entryNo)}</span></div>
+        ${cat ? `<div style="display:flex;justify-content:space-between;font-size:14px;"><span style="color:#6b7c89;">Class</span><span style="font-weight:700;color:#0a1f44;">${esc(cat)}</span></div>` : ''}
+        <div style="display:flex;justify-content:space-between;font-size:14px;"><span style="color:#6b7c89;">Submitted</span><span style="font-weight:700;color:#0a1f44;">${esc(formatDate(entry.created_at))}</span></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:18px;">
+        <a href="${base}show?id=${esc(show.id)}" style="flex:1;text-align:center;background:#002d6b;color:#fff;font-weight:700;font-size:14px;padding:11px;border-radius:11px;text-decoration:none;">View Show Page</a>
+        <button disabled style="flex:none;background:#fff;color:#9aa8b4;font-weight:700;font-size:14px;padding:11px 16px;border-radius:11px;border:1.5px solid #e7eef0;cursor:not-allowed;font-family:inherit;" title="Coming soon">Edit</button>
+      </div>
+    </div>
+
+    <!-- Right column -->
+    <div style="display:flex;flex-direction:column;gap:16px;">
+
+      <!-- Payment -->
+      <div style="background:#fff;border:1px solid #e7eef0;border-radius:18px;padding:18px 20px;box-shadow:0 6px 18px rgba(10,31,68,0.04);">
+        <div style="font-size:13px;font-weight:700;color:#6b7c89;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:13px;">Payment</div>
+        <div style="display:flex;align-items:center;gap:11px;">
+          <div style="width:40px;height:40px;border-radius:11px;background:#e6f7ec;display:flex;align-items:center;justify-content:center;flex:none;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" fill="#1d8a4e"/><path d="M8 12l2.5 2.5L16 9" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div>
+            <div style="font-size:15px;font-weight:800;color:#0a1f44;">Paid · ${esc(paidAmount)}</div>
+            <div style="font-size:12.5px;color:#6b7c89;">Entry fee</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Timeline -->
+      <div style="background:#fff;border:1px solid #e7eef0;border-radius:18px;padding:18px 20px;box-shadow:0 6px 18px rgba(10,31,68,0.04);">
+        <div style="font-size:13px;font-weight:700;color:#6b7c89;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:15px;">What happens next</div>
+        <div>${timeline}</div>
+      </div>
+
+    </div>
+  </div>
+
+`;
+</script>
