@@ -61,21 +61,20 @@ const pawSvg = `<svg width="22" height="22" viewBox="0 0 48 48" fill="#fff" aria
         <!-- Right: role switcher slot + avatar -->
         <div style="display:flex;align-items:center;gap:12px;flex:none;">
           <div id="hub-nav-actions"></div>
-          <!-- Avatar + chevron -->
-          <div id="hub-avatar-btn" style="display:flex;align-items:center;gap:7px;cursor:pointer;">
-            <div style="width:38px;height:38px;border-radius:50%;background:#002d6b;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;" id="hub-avatar-initial">
-              {userInitial}
+          <!-- Avatar + chevron (dropdown anchor) -->
+          <div style="position:relative;">
+            <div id="hub-avatar-btn" style="display:flex;align-items:center;gap:7px;cursor:pointer;">
+              <div style="width:38px;height:38px;border-radius:50%;background:#002d6b;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;" id="hub-avatar-initial">
+                {userInitial}
+              </div>
+              <svg width="13" height="13" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="#6b7c89" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </div>
-            <svg width="13" height="13" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="#6b7c89" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <!-- Dropdown -->
+            <div id="hub-avatar-menu" style="display:none;position:absolute;right:0;top:calc(100% + 8px);background:#fff;border:1px solid #e7eef0;border-radius:13px;box-shadow:0 8px 24px rgba(10,31,68,0.10);padding:6px;min-width:160px;z-index:50;">
+              {displayName && <div style="padding:8px 12px 6px;font-size:13px;font-weight:700;color:#0a1f44;border-bottom:1px solid #f0f4f5;margin-bottom:4px;">{displayName}</div>}
+              <button id="hub-signout" style="width:100%;text-align:left;background:none;border:none;padding:9px 12px;font-size:13.5px;font-weight:600;color:#6b7c89;cursor:pointer;border-radius:9px;font-family:inherit;" class="hover:bg-[#f5f8f9]">Sign out</button>
+            </div>
           </div>
-        </div>
-      </div>
-
-      <!-- Avatar dropdown -->
-      <div id="hub-avatar-menu" style="display:none;position:absolute;right:22px;top:68px;background:#fff;border:1px solid #e7eef0;border-radius:13px;box-shadow:0 8px 24px rgba(10,31,68,0.10);padding:6px;min-width:160px;z-index:50;">
-        {displayName && <div style="padding:8px 12px 6px;font-size:13px;font-weight:700;color:#0a1f44;border-bottom:1px solid #f0f4f5;margin-bottom:4px;">{displayName}</div>}
-        <button id="hub-signout" style="width:100%;text-align:left;background:none;border:none;padding:9px 12px;font-size:13.5px;font-weight:600;color:#6b7c89;cursor:pointer;border-radius:9px;font-family:inherit;" class="hover:bg-[#f5f8f9]">Sign out</button>
-      </div>
     </header>
 
     <!-- Page content -->
