@@ -184,7 +184,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
         <div style="color:#fff;font-weight:700;font-size:17px;margin-bottom:3px;">Want to run your own show?</div>
         <div style="color:#bcd2f0;font-size:14px;">Hosting on Fur to Feathers is <strong style="color:#fff;">free</strong> — raise money and bring your community together.</div>
       </div>
-      <button id="upgrade-btn" style="flex:none;background:#1ba89a;color:#fff;font-weight:700;font-size:14.5px;padding:12px 20px;border-radius:11px;border:none;cursor:pointer;font-family:inherit;">Start a Show — Free</button>
+      <a href="${base}signup?role=organiser" style="flex:none;background:#1ba89a;color:#fff;font-weight:700;font-size:14.5px;padding:12px 20px;border-radius:11px;text-decoration:none;">Start a Show — Free</a>
     </div>`;
 
     const showsSection = total === 0 ? renderEmptyState() : `
@@ -223,18 +223,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   const root = document.getElementById('hub-root');
   root.innerHTML = renderDashboard();
 
-  // Upgrade button
   root.addEventListener('click', async (e) => {
-    if (e.target.closest('#upgrade-btn')) {
-      const btn = e.target.closest('#upgrade-btn');
-      btn.textContent = 'Setting up…';
-      btn.disabled = true;
-      const newRoles = [...(profile?.roles || ['participant']), 'organiser'];
-      await supabase.from('profiles').update({ roles: newRoles }).eq('id', session.user.id);
-      window.location.href = base + 'organiser';
-      return;
-    }
-
     // Filter tabs
     const filterBtn = e.target.closest('.filter-btn');
     if (filterBtn) {

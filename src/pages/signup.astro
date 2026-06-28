@@ -240,7 +240,8 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     if (clubField) clubField.style.display = subtype === 'club' ? 'block' : 'none';
   }
 
-  setRole('participant');
+  const defaultRole = new URL(window.location.href).searchParams.get('role');
+  setRole(defaultRole === 'organiser' ? 'organiser' : 'participant');
 
   document.querySelectorAll('.role-btn').forEach(btn => {
     btn.addEventListener('click', () => setRole(btn.dataset.role));
