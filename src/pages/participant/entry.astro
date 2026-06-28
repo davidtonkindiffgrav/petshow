@@ -46,10 +46,19 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
   const { data: entry, error } = await supabase
     .from('show_entries')
-    .select(`*, shows(*), show_categories(name)`)
+    .select('id, animal_name, breed, photo_url, category_id, entry_number, result_place, status, entry_fee_paid, created_at, show_id')
     .eq('id', entryId)
     .eq('user_id', session.user.id)
     .single();
+
+  if (!error && entry) {
+    const [showRes, catRes] = await Promise.all([
+      entry.show_id    ? supabase.from('shows').select('id, title, organisation_name, host_org, show_date, entry_close_date, results_published_at, currency').eq('id', entry.show_id).single() : { data: null },
+      entry.category_id ? supabase.from('show_categories').select('id, name').eq('id', entry.category_id).single() : { data: null },
+    ]);
+    entry.shows           = showRes.data  || null;
+    entry.show_categories = catRes.data   || null;
+  }
 
   const root = document.getElementById('entry-root');
 

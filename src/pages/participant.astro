@@ -36,17 +36,30 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     }
   }
 
-  // Fetch entries
-  const { data: entries = [] } = await supabase
+  // Fetch entries, then related shows and categories separately
+  const { data: rawEntries = [] } = await supabase
     .from('show_entries')
-    .select(`id, animal_name, breed, photo_url, category_id, entry_number,
-             result_place, status, entry_fee_paid, created_at, show_id,
-             shows ( id, title, organisation_name, host_org, show_date,
-                     entry_close_date, results_published_at, currency ),
-             show_categories ( name )`)
+    .select('id, animal_name, breed, photo_url, category_id, entry_number, result_place, status, entry_fee_paid, created_at, show_id')
     .eq('user_id', session.user.id)
     .neq('status', 'cancelled')
     .order('created_at', { ascending: false });
+
+  const showIds    = [...new Set((rawEntries || []).map(e => e.show_id).filter(Boolean))];
+  const catIds     = [...new Set((rawEntries || []).map(e => e.category_id).filter(Boolean))];
+
+  const [showsRes, catsRes] = await Promise.all([
+    showIds.length ? supabase.from('shows').select('id, title, organisation_name, host_org, show_date, entry_close_date, results_published_at, currency').in('id', showIds) : { data: [] },
+    catIds.length  ? supabase.from('show_categories').select('id, name').in('id', catIds) : { data: [] },
+  ]);
+
+  const showsMap = Object.fromEntries((showsRes.data || []).map(s => [s.id, s]));
+  const catsMap  = Object.fromEntries((catsRes.data  || []).map(c => [c.id, c]));
+
+  const entries = (rawEntries || []).map(e => ({
+    ...e,
+    shows:           showsMap[e.show_id]    || null,
+    show_categories: catsMap[e.category_id] || null,
+  }));
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
   function esc(s) {
