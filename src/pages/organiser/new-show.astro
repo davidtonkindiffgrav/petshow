@@ -79,6 +79,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       </div>
 
       <div class="mb-5">
+        <label for="s1-description" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Show Description</label>
+        <textarea id="s1-description" rows="3" placeholder="Briefly describe your show — what's special about it, what animals compete, any cause you're supporting…"
+          class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors resize-none"></textarea>
+      </div>
+
+      <div class="mb-5">
         <p class="text-[13px] font-semibold text-[#4a4357] mb-2.5">Type of Organisation <span class="text-red-400">*</span></p>
         <div class="grid grid-cols-3 gap-3" id="org-type-cards">
           <button type="button" data-value="non_profit" class="sel-card flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#b8e4e0] bg-white px-2 py-4 text-center transition-all cursor-pointer">
@@ -946,6 +952,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       show.entry_close_date = document.getElementById('s1-entry-close').value || null;
       show.show_date      = document.getElementById('s1-show-date').value || null;
       show.host_org       = document.getElementById('s1-host-org').value.trim();
+      show.description    = document.getElementById('s1-description').value.trim() || null;
       show.org_type       = getSelectedCard('org-type-cards');
       show.charity_number = document.getElementById('s1-charity-number').value.trim();
       show.contact_email  = document.getElementById('s1-contact-email').value.trim();

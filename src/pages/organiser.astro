@@ -1,11 +1,13 @@
 ---
 import DashboardLayout from '../layouts/DashboardLayout.astro';
+const raw = import.meta.env.BASE_URL;
+const base = raw.endsWith('/') ? raw : raw + '/';
 ---
 
 <DashboardLayout title="Dashboard" activePage="dashboard">
 
   <button slot="actions" id="btn-go-shows"
-    class="text-[13.5px] font-bold text-[#6f6880] border border-[#b8e4e0] px-4 py-2.5 rounded-btn hover:bg-[#f0fafa] transition-colors">
+    class="hidden min-[900px]:flex text-[13.5px] font-bold text-[#6f6880] border border-[#b8e4e0] px-4 py-2.5 rounded-btn hover:bg-[#f0fafa] transition-colors">
     All Shows
   </button>
 
@@ -17,14 +19,8 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
   <!-- No shows at all -->
   <div id="state-no-shows" style="display:none" class="flex items-center justify-center min-h-[60vh]">
     <div class="text-center max-w-[380px]">
-      <div class="w-24 h-24 rounded-full bg-brand-tint flex items-center justify-center mx-auto mb-7">
-        <svg width="52" height="52" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-          <ellipse cx="24" cy="31" rx="11" ry="9" fill="#1ba89a"/>
-          <ellipse cx="11" cy="23" rx="5.5" ry="6" fill="#1ba89a"/>
-          <ellipse cx="37" cy="23" rx="5.5" ry="6" fill="#1ba89a"/>
-          <ellipse cx="17" cy="14" rx="5" ry="5.5" fill="#20b7ac"/>
-          <ellipse cx="31" cy="14" rx="5" ry="5.5" fill="#20b7ac"/>
-        </svg>
+      <div class="flex justify-center mb-7">
+        <img src={`${base}images/ftf_logo_256x212.png`} width="80" style="height:auto;display:block;" alt="" aria-hidden="true" />
       </div>
       <h2 class="text-[28px] font-extrabold text-[#1c1626] tracking-[-0.02em] leading-tight mb-3">Let's get your first show set up!</h2>
       <p class="text-[15px] text-[#6f6880] leading-relaxed mb-8">Once you create and publish a show, your dashboard will come to life — entries, revenue and more will appear here.</p>
@@ -143,13 +139,7 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
     const logoHtml = hasLogo
       ? `<img src="${esc(show.logo_url)}" style="width:72px;height:72px;border-radius:14px;object-fit:contain;background:#f5f3fa;border:1.5px solid #efebf5;flex-shrink:0;" alt="" />`
       : `<div style="width:72px;height:72px;border-radius:14px;background:#efebf5;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-           <svg width="32" height="32" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-             <ellipse cx="24" cy="31" rx="10" ry="8" fill="#c4bed0"/>
-             <ellipse cx="12" cy="23" rx="5" ry="5.5" fill="#c4bed0"/>
-             <ellipse cx="36" cy="23" rx="5" ry="5.5" fill="#c4bed0"/>
-             <ellipse cx="18" cy="14" rx="4.5" ry="5" fill="#d6d1e0"/>
-             <ellipse cx="30" cy="14" rx="4.5" ry="5" fill="#d6d1e0"/>
-           </svg>
+           <img src="${base}images/ftf_logo_256x212.png" width="40" style="height:auto;display:block;opacity:0.55;" alt="" aria-hidden="true" />
          </div>`;
 
     el.innerHTML = `

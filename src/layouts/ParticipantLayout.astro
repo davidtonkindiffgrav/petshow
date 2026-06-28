@@ -32,26 +32,42 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500;1,600&display=swap"
       rel="stylesheet"
     />
+  <style>
+    /* Desktop: show center nav, hide mobile hub link */
+    @media (min-width: 700px) {
+      #hub-nav-desktop  { display: flex !important; }
+      #hub-home-mobile  { display: none !important; }
+    }
+    /* Mobile: hide center nav, show mobile hub link */
+    @media (max-width: 699px) {
+      #hub-nav-desktop  { display: none !important; }
+      #hub-home-mobile  { display: block !important; }
+      /* Tighten header padding so everything fits on 320px screens */
+      #hub-header-inner { padding: 12px 14px !important; }
+    }
+  </style>
   </head>
   <body class="font-sans antialiased" style="background:#eef3f4;color:#0a1f44;min-height:100vh;">
 
     <!-- Top bar -->
     <header style="background:#fff;border-bottom:1px solid #e7eef0;position:sticky;top:0;z-index:40;">
-      <div style="max-width:1080px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;justify-content:space-between;gap:18px;">
+      <div id="hub-header-inner" style="max-width:1080px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;justify-content:space-between;gap:18px;">
 
         <!-- Logo -->
         <PawLogo height={38} />
 
-        <!-- Center nav (hidden on mobile) -->
-        <nav id="hub-nav" style="display:flex;align-items:center;gap:22px;font-size:14.5px;font-weight:600;" class="hidden min-[700px]:flex">
+        <!-- Center nav (desktop only) -->
+        <nav id="hub-nav-desktop" style="display:flex;align-items:center;gap:22px;font-size:14.5px;font-weight:600;">
           <a href={`${base}participant`} style="color:#002d6b;font-weight:800;text-decoration:none;">My Show Hub</a>
-          <a href={base} style="color:#48586a;text-decoration:none;" class="hover:text-[#002d6b] transition-colors">Browse Shows</a>
-          <a href={`${base}#how-it-works`} style="color:#48586a;text-decoration:none;" class="hover:text-[#002d6b] transition-colors">How It Works</a>
+          <a href={base} style="color:#48586a;text-decoration:none;">Browse Shows</a>
+          <a href={`${base}#how-it-works`} style="color:#48586a;text-decoration:none;">How It Works</a>
         </nav>
 
-        <!-- Right: role switcher slot + avatar -->
+        <!-- Right: role switcher slot + mobile hub link + avatar -->
         <div style="display:flex;align-items:center;gap:12px;flex:none;">
           <div id="hub-nav-actions"></div>
+          <!-- Mobile-only direct link to hub (always tappable) -->
+          <a id="hub-home-mobile" href={`${base}participant`} style="font-size:13px;font-weight:800;color:#002d6b;text-decoration:none;white-space:nowrap;">My Show Hub</a>
           <!-- Avatar + chevron (dropdown anchor) -->
           <div style="position:relative;">
             <div id="hub-avatar-btn" style="display:flex;align-items:center;gap:7px;cursor:pointer;">
@@ -66,6 +82,8 @@ const base = raw.endsWith('/') ? raw : raw + '/';
               <button id="hub-signout" style="width:100%;text-align:left;background:none;border:none;padding:9px 12px;font-size:13.5px;font-weight:600;color:#6b7c89;cursor:pointer;border-radius:9px;font-family:inherit;" class="hover:bg-[#f5f8f9]">Sign out</button>
             </div>
           </div>
+        </div>
+      </div>
     </header>
 
     <!-- Page content -->

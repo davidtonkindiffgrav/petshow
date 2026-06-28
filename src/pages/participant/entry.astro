@@ -46,7 +46,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
   const { data: entry, error } = await supabase
     .from('show_entries')
-    .select('id, animal_name, breed, photo_url, category_id, entry_number, result_place, status, entry_fee_paid, created_at, show_id')
+    .select('id, show_id, status, photo_url, created_at')
     .eq('id', entryId)
     .eq('user_id', session.user.id)
     .single();
@@ -155,7 +155,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
   <!-- Hero -->
   <div style="position:relative;overflow:hidden;background:linear-gradient(115deg,#002d6b,#0b4a8f);border-radius:20px;padding:24px 26px;margin-bottom:18px;">
-    <svg style="position:absolute;right:-10px;bottom:-30px;opacity:0.13;" width="160" height="160" viewBox="0 0 48 48" fill="#fff" aria-hidden="true"><ellipse cx="24" cy="31" rx="11" ry="9"/><ellipse cx="11" cy="22" rx="4.6" ry="6"/><ellipse cx="37" cy="22" rx="4.6" ry="6"/><ellipse cx="17.5" cy="13" rx="4.3" ry="5.6"/><ellipse cx="30.5" cy="13" rx="4.3" ry="5.6"/></svg>
+    <img src="${base}images/ftf_logo_256x212.png" style="position:absolute;right:-10px;bottom:-30px;width:160px;height:auto;opacity:0.13;filter:brightness(0) invert(1);pointer-events:none;" alt="" aria-hidden="true" />
     <span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;color:${pill.color};background:${pill.bg};padding:5px 11px;border-radius:99px;margin-bottom:12px;">${pill.text}</span>
     <h1 style="font-size:27px;font-weight:800;color:#fff;margin:0 0 7px;letter-spacing:-0.01em;">${esc(show.title || 'Untitled Show')}</h1>
     <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;color:#bcd2f0;font-size:13.5px;font-weight:600;">

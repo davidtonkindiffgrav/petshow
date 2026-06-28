@@ -126,6 +126,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
             class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
         </div>
         <div>
+          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Show Description</label>
+          <textarea id="mgmt-description" rows="3" placeholder="Briefly describe your show — what's special about it, what animals compete, any cause you're supporting…"
+            class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors resize-none"></textarea>
+        </div>
+        <div>
           <p class="text-[13px] font-semibold text-[#4a4357] mb-2">Type of Organisation <span class="text-red-400">*</span></p>
           <div class="grid grid-cols-3 gap-2" id="mgmt-org-type-cards">
             <button type="button" data-value="non_profit" class="sel-card flex flex-col items-center gap-1.5 rounded-[12px] border-2 border-[#b8e4e0] bg-white px-2 py-3 text-center transition-all cursor-pointer">
@@ -1098,6 +1103,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.getElementById('mgmt-entry-close').value    = show.entry_close_date || '';
     document.getElementById('mgmt-show-date').value      = show.show_date || '';
     document.getElementById('mgmt-host-org').value       = show.host_org || '';
+    (document.getElementById('mgmt-description') as HTMLTextAreaElement).value = show.description || '';
     document.getElementById('mgmt-contact-email').value  = show.contact_email || '';
     document.getElementById('mgmt-contact-phone').value  = show.contact_phone || '';
     document.getElementById('mgmt-charity-number').value = show.charity_number || '';
@@ -1391,6 +1397,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     await saveSection('basics', {
       title, org_type: orgType,
       host_org: document.getElementById('mgmt-host-org').value.trim() || null,
+      description: (document.getElementById('mgmt-description') as HTMLTextAreaElement).value.trim() || null,
       charity_number: needsNum ? charityNum || null : null,
       contact_email: email,
       contact_phone: document.getElementById('mgmt-contact-phone').value.trim() || null,

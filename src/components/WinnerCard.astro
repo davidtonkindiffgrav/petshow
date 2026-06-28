@@ -8,6 +8,8 @@ interface Props {
 }
 
 const { name, category, event, rank, bgGradient = 'from-violet-100 to-pink-100' } = Astro.props;
+const raw = import.meta.env.BASE_URL;
+const base = raw.endsWith('/') ? raw : raw + '/';
 
 const medalColors: Record<number, { bg: string; label: string }> = {
   1: { bg: '#fbbf24', label: '1st' },
@@ -34,13 +36,7 @@ const medal = medalColors[rank] ?? medalColors[4];
       </svg>
     </div>
     <!-- Pet silhouette placeholder -->
-    <svg width="56" height="56" viewBox="0 0 80 80" fill="none" opacity="0.25" aria-hidden="true">
-      <ellipse cx="40" cy="52" rx="18" ry="14" fill="#1ba89a"/>
-      <ellipse cx="18" cy="37" rx="9" ry="10" fill="#1ba89a"/>
-      <ellipse cx="62" cy="37" rx="9" ry="10" fill="#1ba89a"/>
-      <ellipse cx="28" cy="24" rx="8" ry="9" fill="#20b7ac"/>
-      <ellipse cx="52" cy="24" rx="8" ry="9" fill="#20b7ac"/>
-    </svg>
+    <img src={`${base}images/ftf_logo_256x212.png`} width="56" style="height:auto;display:block;opacity:0.25;" alt="" aria-hidden="true" />
   </div>
 
   <!-- Card body -->

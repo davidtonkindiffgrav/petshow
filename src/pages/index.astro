@@ -52,15 +52,8 @@ const base = raw.endsWith('/') ? raw : raw + '/';
             </svg>
             Create a Show
           </a>
-          <a href={`${base}#events`}
-            class="inline-flex items-center gap-2 text-brand bg-white text-[16px] font-bold px-[22px] py-[13px] rounded-btn border-[1.5px] border-[#b8e4e0] hover:bg-brand-tint hover:-translate-y-px transition-all">
-            <svg width="15" height="15" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-              <ellipse cx="24" cy="31" rx="11" ry="9" fill="#1ba89a"/>
-              <ellipse cx="11" cy="23" rx="5.5" ry="6" fill="#1ba89a"/>
-              <ellipse cx="37" cy="23" rx="5.5" ry="6" fill="#1ba89a"/>
-              <ellipse cx="17" cy="14" rx="5" ry="5.5" fill="#20b7ac"/>
-              <ellipse cx="31" cy="14" rx="5" ry="5.5" fill="#20b7ac"/>
-            </svg>
+          <a href="#" class="events-trigger inline-flex items-center gap-2 text-brand bg-white text-[16px] font-bold px-[22px] py-[13px] rounded-btn border-[1.5px] border-[#b8e4e0] hover:bg-brand-tint hover:-translate-y-px transition-all">
+            <img src={`${base}images/ftf_logo_256x212.png`} width="15" style="height:auto;display:block;" alt="" aria-hidden="true" />
             Browse Events
           </a>
         </div>
@@ -82,13 +75,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
           <!-- Easy to Run -->
           <div class="flex items-start gap-3">
             <div class="w-[38px] h-[38px] rounded-[11px] bg-[#cff0ed] flex-shrink-0 flex items-center justify-center">
-              <svg width="15" height="15" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-                <ellipse cx="24" cy="31" rx="11" ry="9" fill="#1ba89a"/>
-                <ellipse cx="11" cy="23" rx="5.5" ry="6" fill="#1ba89a"/>
-                <ellipse cx="37" cy="23" rx="5.5" ry="6" fill="#1ba89a"/>
-                <ellipse cx="17" cy="14" rx="5" ry="5.5" fill="#20b7ac"/>
-                <ellipse cx="31" cy="14" rx="5" ry="5.5" fill="#20b7ac"/>
-              </svg>
+              <img src={`${base}images/ftf_logo_256x212.png`} width="15" style="height:auto;display:block;" alt="" aria-hidden="true" />
             </div>
             <div>
               <p class="text-[14.5px] font-bold text-[#1c1626]">Easy to Run</p>
@@ -170,14 +157,8 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     <div class="relative overflow-hidden rounded-card flex flex-wrap items-center gap-[26px] px-6 min-[600px]:px-9 py-[26px] min-[600px]:py-[30px]"
       style="background:linear-gradient(120deg,#158c80,#0f6e68)">
 
-      <!-- Faint paw watermark -->
-      <svg class="absolute top-[-20px] right-[-20px] opacity-[0.12] pointer-events-none" width="160" height="160" viewBox="0 0 48 48" fill="white" aria-hidden="true">
-        <ellipse cx="24" cy="31" rx="11" ry="9"/>
-        <ellipse cx="11" cy="23" rx="5.5" ry="6"/>
-        <ellipse cx="37" cy="23" rx="5.5" ry="6"/>
-        <ellipse cx="17" cy="14" rx="5" ry="5.5"/>
-        <ellipse cx="31" cy="14" rx="5" ry="5.5"/>
-      </svg>
+      <!-- Faint logo watermark -->
+      <img src={`${base}images/ftf_logo_256x212.png`} class="absolute top-[-20px] right-[-20px] pointer-events-none" width="160" style="height:auto;opacity:0.12;filter:brightness(0) invert(1);" alt="" aria-hidden="true" />
 
       <!-- Icon tile -->
       <div class="w-[62px] h-[62px] rounded-panel flex-shrink-0 flex items-center justify-center" style="background:rgba(255,255,255,0.16)">
@@ -345,14 +326,8 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     <div class="relative overflow-hidden rounded-card flex flex-wrap items-center justify-between gap-5 px-6 min-[600px]:px-[38px] py-7 min-[600px]:py-[30px]"
       style="background:linear-gradient(120deg,#1ba89a,#158c80)">
 
-      <!-- Faint paw watermark -->
-      <svg class="absolute bottom-[-30px] left-[-20px] opacity-10 pointer-events-none" width="180" height="180" viewBox="0 0 48 48" fill="white" aria-hidden="true">
-        <ellipse cx="24" cy="31" rx="11" ry="9"/>
-        <ellipse cx="11" cy="23" rx="5.5" ry="6"/>
-        <ellipse cx="37" cy="23" rx="5.5" ry="6"/>
-        <ellipse cx="17" cy="14" rx="5" ry="5.5"/>
-        <ellipse cx="31" cy="14" rx="5" ry="5.5"/>
-      </svg>
+      <!-- Faint logo watermark -->
+      <img src={`${base}images/ftf_logo_256x212.png`} class="absolute bottom-[-30px] left-[-20px] pointer-events-none" width="180" style="height:auto;opacity:0.10;filter:brightness(0) invert(1);" alt="" aria-hidden="true" />
 
       <!-- Text -->
       <div>

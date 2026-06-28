@@ -37,15 +37,14 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   }
 
   // Fetch entries, then related shows and categories separately
-  const { data: rawEntries = [] } = await supabase
+  const { data: rawEntries } = await supabase
     .from('show_entries')
-    .select('id, animal_name, breed, photo_url, category_id, entry_number, result_place, status, entry_fee_paid, created_at, show_id')
+    .select('id, show_id, status, photo_url, created_at')
     .eq('user_id', session.user.id)
-    .neq('status', 'cancelled')
     .order('created_at', { ascending: false });
 
-  const showIds    = [...new Set((rawEntries || []).map(e => e.show_id).filter(Boolean))];
-  const catIds     = [...new Set((rawEntries || []).map(e => e.category_id).filter(Boolean))];
+  const showIds    = [...new Set((rawEntries ?? []).map(e => e.show_id).filter(Boolean))];
+  const catIds     = [...new Set((rawEntries ?? []).map(e => e.category_id).filter(Boolean))];
 
   const [showsRes, catsRes] = await Promise.all([
     showIds.length ? supabase.from('shows').select('id, title, organisation_name, host_org, show_date, entry_close_date, results_published_at, currency').in('id', showIds) : { data: [] },
@@ -55,7 +54,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   const showsMap = Object.fromEntries((showsRes.data || []).map(s => [s.id, s]));
   const catsMap  = Object.fromEntries((catsRes.data  || []).map(c => [c.id, c]));
 
-  const entries = (rawEntries || []).map(e => ({
+  const entries = (rawEntries ?? []).map(e => ({
     ...e,
     shows:           showsMap[e.show_id]    || null,
     show_categories: catsMap[e.category_id] || null,
@@ -144,7 +143,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       </div>
       <div style="display:flex;align-items:center;gap:8px;padding:8px 11px;background:#f6f9f9;border-radius:11px;">
         <div style="width:24px;height:24px;border-radius:50%;background:#fff;border:1px solid #e7eef0;display:flex;align-items:center;justify-content:center;flex:none;">
-          <svg width="13" height="13" viewBox="0 0 48 48" fill="#1ba89a" aria-hidden="true"><ellipse cx="24" cy="31" rx="11" ry="9"/><ellipse cx="11" cy="22" rx="4.6" ry="6"/><ellipse cx="37" cy="22" rx="4.6" ry="6"/><ellipse cx="17.5" cy="13" rx="4.3" ry="5.6"/><ellipse cx="30.5" cy="13" rx="4.3" ry="5.6"/></svg>
+          <img src="${base}images/ftf_logo_256x212.png" width="13" style="height:auto;display:block;" alt="" aria-hidden="true" />
         </div>
         <div style="font-size:13px;color:#48586a;flex:1;min-width:0;"><strong style="color:#0a1f44;">${esc(entry.animal_name || '')}</strong>${entry.breed ? ' · ' + esc(entry.breed) : ''}</div>
         ${cat ? `<div style="font-size:11.5px;font-weight:600;color:#1ba89a;background:#e3f5f2;padding:3px 9px;border-radius:99px;white-space:nowrap;flex:none;">${esc(cat)}</div>` : ''}
@@ -161,8 +160,8 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   function renderEmptyState() {
     return `
     <div style="background:#fff;border:1px solid #e7eef0;border-radius:20px;padding:56px 30px;text-align:center;box-shadow:0 6px 18px rgba(10,31,68,0.04);">
-      <div style="width:108px;height:108px;border-radius:50%;background:#eef7f5;display:flex;align-items:center;justify-content:center;margin:0 auto 22px;">
-        <svg width="56" height="56" viewBox="0 0 48 48" fill="none" aria-hidden="true"><ellipse cx="24" cy="30" rx="10.5" ry="8.5" fill="#bfe3dd"/><ellipse cx="12" cy="22" rx="4.4" ry="5.6" fill="#bfe3dd"/><ellipse cx="36" cy="22" rx="4.4" ry="5.6" fill="#bfe3dd"/><ellipse cx="18" cy="14" rx="4" ry="5.2" fill="#bfe3dd"/><ellipse cx="30" cy="14" rx="4" ry="5.2" fill="#bfe3dd"/></svg>
+      <div style="margin:0 auto 22px;width:fit-content;">
+        <img src="${base}images/ftf_logo_256x212.png" width="80" style="height:auto;display:block;" alt="" aria-hidden="true" />
       </div>
       <h2 style="font-size:23px;font-weight:800;margin:0 0 8px;color:#0a1f44;">No shows yet. Let's find your first!</h2>
       <p style="font-size:15px;color:#5b6b78;margin:0 auto 24px;max-width:420px;line-height:1.55;">When you enter a pet show, it'll show up here so you can track your entry, payment and results all in one place.</p>
@@ -189,7 +188,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
     const upgradeBanner = dualRole ? '' : `
     <div style="position:relative;overflow:hidden;background:linear-gradient(110deg,#002d6b,#013a85);border-radius:18px;padding:20px 24px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:26px;">
-      <svg style="position:absolute;right:18px;bottom:-26px;opacity:0.12;pointer-events:none;" width="150" height="150" viewBox="0 0 48 48" fill="#fff" aria-hidden="true"><ellipse cx="24" cy="31" rx="11" ry="9"/><ellipse cx="11" cy="22" rx="4.6" ry="6"/><ellipse cx="37" cy="22" rx="4.6" ry="6"/><ellipse cx="17.5" cy="13" rx="4.3" ry="5.6"/><ellipse cx="30.5" cy="13" rx="4.3" ry="5.6"/></svg>
+      <img src="${base}images/ftf_logo_256x212.png" style="position:absolute;right:18px;bottom:-26px;width:150px;height:auto;opacity:0.12;filter:brightness(0) invert(1);pointer-events:none;" alt="" aria-hidden="true" />
       <div style="width:46px;height:46px;border-radius:13px;background:rgba(27,168,154,0.22);display:flex;align-items:center;justify-content:center;flex:none;">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3l2.5 5.2 5.5.8-4 3.9 1 5.6L12 16.9 7 18.5l1-5.6-4-3.9 5.5-.8L12 3z" fill="#3ad6c4"/></svg>
       </div>
@@ -219,7 +218,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     return `
     <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:22px;">
       <div>
-        <h1 style="font-size:30px;font-weight:800;letter-spacing:-0.02em;margin:0 0 6px;color:#0a1f44;">Hi, ${esc(name)} 👋</h1>
+        <h1 style="font-size:30px;font-weight:800;letter-spacing:-0.02em;margin:0 0 6px;color:#0a1f44;">Hi, ${esc(name)}</h1>
         <p style="font-size:15px;color:#5b6b78;margin:0;">Here's everything you've entered. Good luck out there!</p>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
