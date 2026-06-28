@@ -159,7 +159,13 @@ function navClass(page: string) {
           </svg>
         </button>
         <h1 class="text-[17px] min-[900px]:text-[19px] font-extrabold text-[#1c1626] tracking-[-0.01em] flex-1 min-[900px]:flex-none truncate">{title}</h1>
-        <slot name="actions" />
+        <div class="flex items-center gap-3 shrink-0">
+          <slot name="actions" />
+          <button id="sidebar-switch-participant" class="hidden min-[900px]:flex items-center gap-1.5 text-[13px] font-semibold text-brand border border-[#b8e4e0] rounded-btn px-3 py-2 hover:bg-brand-tint transition-colors">
+            <svg width="13" height="13" viewBox="0 0 48 48" fill="currentColor" aria-hidden="true"><ellipse cx="24" cy="31" rx="11" ry="9"/><ellipse cx="11" cy="22" rx="4.6" ry="6"/><ellipse cx="37" cy="22" rx="4.6" ry="6"/><ellipse cx="17.5" cy="13" rx="4.3" ry="5.6"/><ellipse cx="30.5" cy="13" rx="4.3" ry="5.6"/></svg>
+            My Show Hub
+          </button>
+        </div>
       </header>
 
       <!-- Scrollable content -->
@@ -201,4 +207,17 @@ function navClass(page: string) {
   sidebar?.querySelectorAll('a').forEach(a =>
     a.addEventListener('click', () => { if (window.innerWidth < 900) closeSidebar(); })
   );
+
+  // Switch to participant view — adds role if missing, then redirects
+  document.getElementById('sidebar-switch-participant')?.addEventListener('click', async () => {
+    const { supabase } = await import('../lib/supabase.js');
+    const { getAuth }  = await import('../lib/auth.js');
+    const { session, profile, base } = await getAuth();
+    if (!session) return;
+    const roles = profile?.roles || [];
+    if (!roles.includes('participant')) {
+      await supabase.from('profiles').update({ roles: [...roles, 'participant'] }).eq('id', session.user.id);
+    }
+    window.location.href = base + 'participant';
+  });
 </script>
