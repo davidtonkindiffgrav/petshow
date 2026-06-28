@@ -68,10 +68,10 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   }
 
   const kindMap = {
-    open:    { badgeText: 'Entries Open',     badgeBg: '#e3f5f2', badgeColor: '#117e72', stripBg: '#e3f5f2',                                    stripColor: '#117e72', stripText: '✓ Entry submitted — good luck!' },
+    open:    { badgeText: 'Entries Open',     badgeBg: '#e3f5f2', badgeColor: '#117e72', stripBg: '#e3f5f2',                                    stripColor: '#117e72', stripText: '✓ Entry submitted. Good luck!' },
     judging: { badgeText: 'Awaiting Judging', badgeBg: '#fef3d6', badgeColor: '#b67d12', stripBg: '#fdf6e3',                                    stripColor: '#9a6b0e', stripText: '⏳ Judging in progress' },
     won:     { badgeText: 'Results In',       badgeBg: '#e6f7ec', badgeColor: '#1d8a4e', stripBg: 'linear-gradient(90deg,#fff6df,#fdeecb)',     stripColor: '#8a5a00', stripText: null },
-    noplace: { badgeText: 'Results In',       badgeBg: '#eef1f4', badgeColor: '#6b7c89', stripBg: '#f1f4f6',                                    stripColor: '#6b7c89', stripText: 'Results published — thanks for entering 💛' },
+    noplace: { badgeText: 'Results In',       badgeBg: '#eef1f4', badgeColor: '#6b7c89', stripBg: '#f1f4f6',                                    stripColor: '#6b7c89', stripText: 'Results published. Thanks for entering 💛' },
   };
 
   function placeLabel(n) {
@@ -133,7 +133,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
         <div style="width:24px;height:24px;border-radius:50%;background:#fff;border:1px solid #e7eef0;display:flex;align-items:center;justify-content:center;flex:none;">
           <svg width="13" height="13" viewBox="0 0 48 48" fill="#1ba89a" aria-hidden="true"><ellipse cx="24" cy="31" rx="11" ry="9"/><ellipse cx="11" cy="22" rx="4.6" ry="6"/><ellipse cx="37" cy="22" rx="4.6" ry="6"/><ellipse cx="17.5" cy="13" rx="4.3" ry="5.6"/><ellipse cx="30.5" cy="13" rx="4.3" ry="5.6"/></svg>
         </div>
-        <div style="font-size:13px;color:#48586a;flex:1;min-width:0;"><strong style="color:#0a1f44;">${esc(entry.animal_name || '—')}</strong>${entry.breed ? ' · ' + esc(entry.breed) : ''}</div>
+        <div style="font-size:13px;color:#48586a;flex:1;min-width:0;"><strong style="color:#0a1f44;">${esc(entry.animal_name || '')}</strong>${entry.breed ? ' · ' + esc(entry.breed) : ''}</div>
         ${cat ? `<div style="font-size:11.5px;font-weight:600;color:#1ba89a;background:#e3f5f2;padding:3px 9px;border-radius:99px;white-space:nowrap;flex:none;">${esc(cat)}</div>` : ''}
       </div>
       <div style="display:flex;align-items:center;gap:9px;padding:10px 13px;border-radius:11px;background:${km.stripBg};">
@@ -151,7 +151,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       <div style="width:108px;height:108px;border-radius:50%;background:#eef7f5;display:flex;align-items:center;justify-content:center;margin:0 auto 22px;">
         <svg width="56" height="56" viewBox="0 0 48 48" fill="none" aria-hidden="true"><ellipse cx="24" cy="30" rx="10.5" ry="8.5" fill="#bfe3dd"/><ellipse cx="12" cy="22" rx="4.4" ry="5.6" fill="#bfe3dd"/><ellipse cx="36" cy="22" rx="4.4" ry="5.6" fill="#bfe3dd"/><ellipse cx="18" cy="14" rx="4" ry="5.2" fill="#bfe3dd"/><ellipse cx="30" cy="14" rx="4" ry="5.2" fill="#bfe3dd"/></svg>
       </div>
-      <h2 style="font-size:23px;font-weight:800;margin:0 0 8px;color:#0a1f44;">No shows yet — let's find your first!</h2>
+      <h2 style="font-size:23px;font-weight:800;margin:0 0 8px;color:#0a1f44;">No shows yet. Let's find your first!</h2>
       <p style="font-size:15px;color:#5b6b78;margin:0 auto 24px;max-width:420px;line-height:1.55;">When you enter a pet show, it'll show up here so you can track your entry, payment and results all in one place.</p>
       <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
         <a href="${base}" style="background:#1ba89a;color:#fff;font-weight:700;font-size:15px;padding:13px 24px;border-radius:12px;text-decoration:none;">Browse Shows</a>
@@ -182,9 +182,9 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       </div>
       <div style="flex:1;min-width:220px;">
         <div style="color:#fff;font-weight:700;font-size:17px;margin-bottom:3px;">Want to run your own show?</div>
-        <div style="color:#bcd2f0;font-size:14px;">Hosting on Fur to Feathers is <strong style="color:#fff;">free</strong> — raise money and bring your community together.</div>
+        <div style="color:#bcd2f0;font-size:14px;">Hosting on Fur to Feathers is <strong style="color:#fff;">free</strong>. Raise money and bring your community together.</div>
       </div>
-      <button id="upgrade-btn" style="flex:none;background:#1ba89a;color:#fff;font-weight:700;font-size:14.5px;padding:12px 20px;border-radius:11px;border:none;cursor:pointer;font-family:inherit;">Start a Show — Free</button>
+      <button id="upgrade-btn" style="flex:none;background:#1ba89a;color:#fff;font-weight:700;font-size:14.5px;padding:12px 20px;border-radius:11px;border:none;cursor:pointer;font-family:inherit;">Start a Show. Free!</button>
     </div>`;
 
     const showsSection = total === 0 ? renderEmptyState() : `
