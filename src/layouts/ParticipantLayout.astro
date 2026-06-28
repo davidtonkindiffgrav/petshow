@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import PawLogo from '../components/PawLogo.astro';
 
 interface Props {
   title: string;
@@ -12,8 +13,6 @@ const { title, displayName = '', userInitial = '?', dualRole = false } = Astro.p
 
 const raw = import.meta.env.BASE_URL;
 const base = raw.endsWith('/') ? raw : raw + '/';
-
-const pawSvg = `<svg width="22" height="22" viewBox="0 0 48 48" fill="#fff" aria-hidden="true"><ellipse cx="24" cy="31" rx="11" ry="9"/><ellipse cx="11" cy="22" rx="4.6" ry="6"/><ellipse cx="37" cy="22" rx="4.6" ry="6"/><ellipse cx="17.5" cy="13" rx="4.3" ry="5.6"/><ellipse cx="30.5" cy="13" rx="4.3" ry="5.6"/></svg>`;
 ---
 
 <!doctype html>
@@ -41,15 +40,7 @@ const pawSvg = `<svg width="22" height="22" viewBox="0 0 48 48" fill="#fff" aria
       <div style="max-width:1080px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;justify-content:space-between;gap:18px;">
 
         <!-- Logo -->
-        <a href={base} style="display:flex;align-items:center;gap:10px;text-decoration:none;flex:none;">
-          <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#1ba89a,#002d6b);display:flex;align-items:center;justify-content:center;flex:none;">
-            <Fragment set:html={pawSvg} />
-          </div>
-          <div style="line-height:1.05;">
-            <div style="font-size:17px;font-weight:800;letter-spacing:-0.01em;color:#002d6b;">Fur to Feathers</div>
-            <div style="font-size:11px;font-weight:600;color:#1ba89a;">Online pet shows</div>
-          </div>
-        </a>
+        <PawLogo height={38} />
 
         <!-- Center nav (hidden on mobile) -->
         <nav id="hub-nav" style="display:flex;align-items:center;gap:22px;font-size:14.5px;font-weight:600;" class="hidden min-[700px]:flex">
