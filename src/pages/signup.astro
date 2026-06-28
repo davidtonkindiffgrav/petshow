@@ -330,7 +330,10 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     }
 
     if (signUpData.session) {
-      // Email confirmation is off — user is already logged in, go straight to dashboard
+      // Email confirmation is off — user is already logged in, persist name to profiles
+      await supabase.from('profiles')
+        .update({ first_name: firstName, last_name: lastName, display_name: displayName })
+        .eq('id', signUpData.user.id);
       window.location.href = base + 'choose';
     } else {
       // Email confirmation is on — show the check-your-inbox screen

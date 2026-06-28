@@ -13,5 +13,19 @@ export async function getAuth() {
     .eq('id', session.user.id)
     .single()
 
+  // Fall back to auth metadata if profile columns aren't populated yet
+  if (profile && !profile.first_name) {
+    const meta = session.user.user_metadata || {}
+    profile.first_name   = meta.first_name   || null
+    profile.last_name    = meta.last_name    || null
+    profile.display_name = profile.display_name || meta.display_name || null
+    // Persist so subsequent logins don't need the fallback
+    if (meta.first_name) {
+      await supabase.from('profiles')
+        .update({ first_name: meta.first_name, last_name: meta.last_name || null, display_name: profile.display_name })
+        .eq('id', session.user.id)
+    }
+  }
+
   return { session, profile, base }
 }
