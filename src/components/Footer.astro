@@ -32,7 +32,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       <ul class="flex flex-col gap-[10px]">
         <li><a href="#" class="text-[14px] font-medium text-[#6f6880] hover:text-brand transition-colors">Help Center</a></li>
         <li><a href="#" class="text-[14px] font-medium text-[#6f6880] hover:text-brand transition-colors">Contact Us</a></li>
-        <li><a href="#" class="text-[14px] font-medium text-[#6f6880] hover:text-brand transition-colors">Terms of Service</a></li>
+        <li><a href={`${base}terms`} class="text-[14px] font-medium text-[#6f6880] hover:text-brand transition-colors">Terms of Service</a></li>
         <li><a href="#" class="text-[14px] font-medium text-[#6f6880] hover:text-brand transition-colors">Privacy Policy</a></li>
       </ul>
     </div>
@@ -42,9 +42,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       <h3 class="text-[14px] font-extrabold text-[#1c1626] mb-4">For Organisers</h3>
       <ul class="flex flex-col gap-[10px]">
         <li><a href={`${base}login`} class="text-[14px] font-medium text-[#6f6880] hover:text-brand transition-colors">Create a Show</a></li>
-        <li><a href="#"              class="text-[14px] font-medium text-[#6f6880] hover:text-brand transition-colors">Fundraising Tools</a></li>
-        <li><a href={`${base}#pricing`} class="text-[14px] font-medium text-[#6f6880] hover:text-brand transition-colors">Pricing</a></li>
-        <li><a href="#"              class="text-[14px] font-medium text-[#6f6880] hover:text-brand transition-colors">Resources</a></li>
+        <li><a href={`${base}pricing`} class="text-[14px] font-medium text-[#6f6880] hover:text-brand transition-colors">Pricing</a></li>
       </ul>
     </div>
 

@@ -1,0 +1,468 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+---
+
+<DashboardLayout title="Entries" activePage="entries">
+
+  <!-- Loading -->
+  <div id="state-loading" class="flex items-center justify-center h-64">
+    <div class="w-8 h-8 border-[3px] border-brand/20 border-t-brand rounded-full animate-spin"></div>
+  </div>
+
+  <!-- Content -->
+  <div id="state-content" style="display:none;">
+
+    <!-- Page header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px;flex-wrap:wrap;">
+      <div>
+        <h1 style="font-size:22px;font-weight:900;color:#1c1626;margin:0 0 2px;">Entries</h1>
+        <p id="entry-count-label" style="font-size:14px;color:#6b7c89;margin:0;"></p>
+      </div>
+      <select id="show-select"
+        style="border:1.5px solid #b8e4e0;border-radius:10px;padding:9px 14px;font-size:14px;font-weight:600;color:#1c1626;background:#fff;cursor:pointer;font-family:inherit;min-width:220px;max-width:340px;">
+        <option value="">Select a show...</option>
+      </select>
+    </div>
+
+    <!-- No show selected -->
+    <div id="state-no-show" class="flex items-center justify-center" style="min-height:40vh;">
+      <div style="text-align:center;max-width:320px;">
+        <div style="width:56px;height:56px;border-radius:50%;background:#e3f5f2;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+            <line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>
+            <line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>
+        </div>
+        <p style="font-size:16px;font-weight:800;color:#1c1626;margin:0 0 6px;">Select a show</p>
+        <p style="font-size:14px;color:#6b7c89;margin:0;">Choose a show above to view its entries.</p>
+      </div>
+    </div>
+
+    <!-- Entries panel -->
+    <div id="state-show" style="display:none;">
+
+      <!-- Search + filter bar -->
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+        <div style="position:relative;flex:1;min-width:200px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+            style="position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none;">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input id="search-input" type="search" placeholder="Search by name, exhibitor or breed..."
+            style="width:100%;border:1.5px solid #e7eef0;border-radius:10px;padding:9px 14px 9px 36px;font-size:14px;color:#1c1626;font-family:inherit;box-sizing:border-box;outline:none;"
+            onfocus="this.style.borderColor='#1ba89a'" onblur="this.style.borderColor='#e7eef0'" />
+        </div>
+        <select id="cat-filter"
+          style="border:1.5px solid #e7eef0;border-radius:10px;padding:9px 14px;font-size:14px;color:#1c1626;background:#fff;font-family:inherit;min-width:160px;">
+          <option value="">All categories</option>
+        </select>
+      </div>
+
+      <!-- Table -->
+      <div style="background:#fff;border:1.5px solid #e7eef0;border-radius:14px;overflow:hidden;">
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:14px;">
+            <thead>
+              <tr style="background:#f5f8f9;border-bottom:1.5px solid #e7eef0;">
+                <th data-sort="entry_number"   style="text-align:left;padding:11px 16px;font-size:12px;font-weight:700;color:#9b94a8;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;cursor:pointer;user-select:none;">#<span class="sort-arrow" style="font-size:11px;opacity:1;"> ↑</span></th>
+                <th data-sort="animal_name"    style="text-align:left;padding:11px 16px;font-size:12px;font-weight:700;color:#9b94a8;text-transform:uppercase;letter-spacing:0.05em;cursor:pointer;user-select:none;">Animal<span class="sort-arrow" style="font-size:11px;opacity:0.3;"> ↕</span></th>
+                <th data-sort="breed"          style="text-align:left;padding:11px 16px;font-size:12px;font-weight:700;color:#9b94a8;text-transform:uppercase;letter-spacing:0.05em;cursor:pointer;user-select:none;">Breed<span class="sort-arrow" style="font-size:11px;opacity:0.3;"> ↕</span></th>
+                <th data-sort="category"       style="text-align:left;padding:11px 16px;font-size:12px;font-weight:700;color:#9b94a8;text-transform:uppercase;letter-spacing:0.05em;cursor:pointer;user-select:none;">Category<span class="sort-arrow" style="font-size:11px;opacity:0.3;"> ↕</span></th>
+                <th data-sort="exhibitor_name" style="text-align:left;padding:11px 16px;font-size:12px;font-weight:700;color:#9b94a8;text-transform:uppercase;letter-spacing:0.05em;cursor:pointer;user-select:none;">Exhibitor<span class="sort-arrow" style="font-size:11px;opacity:0.3;"> ↕</span></th>
+                <th data-sort="created_at"     style="text-align:left;padding:11px 16px;font-size:12px;font-weight:700;color:#9b94a8;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;cursor:pointer;user-select:none;">Date Entered<span class="sort-arrow" style="font-size:11px;opacity:0.3;"> ↕</span></th>
+                <th style="padding:11px 16px;"></th>
+              </tr>
+            </thead>
+            <tbody id="entries-tbody"></tbody>
+          </table>
+        </div>
+        <div id="entries-empty" style="display:none;padding:52px 24px;text-align:center;">
+          <p id="empty-title" style="font-size:15px;font-weight:700;color:#1c1626;margin:0 0 6px;">No entries yet</p>
+          <p id="empty-sub"   style="font-size:14px;color:#6b7c89;margin:0;">Entries will appear here once exhibitors have paid.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div id="edit-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(28,22,38,0.45);align-items:center;justify-content:center;padding:16px;">
+    <div style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:460px;box-shadow:0 20px 60px rgba(0,0,0,0.15);max-height:90vh;overflow-y:auto;">
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <h2 style="font-size:18px;font-weight:900;color:#1c1626;margin:0;">Edit Entry</h2>
+        <button id="modal-close-btn"
+          style="width:32px;height:32px;border-radius:50%;border:none;background:#f5f8f9;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#4a4357;font-size:20px;line-height:1;font-family:inherit;"
+          aria-label="Close">&times;</button>
+      </div>
+
+      <div id="edit-judging-warning" style="display:none;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:10px;padding:12px 14px;margin-bottom:20px;font-size:13px;color:#92400e;line-height:1.5;">
+        <strong>Note:</strong> This show's judging day may have begun. Editing entries at this stage should be done with care.
+      </div>
+
+      <div id="edit-error" style="display:none;background:#fef2f2;border:1.5px solid #ef4444;border-radius:10px;padding:12px 14px;margin-bottom:20px;font-size:13px;color:#dc2626;"></div>
+
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div>
+          <label style="display:block;font-size:13px;font-weight:700;color:#4a4357;margin-bottom:6px;">Animal Name</label>
+          <input id="edit-animal-name" type="text"
+            style="width:100%;border:1.5px solid #e7eef0;border-radius:10px;padding:10px 14px;font-size:14px;color:#1c1626;font-family:inherit;box-sizing:border-box;outline:none;"
+            onfocus="this.style.borderColor='#1ba89a'" onblur="this.style.borderColor='#e7eef0'" />
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;font-weight:700;color:#4a4357;margin-bottom:6px;">Breed</label>
+          <input id="edit-breed" type="text"
+            style="width:100%;border:1.5px solid #e7eef0;border-radius:10px;padding:10px 14px;font-size:14px;color:#1c1626;font-family:inherit;box-sizing:border-box;outline:none;"
+            onfocus="this.style.borderColor='#1ba89a'" onblur="this.style.borderColor='#e7eef0'" />
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;font-weight:700;color:#4a4357;margin-bottom:6px;">Category</label>
+          <select id="edit-category-id"
+            style="width:100%;border:1.5px solid #e7eef0;border-radius:10px;padding:10px 14px;font-size:14px;color:#1c1626;background:#fff;font-family:inherit;box-sizing:border-box;outline:none;">
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;font-weight:700;color:#4a4357;margin-bottom:6px;">Exhibitor Name</label>
+          <input id="edit-exhibitor-name" type="text"
+            style="width:100%;border:1.5px solid #e7eef0;border-radius:10px;padding:10px 14px;font-size:14px;color:#1c1626;font-family:inherit;box-sizing:border-box;outline:none;"
+            onfocus="this.style.borderColor='#1ba89a'" onblur="this.style.borderColor='#e7eef0'" />
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:24px;">
+        <button id="modal-cancel-btn"
+          style="padding:10px 20px;border-radius:10px;border:1.5px solid #e7eef0;background:#fff;font-size:14px;font-weight:700;color:#4a4357;cursor:pointer;font-family:inherit;">
+          Cancel
+        </button>
+        <button id="edit-save-btn"
+          style="padding:10px 20px;border-radius:10px;border:none;background:#1ba89a;font-size:14px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">
+          Save Changes
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+</DashboardLayout>
+
+<script>
+  import { getAuth } from '../../lib/auth.js';
+  import { supabase } from '../../lib/supabase.js';
+
+  const { session, base } = await getAuth();
+  if (!session) { window.location.replace(base + 'login'); throw 0; }
+
+  const uid   = session.user.id;
+  const preId = new URLSearchParams(window.location.search).get('id');
+
+  function esc(s: any) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function fmtDate(d: string) { return new Date(d).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }); }
+
+  const CAT_PALETTE = ['#1ba89a','#002d6b','#f59e0b','#ef4444','#8b5cf6','#ec4899','#10b981','#f97316'];
+
+  let allEntries:      any[]              = [];
+  let categories:      any[]              = [];
+  let catMap:          Record<string,any> = {};
+  let currentShowDate: string | null      = null;
+  let editingEntryId:  string | null      = null;
+  let sortCol = 'entry_number';
+  let sortDir: 'asc' | 'desc' = 'asc';
+
+  // ── Load organiser's shows ───────────────────────────────────────────────────
+  const { data: shows } = await supabase
+    .from('shows').select('id, title, show_date, status')
+    .eq('created_by', uid).order('show_date', { ascending: false });
+
+  document.getElementById('state-loading')!.style.display = 'none';
+  document.getElementById('state-content')!.style.display = 'block';
+
+  const showSelect = document.getElementById('show-select') as HTMLSelectElement;
+  (shows || []).forEach((s: any) => {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = s.title + (s.show_date ? '  (' + fmtDate(s.show_date) + ')' : '');
+    showSelect.appendChild(opt);
+  });
+
+  // ── Sort arrows ──────────────────────────────────────────────────────────────
+  function updateHeaderArrows() {
+    document.querySelectorAll<HTMLElement>('[data-sort]').forEach(th => {
+      const col   = th.getAttribute('data-sort')!;
+      const arrow = th.querySelector<HTMLElement>('.sort-arrow');
+      if (!arrow) return;
+      if (col === sortCol) {
+        arrow.textContent   = sortDir === 'asc' ? ' ↑' : ' ↓';
+        arrow.style.opacity = '1';
+      } else {
+        arrow.textContent   = ' ↕';
+        arrow.style.opacity = '0.3';
+      }
+    });
+  }
+
+  // ── Render filtered + sorted rows ───────────────────────────────────────────
+  function renderRows() {
+    updateHeaderArrows();
+
+    const q   = (document.getElementById('search-input') as HTMLInputElement).value.trim().toLowerCase();
+    const cat = (document.getElementById('cat-filter')   as HTMLSelectElement).value;
+
+    const filtered = allEntries.filter(e => {
+      const catName = (catMap[e.category_id]?.name || '').toLowerCase();
+      const matchQ  = !q ||
+        (e.animal_name    || '').toLowerCase().includes(q) ||
+        (e.exhibitor_name || '').toLowerCase().includes(q) ||
+        (e.breed          || '').toLowerCase().includes(q) ||
+        catName.includes(q);
+      return matchQ && (!cat || e.category_id === cat);
+    });
+
+    const sorted = [...filtered].sort((a, b) => {
+      let aVal: any, bVal: any;
+      switch (sortCol) {
+        case 'entry_number':   aVal = a.entry_number ?? 0;                bVal = b.entry_number ?? 0;                break;
+        case 'animal_name':    aVal = a.animal_name    || '';             bVal = b.animal_name    || '';             break;
+        case 'breed':          aVal = a.breed          || '';             bVal = b.breed          || '';             break;
+        case 'category':       aVal = catMap[a.category_id]?.name || ''; bVal = catMap[b.category_id]?.name || ''; break;
+        case 'exhibitor_name': aVal = a.exhibitor_name || '';             bVal = b.exhibitor_name || '';             break;
+        case 'created_at':     aVal = a.created_at     || '';             bVal = b.created_at     || '';             break;
+        default:               aVal = 0;                                   bVal = 0;
+      }
+      const cmp = typeof aVal === 'number'
+        ? aVal - bVal
+        : String(aVal).toLowerCase().localeCompare(String(bVal).toLowerCase());
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+
+    const tbody      = document.getElementById('entries-tbody')!;
+    const empty      = document.getElementById('entries-empty')!;
+    const emptyTitle = document.getElementById('empty-title')!;
+    const emptySub   = document.getElementById('empty-sub')!;
+
+    if (!sorted.length) {
+      tbody.innerHTML = '';
+      empty.style.display = 'block';
+      if (allEntries.length === 0) {
+        emptyTitle.textContent = 'No entries yet';
+        emptySub.textContent   = 'Entries will appear here once exhibitors have paid.';
+      } else {
+        emptyTitle.textContent = 'No results';
+        emptySub.textContent   = 'Try adjusting your search or filter.';
+      }
+      return;
+    }
+
+    empty.style.display = 'none';
+    tbody.innerHTML = sorted.map((e, i) => {
+      const cat      = catMap[e.category_id];
+      const catIdx   = categories.findIndex((c: any) => c.id === e.category_id);
+      const catColor = catIdx >= 0 ? CAT_PALETTE[catIdx % CAT_PALETTE.length] : '#9b94a8';
+      const catName  = cat?.name || 'Uncategorised';
+      const num      = e.entry_number ?? (i + 1);
+      const rowBg    = i % 2 === 0 ? '#fff' : '#fafbfc';
+
+      const thumb = e.photo_url
+        ? `<img src="${esc(e.photo_url)}" style="width:36px;height:36px;border-radius:8px;object-fit:cover;flex-shrink:0;" alt="" />`
+        : `<div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#1ba89a,#0f6f8f);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;flex-shrink:0;">${esc((e.animal_name||'?')[0].toUpperCase())}</div>`;
+
+      return `<tr style="background:${rowBg};border-bottom:1px solid #f0f2f4;">
+        <td style="padding:10px 16px;color:#9b94a8;font-weight:600;font-size:13px;">${num}</td>
+        <td style="padding:10px 16px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            ${thumb}
+            <span style="font-weight:700;color:#1c1626;">${esc(e.animal_name || 'Unknown')}</span>
+          </div>
+        </td>
+        <td style="padding:10px 16px;color:#6b7c89;">${esc(e.breed || '—')}</td>
+        <td style="padding:10px 16px;">
+          <span style="font-size:12px;font-weight:700;color:${catColor};background:${catColor}18;padding:3px 10px;border-radius:99px;white-space:nowrap;">${esc(catName)}</span>
+        </td>
+        <td style="padding:10px 16px;color:#4a4357;">${esc(e.exhibitor_name || '—')}</td>
+        <td style="padding:10px 16px;color:#9b94a8;font-size:13px;white-space:nowrap;">${fmtDate(e.created_at)}</td>
+        <td style="padding:10px 16px;text-align:right;">
+          <button data-edit-id="${esc(e.id)}" title="Edit entry"
+            style="width:30px;height:30px;border-radius:8px;border:1.5px solid #e7eef0;background:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:#9b94a8;"
+            onmouseenter="this.style.borderColor='#1ba89a';this.style.color='#1ba89a'"
+            onmouseleave="this.style.borderColor='#e7eef0';this.style.color='#9b94a8'">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+          </button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── Load entries for a show ──────────────────────────────────────────────────
+  async function loadShow(showId: string) {
+    document.getElementById('state-no-show')!.style.display = 'none';
+    document.getElementById('entries-tbody')!.innerHTML = `
+      <tr><td colspan="7" style="padding:40px;text-align:center;">
+        <div style="width:28px;height:28px;border:3px solid rgba(27,168,154,0.2);border-top-color:#1ba89a;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto;"></div>
+      </td></tr>`;
+    document.getElementById('state-show')!.style.display    = 'block';
+    document.getElementById('entries-empty')!.style.display = 'none';
+
+    currentShowDate = (shows || []).find((s: any) => s.id === showId)?.show_date ?? null;
+
+    const [catsRes, entriesRes] = await Promise.all([
+      supabase.from('show_categories').select('id, name').eq('show_id', showId),
+      supabase.from('show_entries')
+        .select('id, entry_number, animal_name, exhibitor_name, breed, photo_url, category_id, created_at')
+        .eq('show_id', showId).eq('status', 'confirmed')
+        .order('entry_number', { ascending: true }),
+    ]);
+
+    categories = catsRes.data   || [];
+    allEntries = entriesRes.data || [];
+    catMap = {};
+    categories.forEach((c: any) => { catMap[c.id] = c; });
+
+    document.getElementById('entry-count-label')!.textContent = allEntries.length === 0
+      ? 'No confirmed entries yet'
+      : `${allEntries.length} confirmed ${allEntries.length === 1 ? 'entry' : 'entries'}`;
+
+    const catFilter = document.getElementById('cat-filter') as HTMLSelectElement;
+    catFilter.innerHTML = '<option value="">All categories</option>';
+    categories.forEach((c: any) => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.name;
+      catFilter.appendChild(opt);
+    });
+
+    (document.getElementById('search-input') as HTMLInputElement).value = '';
+    renderRows();
+  }
+
+  // ── Edit modal ───────────────────────────────────────────────────────────────
+  function openEdit(entry: any) {
+    editingEntryId = entry.id;
+
+    (document.getElementById('edit-animal-name')    as HTMLInputElement).value  = entry.animal_name    || '';
+    (document.getElementById('edit-breed')          as HTMLInputElement).value  = entry.breed          || '';
+    (document.getElementById('edit-exhibitor-name') as HTMLInputElement).value  = entry.exhibitor_name || '';
+
+    const catSel = document.getElementById('edit-category-id') as HTMLSelectElement;
+    catSel.innerHTML = categories.map((c: any) =>
+      `<option value="${esc(c.id)}" ${c.id === entry.category_id ? 'selected' : ''}>${esc(c.name)}</option>`
+    ).join('');
+
+    const isJudgingDay = currentShowDate && new Date(currentShowDate) <= new Date();
+    document.getElementById('edit-judging-warning')!.style.display = isJudgingDay ? 'block' : 'none';
+    document.getElementById('edit-error')!.style.display           = 'none';
+
+    const saveBtn       = document.getElementById('edit-save-btn') as HTMLButtonElement;
+    saveBtn.disabled    = false;
+    saveBtn.textContent = 'Save Changes';
+
+    document.getElementById('edit-modal')!.style.display = 'flex';
+  }
+
+  function closeEdit() {
+    document.getElementById('edit-modal')!.style.display = 'none';
+    editingEntryId = null;
+  }
+
+  async function saveEdit() {
+    if (!editingEntryId) return;
+
+    const animalName    = (document.getElementById('edit-animal-name')    as HTMLInputElement).value.trim();
+    const breed         = (document.getElementById('edit-breed')          as HTMLInputElement).value.trim();
+    const exhibitorName = (document.getElementById('edit-exhibitor-name') as HTMLInputElement).value.trim();
+    const categoryId    = (document.getElementById('edit-category-id')    as HTMLSelectElement).value;
+
+    const saveBtn        = document.getElementById('edit-save-btn') as HTMLButtonElement;
+    const errorDiv       = document.getElementById('edit-error')!;
+    saveBtn.disabled     = true;
+    saveBtn.textContent  = 'Saving...';
+    errorDiv.style.display = 'none';
+
+    const { data: updated, error } = await supabase.from('show_entries')
+      .update({ animal_name: animalName, breed: breed || null, exhibitor_name: exhibitorName, category_id: categoryId })
+      .eq('id', editingEntryId)
+      .select('id');
+
+    if (error || !updated?.length) {
+      errorDiv.textContent   = error?.message || 'Update was blocked — check that you have permission to edit entries for this show.';
+      errorDiv.style.display = 'block';
+      saveBtn.disabled       = false;
+      saveBtn.textContent    = 'Save Changes';
+      return;
+    }
+
+    const idx = allEntries.findIndex((e: any) => e.id === editingEntryId);
+    if (idx >= 0) {
+      allEntries[idx] = { ...allEntries[idx], animal_name: animalName, breed: breed || null, exhibitor_name: exhibitorName, category_id: categoryId };
+    }
+
+    closeEdit();
+    renderRows();
+  }
+
+  // ── Event listeners ──────────────────────────────────────────────────────────
+  showSelect.addEventListener('change', () => {
+    const id = showSelect.value;
+    if (!id) {
+      document.getElementById('state-no-show')!.style.display = 'flex';
+      document.getElementById('state-show')!.style.display    = 'none';
+      document.getElementById('entry-count-label')!.textContent = '';
+      return;
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.set('id', id);
+    window.history.replaceState({}, '', url.toString());
+    loadShow(id);
+  });
+
+  document.getElementById('search-input')!.addEventListener('input', renderRows);
+  document.getElementById('cat-filter')!.addEventListener('change', renderRows);
+
+  document.querySelectorAll('[data-sort]').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.getAttribute('data-sort')!;
+      if (sortCol === col) {
+        sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortCol = col;
+        sortDir = 'asc';
+      }
+      renderRows();
+    });
+  });
+
+  document.getElementById('entries-tbody')!.addEventListener('click', e => {
+    const btn = (e.target as Element).closest('[data-edit-id]');
+    if (!btn) return;
+    const entryId = btn.getAttribute('data-edit-id');
+    const entry   = allEntries.find((e: any) => e.id === entryId);
+    if (entry) openEdit(entry);
+  });
+
+  document.getElementById('modal-close-btn')!.addEventListener('click',  closeEdit);
+  document.getElementById('modal-cancel-btn')!.addEventListener('click', closeEdit);
+  document.getElementById('edit-save-btn')!.addEventListener('click',    saveEdit);
+  document.getElementById('edit-modal')!.addEventListener('click', e => {
+    if (e.target === document.getElementById('edit-modal')) closeEdit();
+  });
+
+  // ── Pre-select: URL param → published show → most recent ────────────────────
+  const showList  = shows || [];
+  const published = showList.find((s: any) => s.status === 'published');
+  const defaultId = (preId && showList.some((s: any) => s.id === preId))
+    ? preId
+    : published?.id ?? showList[0]?.id ?? null;
+
+  if (defaultId) {
+    showSelect.value = defaultId;
+    loadShow(defaultId);
+  } else {
+    document.getElementById('state-no-show')!.style.display = 'flex';
+  }
+</script>
+
+<style>
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
