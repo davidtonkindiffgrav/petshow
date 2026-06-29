@@ -130,7 +130,9 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     return `
     <div class="hub-card" data-entry-id="${esc(entry.id)}" style="background:#fff;border:1px solid #e7eef0;border-radius:16px;padding:16px;cursor:pointer;box-shadow:0 6px 18px rgba(10,31,68,0.04);display:flex;flex-direction:column;gap:13px;transition:box-shadow .15s,transform .15s;">
       <div style="display:flex;gap:13px;align-items:flex-start;">
-        <div style="width:62px;height:62px;border-radius:14px;flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:24px;background:${grad};">${esc(init)}</div>
+        ${entry.photo_url
+          ? `<img src="${esc(entry.photo_url)}" style="width:62px;height:62px;border-radius:14px;flex:none;object-fit:cover;" alt="${esc(entry.animal_name)}" />`
+          : `<div style="width:62px;height:62px;border-radius:14px;flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:24px;background:${grad};">${esc(init)}</div>`}
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
             <div style="font-size:16px;font-weight:800;line-height:1.25;color:#0a1f44;">${esc(show.title || 'Untitled Show')}</div>
@@ -167,7 +169,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       <h2 style="font-size:23px;font-weight:800;margin:0 0 8px;color:#0a1f44;">No shows yet. Let's find your first!</h2>
       <p style="font-size:15px;color:#5b6b78;margin:0 auto 24px;max-width:420px;line-height:1.55;">When you enter a pet show, it'll show up here so you can track your entry, payment and results all in one place.</p>
       <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-        <a href="${base}" style="background:#1ba89a;color:#fff;font-weight:700;font-size:15px;padding:13px 24px;border-radius:12px;text-decoration:none;">Browse Shows</a>
+        <button id="btn-browse-shows" style="background:#1ba89a;color:#fff;font-weight:700;font-size:15px;padding:13px 24px;border-radius:12px;border:none;cursor:pointer;font-family:inherit;">Browse Shows</button>
         <a href="${base}#how-it-works" style="background:#fff;color:#002d6b;font-weight:700;font-size:15px;padding:13px 24px;border-radius:12px;border:1.5px solid #d8e2e6;text-decoration:none;">How It Works</a>
       </div>
     </div>`;
@@ -237,6 +239,12 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   root.innerHTML = renderDashboard();
 
   root.addEventListener('click', async (e) => {
+    // Browse shows — delegate to header's events-trigger
+    if (e.target.closest('#btn-browse-shows')) {
+      document.querySelector('.events-trigger')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      return;
+    }
+
     // Upgrade to organiser
     if (e.target.closest('#upgrade-btn')) {
       const btn = e.target.closest('#upgrade-btn');
