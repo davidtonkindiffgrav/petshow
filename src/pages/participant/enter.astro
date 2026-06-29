@@ -1,0 +1,654 @@
+---
+import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
+---
+
+<ParticipantLayout title="Enter Show" userInitial="?">
+  <div id="enter-root" style="max-width:640px;margin:0 auto;padding:30px 22px 80px;">
+    <p style="color:#6b7c89;font-size:15px;text-align:center;padding:60px 0;">Loading…</p>
+  </div>
+</ParticipantLayout>
+
+<script>
+  import { getAuth } from '../../lib/auth.js';
+  import { supabase } from '../../lib/supabase.js';
+
+  const { session, profile, base } = await getAuth();
+  if (!session) {
+    const current = 'participant/enter' + window.location.search;
+    window.location.replace(base + 'login?redirect=' + encodeURIComponent(current));
+    throw 0;
+  }
+
+  const avatarEl = document.getElementById('hub-avatar-initial');
+  if (avatarEl) avatarEl.textContent = (profile?.display_name || session.user.email || '?')[0].toUpperCase();
+
+  // ── Payment modal (built in JS so it's guaranteed in the DOM) ────────────────
+  const modalStyle = document.createElement('style');
+  modalStyle.textContent = `
+    @keyframes pet-wobble {
+      0%   { transform: rotate(-30deg); }
+      50%  { transform: rotate(30deg); }
+      100% { transform: rotate(-30deg); }
+    }
+    #payment-modal img { animation: pet-wobble 1s ease-in-out infinite; transform-origin: center 85%; }
+  `;
+  document.head.appendChild(modalStyle);
+
+  const modal = document.createElement('div');
+  modal.id = 'payment-modal';
+  modal.style.cssText = 'display:none;position:fixed;inset:0;z-index:9999;background:rgba(10,31,68,0.72);align-items:center;justify-content:center;';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:24px;padding:44px 48px;text-align:center;max-width:300px;width:90%;box-shadow:0 24px 60px rgba(10,31,68,0.25);">
+      <img src="${base}images/ftf_logo_256x212.png" width="72" style="display:block;margin:0 auto 24px;height:auto;" alt="" />
+      <p id="modal-title" style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 8px;"></p>
+      <p id="modal-sub" style="font-size:13px;color:#6b7c89;margin:0;"></p>
+    </div>`;
+  document.body.appendChild(modal);
+
+  function showModal(title: string, sub: string) {
+    (document.getElementById('modal-title') as HTMLElement).textContent = title;
+    (document.getElementById('modal-sub')   as HTMLElement).textContent = sub;
+    modal.style.display = 'flex';
+  }
+  function hideModal() { modal.style.display = 'none'; }
+
+  const params    = new URLSearchParams(window.location.search);
+  const showId    = params.get('show');
+  const cancelled = params.get('cancelled') === '1';
+  const root      = document.getElementById('enter-root')!;
+
+  const SYMS: Record<string,string> = { GBP:'£', USD:'$', EUR:'€', AUD:'A$', CAD:'C$', NZD:'NZ$', ZAR:'R', SGD:'S$' };
+  function esc(s: any) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function fmt(d: string) { return new Date(d).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }); }
+
+  if (!showId) {
+    root.innerHTML = `<div style="text-align:center;padding:60px 0;"><p style="color:#6b7c89;font-size:15px;margin-bottom:12px;">No show specified.</p><a href="${base}" style="color:#1ba89a;font-weight:700;font-size:14px;">Browse Shows →</a></div>`;
+    throw 0;
+  }
+
+  // If returning from a cancelled Stripe session, delete any pending entries for this show
+  if (cancelled) {
+    await supabase.from('show_entries')
+      .delete()
+      .eq('show_id', showId)
+      .eq('user_id', session.user.id)
+      .eq('status', 'pending');
+  }
+
+  // ── Load show data ────────────────────────────────────────────────────────────
+  const [showRes, catsRes, feeRes] = await Promise.all([
+    supabase.from('shows')
+      .select('id,title,host_org,entry_fee,currency,animal_type,breed_scope,breed_filter,entry_close_date,has_digital_certs,has_physical_prizes,logo_url,status')
+      .eq('id', showId).single(),
+    supabase.from('show_categories').select('id,name').eq('show_id', showId),
+    supabase.from('platform_settings').select('key,value').like('key', 'service_fee_%'),
+  ]);
+
+  const show = showRes.data;
+
+  if (!show || show.status !== 'published') {
+    root.innerHTML = `<div style="text-align:center;padding:60px 0;"><p style="font-size:20px;font-weight:800;color:#1c1626;margin-bottom:8px;">Show not available</p><p style="color:#6b7c89;font-size:14px;margin-bottom:20px;">This show is not currently accepting entries.</p><a href="${base}" style="color:#1ba89a;font-weight:700;font-size:14px;">Browse Shows →</a></div>`;
+    throw 0;
+  }
+  if (show.entry_close_date && new Date(show.entry_close_date) < new Date()) {
+    root.innerHTML = `<div style="text-align:center;padding:60px 0;"><p style="font-size:20px;font-weight:800;color:#1c1626;margin-bottom:8px;">Entries are closed</p><p style="color:#6b7c89;font-size:14px;margin-bottom:20px;">The entry deadline was ${fmt(show.entry_close_date)}.</p><a href="${base}show?id=${showId}" style="color:#1ba89a;font-weight:700;font-size:14px;">View Show →</a></div>`;
+    throw 0;
+  }
+
+  const categories = catsRes.data || [];
+  const sym = SYMS[show.currency] || '£';
+  const feeLookup: Record<string,number> = {};
+  (feeRes.data || []).forEach((r: any) => { feeLookup[r.key] = parseFloat(r.value) || 0; });
+  const svcFee   = feeLookup[`service_fee_${show.currency}`] ?? 1.10;
+  const totalFee = (show.entry_fee || 0) + svcFee;
+  const isFree   = totalFee <= 0;
+
+  // ── Breed list ────────────────────────────────────────────────────────────────
+  const DOG_BREEDS = [
+    'Affenpinscher','Afghan Hound','Airedale Terrier','Akita','Akita (Japanese)',
+    'Alaskan Malamute','American Hairless Terrier','American Staffordshire Terrier',
+    'Anatolian Shepherd Dog','Australasian Bosdog','Australian Cattle Dog',
+    'Australian Kelpie','Australian Shepherd','Australian Silky Terrier',
+    'Australian Stumpy Tail Cattle Dog','Australian Terrier','Azawakh','Basenji',
+    'Basset Fauve de Bretagne','Basset Hound','Bavarian Mountain Scent Hound',
+    'Beagle','Bearded Collie','Beauceron','Bedlington Terrier',
+    'Belgian Shepherd Dog (Groenendael)','Belgian Shepherd Dog (Laekenois)',
+    'Belgian Shepherd Dog (Malinois)','Belgian Shepherd Dog (Tervueren)',
+    'Bergamasco Shepherd Dog','Bernese Mountain Dog','Bichon Frise','Biewer Terrier',
+    'Black and Tan Coonhound','Bloodhound','Bluetick Coonhound','Bolognese',
+    'Border Collie','Border Terrier','Borzoi','Boston Terrier','Bouvier des Flandres',
+    'Boxer','Bracco Italiano','Briard','British Bulldog','Brittany','Bull Terrier',
+    'Bull Terrier (Miniature)','Bullmastiff','Cairn Terrier','Canaan Dog',
+    'Canadian Eskimo Dog','Cane Corso','Caucasian Shepherd Dog',
+    'Cavalier King Charles Spaniel','Central Asian Shepherd Dog','Cesky Terrier',
+    'Chesapeake Bay Retriever','Chihuahua (Long Coat)','Chihuahua (Smooth Coat)',
+    'Chinese Crested Dog','Chow Chow',"Cirneco Dell'Etna",'Clumber Spaniel',
+    'Cocker Spaniel','Cocker Spaniel (American)','Collie (Rough)','Collie (Smooth)',
+    'Coton De Tulear','Curly Coated Retriever','Dachshund (Long Haired)',
+    'Dachshund (Miniature Long Haired)','Dachshund (Miniature Smooth Haired)',
+    'Dachshund (Miniature Wire Haired)','Dachshund (Rabbit Long Haired)',
+    'Dachshund (Rabbit Smooth Haired)','Dachshund (Rabbit Wire Haired)',
+    'Dachshund (Smooth Haired)','Dachshund (Wire Haired)','Dalmatian',
+    'Dandie Dinmont Terrier','Deerhound','Dobermann','Dogue de Bordeaux',
+    'Dutch Shepherd Dog','English Setter','English Springer Spaniel',
+    'English Toy Terrier (Black and Tan)','Estrela Mountain Dog','Eurasier',
+    'Field Spaniel','Finnish Lapphund','Finnish Spitz','Flat Coated Retriever',
+    'Fox Terrier (Smooth)','Fox Terrier (Wire)','Foxhound','French Bulldog',
+    'German Hunting Terrier','German Pinscher','German Shepherd Dog',
+    'German Shepherd Dog (Long Stock Coat)','German Shorthaired Pointer',
+    'German Spitz (Klein)','German Spitz (Mittel)','German Wirehaired Pointer',
+    'Glen of Imaal Terrier','Golden Retriever','Gordon Setter',
+    'Grand Basset Griffon Vendeen','Great Dane','Great Swiss Mountain Dog',
+    'Greyhound','Griffon Bruxellois','Hamiltonstovare','Harrier','Havanese',
+    'Hungarian Vizsla','Hungarian Wirehaired Vizsla','Ibizan Hound',
+    'Icelandic Sheepdog','Irish Red and White Setter','Irish Setter','Irish Terrier',
+    'Irish Water Spaniel','Irish Wolfhound','Italian Greyhound','Italian Spinone',
+    'Jack Russell Terrier','Japanese Chin','Japanese Spitz','Kangal Shepherd Dog',
+    'Karelian Bear Dog','Keeshond','Kerry Blue Terrier','King Charles Spaniel',
+    'Kleine Munsterlander','Komondor','Kuvasz','Labrador Retriever',
+    'Lagotto Romagnolo','Lakeland Terrier','Landseer (European Continental Type)',
+    'Large Munsterlander','Leonberger','Lhasa Apso','Lowchen','Maltese',
+    'Manchester Terrier','Maremma Sheepdog','Mastiff','Miniature American Shepherd',
+    'Miniature Pinscher','Mudi','Murray River Retriever','Neapolitan Mastiff',
+    'Newfoundland','Norfolk Terrier','Norwegian Buhund','Norwegian Elkhound',
+    'Norwich Terrier','Nova Scotia Duck Tolling Retriever','Old English Sheepdog',
+    'Otterhound','Papillon','Parson Russell Terrier','Pekingese',
+    'Peruvian Hairless Dog (Large)','Peruvian Hairless Dog (Medium)',
+    'Peruvian Hairless Dog (Small)','Petit Basset Griffon Vendeen','Pharaoh Hound',
+    'Pointer','Polish Lowland Sheepdog','Pomeranian','Poodle (Miniature)',
+    'Poodle (Standard)','Poodle (Toy)','Porcelaine',
+    'Portuguese Podengo (Large Smooth Haired)','Portuguese Podengo (Large Wire Haired)',
+    'Portuguese Podengo (Medium Smooth Haired)','Portuguese Podengo (Medium Wire Haired)',
+    'Portuguese Podengo (Small Smooth Haired)','Portuguese Podengo (Small Wire Haired)',
+    'Portuguese Water Dog','Prague Ratter','Pug','Puli','Pumi','Pyrenean Mastiff',
+    'Pyrenean Mountain Dog','Pyrenean Sheepdog Longhaired','Rhodesian Ridgeback',
+    'Rottweiler','Russian Black Terrier','Russian Toy (Long Haired)',
+    'Russian Toy (Smooth Haired)','Saluki','Samoyed','Schipperke','Schnauzer',
+    'Schnauzer (Giant)','Schnauzer (Miniature)','Scottish Terrier','Sealyham Terrier',
+    'Shar Pei','Shetland Sheepdog','Shiba Inu','Shih Tzu','Shikoku','Siberian Husky',
+    'Skye Terrier','Sloughi','Soft Coated Wheaten Terrier','Spanish Mastiff',
+    'Spanish Water Dog','St Bernard','Staffordshire Bull Terrier','Sussex Spaniel',
+    'Swedish Lapphund','Swedish Vallhund','Tatra Shepherd Dog','Tenterfield Terrier',
+    'Tibetan Mastiff','Tibetan Spaniel','Tibetan Terrier','Tornjak','Weimaraner',
+    'Weimaraner (Long-haired)','Welsh Corgi (Cardigan)','Welsh Corgi (Pembroke)',
+    'Welsh Springer Spaniel','Welsh Terrier','West Highland White Terrier','Whippet',
+    'White Swiss Shepherd Dog','Wirehaired Slovakian Pointer',
+    'Xoloitzcuintle (Intermediate)','Xoloitzcuintle (Miniature)',
+    'Xoloitzcuintle (Standard)','Yakutian Laika','Yorkshire Terrier',
+  ];
+
+  // ── Form state ────────────────────────────────────────────────────────────────
+  let step         = 1;
+  let animalName   = '';
+  let breed        = '';
+  let categoryId: string | null = null;
+  let photoFile: File | null    = null;
+  let photoPreview: string | null = null;
+  let photoUrl: string | null   = null;
+  const DOG_GROUPS = ['Toy Dogs','Terriers','Gundogs','Hounds','Working Dogs','Utility Dogs','Non-Sporting'];
+
+  interface EntryDraft { animalName: string; breed: string; categoryId: string | null; photoPreview: string | null; photoUrl: string | null; exhibitorName: string; }
+  let pendingEntries: EntryDraft[] = [];
+
+  const fullName = profile?.first_name ? `${profile.first_name}${profile.last_name ? ' ' + profile.last_name : ''}` : '';
+  let exhibitorName = profile?.display_name || fullName || session.user.email || '';
+  if (show.breed_scope === 'breed_specific' && show.breed_filter) breed = show.breed_filter;
+  if (show.breed_scope === 'group_specific' && show.group_filter) breed = show.group_filter;
+  let submitting   = false;
+
+  function resetEntryState() {
+    animalName = ''; categoryId = null; photoFile = null; photoPreview = null; photoUrl = null;
+    breed = show.breed_scope === 'breed_specific' ? (show.breed_filter || '')
+          : show.breed_scope === 'group_specific' ? (show.group_filter || '') : '';
+  }
+
+  // ── Render helpers ────────────────────────────────────────────────────────────
+  function progressDots() {
+    return [1,2,3,4].map(n =>
+      `<div style="width:${n===step?28:8}px;height:8px;border-radius:99px;background:${n===step?'#1ba89a':n<step?'#b8e4e0':'#e7eef0'};transition:all 0.2s;flex-shrink:0;"></div>`
+    ).join('');
+  }
+
+  function showHeader() {
+    const thumb = show.logo_url
+      ? `<img src="${esc(show.logo_url)}" style="width:48px;height:48px;border-radius:10px;object-fit:contain;background:#f5f3fa;border:1px solid #efebf5;flex-shrink:0;" alt="" />`
+      : `<div style="width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,#1ba89a,#002d6b);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff;flex-shrink:0;">${esc((show.title||'S')[0].toUpperCase())}</div>`;
+    return `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px;">
+        ${thumb}
+        <div>
+          <p style="font-size:11px;color:#9b94a8;margin:0 0 2px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Entering</p>
+          <p style="font-size:16px;font-weight:800;color:#1c1626;margin:0;">${esc(show.title)}</p>
+        </div>
+      </div>`;
+  }
+
+  function cancelBanner() {
+    if (!cancelled || step !== 1) return '';
+    return `<div id="cancel-banner" style="background:#fef3c7;border:1px solid #f59e0b;border-radius:12px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:20px;">
+      <span style="font-size:13px;font-weight:600;color:#92400e;">Payment cancelled — your entry was not submitted.</span>
+      <button onclick="document.getElementById('cancel-banner').remove()" style="background:none;border:none;cursor:pointer;color:#b45309;font-size:20px;line-height:1;padding:0;font-family:inherit;">×</button>
+    </div>`;
+  }
+
+  const inputStyle = 'width:100%;border:1.5px solid #b8e4e0;border-radius:11px;padding:12px 16px;font-size:15px;color:#1c1626;box-sizing:border-box;font-family:inherit;outline:none;';
+  const backBtnStyle = 'flex:1;background:#f5f3fa;color:#4a4357;font-weight:700;font-size:14px;padding:13px;border-radius:11px;border:none;cursor:pointer;font-family:inherit;';
+  const nextBtnStyle = 'flex:2;background:#1ba89a;color:white;font-weight:800;font-size:15px;padding:13px;border-radius:11px;border:none;cursor:pointer;font-family:inherit;';
+
+  function errorEl() {
+    return `<p id="step-error" style="display:none;font-size:13px;color:#ef4444;margin-bottom:12px;"></p>`;
+  }
+
+  // ── Breed input ───────────────────────────────────────────────────────────────
+  function renderBreedInput() {
+    const scope = show.breed_scope;
+    const isOptional = !scope || scope === 'all' || scope === 'group_specific';
+    const labelSuffix = isOptional
+      ? '<span style="color:#9b94a8;font-weight:400;">(optional)</span>'
+      : '<span style="color:#f87171;">*</span>';
+
+    if (scope === 'breed_specific') {
+      return `
+        <div style="margin-bottom:24px;">
+          <label style="display:block;font-size:13px;font-weight:700;color:#4a4357;margin-bottom:6px;">Breed ${labelSuffix}</label>
+          <input id="f-breed" type="text" value="${esc(show.breed_filter)}" readonly
+            style="${inputStyle}background:#f5f3fa;color:#6b7c89;cursor:not-allowed;" />
+          <p style="font-size:12px;color:#9b94a8;margin:6px 0 0;">This show is for <strong style="color:#4a4357;">${esc(show.breed_filter)}</strong> only.</p>
+        </div>`;
+    }
+
+    if (scope === 'group_specific') {
+      const opts = DOG_GROUPS.map(g =>
+        `<option value="${esc(g)}" ${g === show.group_filter ? 'selected' : ''}>${esc(g)}</option>`
+      ).join('');
+      return `
+        <div style="margin-bottom:24px;">
+          <label style="display:block;font-size:13px;font-weight:700;color:#4a4357;margin-bottom:6px;">Group ${labelSuffix}</label>
+          <select id="f-breed" disabled
+            style="${inputStyle}background:#f5f3fa;color:#6b7c89;cursor:not-allowed;appearance:none;">
+            ${opts}
+          </select>
+          <p style="font-size:12px;color:#9b94a8;margin:6px 0 0;">This show is open to <strong style="color:#4a4357;">${esc(show.group_filter)}</strong> only.</p>
+        </div>`;
+    }
+
+    // scope === 'all' or unset — searchable combobox
+    return `
+      <div style="margin-bottom:24px;position:relative;">
+        <label style="display:block;font-size:13px;font-weight:700;color:#4a4357;margin-bottom:6px;">Breed ${labelSuffix}</label>
+        <input id="f-breed" type="text" value="${esc(breed)}" placeholder="Search breeds…" autocomplete="off"
+          style="${inputStyle}" />
+        <ul id="breed-listbox" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1.5px solid #b8e4e0;border-radius:11px;z-index:50;max-height:220px;overflow-y:auto;box-shadow:0 4px 16px rgba(10,31,68,0.10);margin:0;padding:6px 0;list-style:none;"></ul>
+      </div>`;
+  }
+
+  function initBreedCombobox() {
+    const input   = document.getElementById('f-breed') as HTMLInputElement | null;
+    const listbox = document.getElementById('breed-listbox');
+    if (!input || !listbox) return;
+
+    let activeIdx = -1;
+
+    function getMatches(q: string) {
+      if (!q) return DOG_BREEDS.slice(0, 8);
+      const lq = q.toLowerCase();
+      return DOG_BREEDS.filter(b => b.toLowerCase().includes(lq)).slice(0, 60);
+    }
+
+    function renderList(matches: string[]) {
+      listbox!.innerHTML = matches.length
+        ? matches.map((b, i) =>
+            `<li role="option" data-idx="${i}" style="padding:10px 16px;font-size:14px;color:#1c1626;cursor:pointer;">${b}</li>`
+          ).join('')
+        : `<li style="padding:10px 16px;font-size:14px;color:#9b94a8;">No breeds found</li>`;
+    }
+
+    function openList(q: string) {
+      renderList(getMatches(q));
+      listbox!.style.display = 'block';
+      activeIdx = -1;
+    }
+
+    function closeList() {
+      listbox!.style.display = 'none';
+      activeIdx = -1;
+    }
+
+    function setActive(idx: number) {
+      const items = listbox!.querySelectorAll('[role="option"]');
+      items.forEach((el, i) => (el as HTMLElement).style.background = i === idx ? '#e8f7f6' : '');
+      activeIdx = idx;
+      if (items[idx]) items[idx].scrollIntoView({ block: 'nearest' });
+    }
+
+    input.addEventListener('input',  () => openList(input.value.trim()));
+    input.addEventListener('focus',  () => openList(input.value.trim()));
+    input.addEventListener('keydown', (e: KeyboardEvent) => {
+      const items = listbox!.querySelectorAll('[role="option"]');
+      if      (e.key === 'ArrowDown') { e.preventDefault(); setActive(Math.min(activeIdx + 1, items.length - 1)); }
+      else if (e.key === 'ArrowUp')   { e.preventDefault(); setActive(Math.max(activeIdx - 1, 0)); }
+      else if (e.key === 'Enter' && activeIdx >= 0) { e.preventDefault(); input.value = (items[activeIdx] as HTMLElement).textContent!; closeList(); }
+      else if (e.key === 'Escape')    { closeList(); }
+    });
+    listbox.addEventListener('mousedown', (e: MouseEvent) => {
+      const li = (e.target as Element).closest('[role="option"]');
+      if (li) { input.value = (li as HTMLElement).textContent!; closeList(); }
+    });
+    document.addEventListener('click', (e: MouseEvent) => {
+      if (!input.contains(e.target as Node) && !listbox.contains(e.target as Node)) closeList();
+    }, { once: false });
+  }
+
+  // ── Step renders ──────────────────────────────────────────────────────────────
+  function renderStep1() {
+    const animalLabel = show.animal_type === 'cat' ? 'Cat' : show.animal_type === 'bird' ? 'Bird' : 'Pet';
+    return `
+      <div style="background:white;border-radius:16px;border:1px solid #e7eef0;box-shadow:0 4px 16px rgba(10,31,68,0.06);padding:28px;">
+        <h2 style="font-size:20px;font-weight:800;color:#1c1626;margin:0 0 4px;">Who's entering?</h2>
+        <p style="font-size:14px;color:#6b7c89;margin:0 0 24px;">Tell us about your ${animalLabel.toLowerCase()}.</p>
+
+        <div style="margin-bottom:18px;">
+          <label style="display:block;font-size:13px;font-weight:700;color:#4a4357;margin-bottom:6px;">${animalLabel} Name <span style="color:#f87171;">*</span></label>
+          <input id="f-animal" type="text" value="${esc(animalName)}" placeholder="e.g. Biscuit" style="${inputStyle}" />
+        </div>
+
+        ${renderBreedInput()}
+
+        ${errorEl()}
+        <button id="btn-next" style="${nextBtnStyle}width:100%;">Next: Choose Class →</button>
+      </div>`;
+  }
+
+  function renderStep2() {
+    if (!categories.length) {
+      return `
+        <div style="background:white;border-radius:16px;border:1px solid #e7eef0;box-shadow:0 4px 16px rgba(10,31,68,0.06);padding:28px;text-align:center;">
+          <p style="color:#6b7c89;font-size:15px;margin-bottom:20px;">No entry classes have been set up for this show yet.</p>
+          <button id="btn-back" style="${backBtnStyle}">← Back</button>
+        </div>`;
+    }
+    const feeLabel = isFree ? 'Free' : `${sym}${totalFee.toFixed(2)}`;
+    return `
+      <div style="background:white;border-radius:16px;border:1px solid #e7eef0;box-shadow:0 4px 16px rgba(10,31,68,0.06);padding:28px;">
+        <h2 style="font-size:20px;font-weight:800;color:#1c1626;margin:0 0 4px;">Choose your class</h2>
+        <p style="font-size:14px;color:#6b7c89;margin:0 0 20px;">Select the class you'd like to enter.</p>
+
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px;">
+          ${categories.map((cat: any) => {
+            const selected = categoryId === cat.id;
+            return `<button class="cat-card" data-id="${esc(cat.id)}"
+              style="text-align:left;padding:14px 16px;border-radius:12px;border:2px solid ${selected ? '#1ba89a' : '#e7eef0'};background:${selected ? '#f0faf9' : '#fff'};cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+              <span style="font-size:14px;font-weight:700;color:#1c1626;">${esc(cat.name)}</span>
+              <span style="font-size:12.5px;font-weight:700;color:#1ba89a;background:#e3f5f2;padding:3px 11px;border-radius:99px;white-space:nowrap;flex-shrink:0;">${feeLabel}</span>
+            </button>`;
+          }).join('')}
+        </div>
+
+        ${errorEl()}
+        <div style="display:flex;gap:10px;">
+          <button id="btn-back" style="${backBtnStyle}">← Back</button>
+          <button id="btn-next" style="${nextBtnStyle}">Next: Photo & Details →</button>
+        </div>
+      </div>`;
+  }
+
+  function renderStep3() {
+    const hasPhoto = !!photoPreview;
+    return `
+      <div style="background:white;border-radius:16px;border:1px solid #e7eef0;box-shadow:0 4px 16px rgba(10,31,68,0.06);padding:28px;">
+        <h2 style="font-size:20px;font-weight:800;color:#1c1626;margin:0 0 4px;">Photo & details</h2>
+        <p style="font-size:14px;color:#6b7c89;margin:0 0 22px;">Add a photo and confirm your exhibitor name.</p>
+
+        <div style="margin-bottom:20px;">
+          <label style="display:block;font-size:13px;font-weight:700;color:#4a4357;margin-bottom:8px;">Pet Photo <span style="color:#9b94a8;font-weight:400;">(optional)</span></label>
+          <div id="photo-drop" style="border:2px dashed ${hasPhoto ? '#1ba89a' : '#b8e4e0'};border-radius:14px;padding:24px;text-align:center;cursor:pointer;background:${hasPhoto ? '#f0faf9' : '#fafafa'};position:relative;overflow:hidden;">
+            ${hasPhoto
+              ? `<img src="${esc(photoPreview!)}" style="width:80px;height:80px;border-radius:10px;object-fit:cover;margin:0 auto 8px;display:block;" alt="Pet photo preview" />
+                 <p style="font-size:13px;color:#1ba89a;font-weight:600;margin:0;">Photo selected ✓</p>
+                 <p style="font-size:11px;color:#9b94a8;margin:4px 0 0;">Click to change</p>`
+              : `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#c4bed0" stroke-width="1.5" stroke-linecap="round" style="margin:0 auto 8px;display:block;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                 <p style="font-size:13px;font-weight:700;color:#4a4357;margin:0 0 4px;">Click to upload a photo</p>
+                 <p style="font-size:11.5px;color:#9b94a8;margin:0;">JPG, PNG, WebP · max 5 MB</p>`}
+            <input id="photo-input" type="file" accept="image/jpeg,image/png,image/webp" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;" />
+          </div>
+        </div>
+
+        <div style="margin-bottom:24px;">
+          <label style="display:block;font-size:13px;font-weight:700;color:#4a4357;margin-bottom:6px;">Your Name as Exhibitor <span style="color:#9b94a8;font-weight:400;">(optional)</span></label>
+          <input id="f-exhibitor" type="text" value="${esc(exhibitorName)}" placeholder="Your name" style="${inputStyle}" />
+        </div>
+
+        ${errorEl()}
+        <div style="display:flex;gap:10px;">
+          <button id="btn-back" style="${backBtnStyle}">← Back</button>
+          <button id="btn-next" style="${nextBtnStyle}">Next →</button>
+        </div>
+      </div>`;
+  }
+
+  function renderEntryCard(e: EntryDraft, label: string) {
+    const cat = categories.find((c: any) => c.id === e.categoryId);
+    return `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f8f9fb;border-radius:11px;margin-bottom:8px;">
+        ${e.photoPreview
+          ? `<img src="${esc(e.photoPreview)}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;flex-shrink:0;" alt="" />`
+          : `<div style="width:40px;height:40px;border-radius:8px;background:linear-gradient(135deg,#1ba89a,#0f6f8f);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;flex-shrink:0;">${esc((e.animalName||'?')[0].toUpperCase())}</div>`}
+        <div style="flex:1;min-width:0;">
+          <p style="font-size:14px;font-weight:700;color:#1c1626;margin:0;">${esc(e.animalName)}</p>
+          ${cat ? `<p style="font-size:12px;color:#6b7c89;margin:0;">${esc(cat.name)}</p>` : ''}
+        </div>
+        <span style="font-size:11px;font-weight:700;color:#1ba89a;background:#e3f5f2;padding:2px 9px;border-radius:99px;flex-shrink:0;">${label}</span>
+      </div>`;
+  }
+
+  function renderStep4() {
+    const selectedCat  = categories.find((c: any) => c.id === categoryId);
+    const totalEntries = pendingEntries.length + 1;
+    const grandTotal   = totalFee * totalEntries;
+    const currentLabel = `Entry ${totalEntries}`;
+
+    const pendingSummary = pendingEntries.length > 0 ? `
+      <div style="margin-bottom:20px;">
+        <p style="font-size:12px;font-weight:700;color:#9b94a8;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 8px;">Already added</p>
+        ${pendingEntries.map((e, i) => renderEntryCard(e, `Entry ${i + 1}`)).join('')}
+      </div>` : '';
+
+    return `
+      <div style="background:white;border-radius:16px;border:1px solid #e7eef0;box-shadow:0 4px 16px rgba(10,31,68,0.06);padding:28px;">
+        <h2 style="font-size:20px;font-weight:800;color:#1c1626;margin:0 0 4px;">Review ${currentLabel}</h2>
+        <p style="font-size:14px;color:#6b7c89;margin:0 0 22px;">Check everything looks right${totalEntries > 1 ? ` (${totalEntries} entries total)` : ''} before ${isFree ? 'submitting' : 'paying'}.</p>
+
+        ${pendingSummary}
+
+        <div style="background:#f0faf9;border:1.5px solid #b8e4e0;border-radius:12px;padding:16px 18px;margin-bottom:16px;display:flex;gap:14px;align-items:flex-start;">
+          ${photoPreview
+            ? `<img src="${esc(photoPreview)}" style="width:64px;height:64px;border-radius:10px;object-fit:cover;flex-shrink:0;" alt="" />`
+            : `<div style="width:64px;height:64px;border-radius:10px;background:linear-gradient(135deg,#1ba89a,#0f6f8f);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:rgba(255,255,255,0.8);flex-shrink:0;">${esc((animalName||'?')[0].toUpperCase())}</div>`}
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+              <p style="font-size:17px;font-weight:800;color:#1c1626;margin:0;">${esc(animalName)}</p>
+              <span style="font-size:11px;font-weight:700;color:#1ba89a;background:#e3f5f2;padding:2px 9px;border-radius:99px;">${currentLabel}</span>
+            </div>
+            ${breed ? `<p style="font-size:13px;color:#6b7c89;margin:0 0 8px;">${esc(breed)}</p>` : '<div style="margin-bottom:8px;"></div>'}
+            ${selectedCat ? `<span style="font-size:12px;font-weight:700;color:#1ba89a;background:#e3f5f2;padding:3px 11px;border-radius:99px;">${esc(selectedCat.name)}</span>` : ''}
+          </div>
+        </div>
+
+        ${exhibitorName ? `<p style="font-size:13px;color:#6b7c89;margin:0 0 16px;">Exhibitor: <strong style="color:#1c1626;">${esc(exhibitorName)}</strong></p>` : ''}
+
+        ${!isFree ? `
+          <div style="border-top:1px solid #e7eef0;padding-top:16px;margin-bottom:16px;">
+            ${totalEntries > 1 ? `
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+              <span style="font-size:14px;color:#6b7c89;">${totalEntries} × entry fee</span>
+              <span style="font-size:14px;color:#1c1626;font-weight:600;">${sym}${((show.entry_fee || 0) * totalEntries).toFixed(2)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
+              <span style="font-size:14px;color:#6b7c89;">${totalEntries} × service fee</span>
+              <span style="font-size:14px;color:#1c1626;font-weight:600;">${sym}${(svcFee * totalEntries).toFixed(2)}</span>
+            </div>` : `
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+              <span style="font-size:14px;color:#6b7c89;">Entry fee</span>
+              <span style="font-size:14px;color:#1c1626;font-weight:600;">${sym}${(show.entry_fee || 0).toFixed(2)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
+              <span style="font-size:14px;color:#6b7c89;">Service fee</span>
+              <span style="font-size:14px;color:#1c1626;font-weight:600;">${sym}${svcFee.toFixed(2)}</span>
+            </div>`}
+            <div style="display:flex;justify-content:space-between;border-top:1px solid #e7eef0;padding-top:12px;">
+              <span style="font-size:15px;font-weight:800;color:#1c1626;">Total</span>
+              <span style="font-size:15px;font-weight:800;color:#1ba89a;">${sym}${grandTotal.toFixed(2)}</span>
+            </div>
+          </div>` : ''}
+
+        <button id="btn-add-another" style="${backBtnStyle}width:100%;margin-bottom:10px;border:1.5px dashed #b8e4e0;" ${submitting ? 'disabled' : ''}>
+          + Add another entry
+        </button>
+
+        ${errorEl()}
+        <div style="display:flex;gap:10px;">
+          <button id="btn-back" style="${backBtnStyle}" ${submitting ? 'disabled' : ''}>← Back</button>
+          <button id="btn-submit" style="${nextBtnStyle}${submitting ? 'opacity:0.7;cursor:not-allowed;' : ''}" ${submitting ? 'disabled' : ''}>
+            ${isFree ? `Submit ${totalEntries > 1 ? totalEntries + ' entries' : 'entry'} →` : `Pay ${sym}${grandTotal.toFixed(2)} →`}
+          </button>
+        </div>
+      </div>`;
+  }
+
+  // ── Main render ───────────────────────────────────────────────────────────────
+  function render() {
+    root.innerHTML = `
+      ${cancelBanner()}
+      ${showHeader()}
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:24px;">
+        ${progressDots()}
+      </div>
+      ${step === 1 ? renderStep1() : ''}
+      ${step === 2 ? renderStep2() : ''}
+      ${step === 3 ? renderStep3() : ''}
+      ${step === 4 ? renderStep4() : ''}
+    `;
+
+    function showErr(msg: string) {
+      const el = document.getElementById('step-error');
+      if (el) { el.textContent = msg; el.style.display = 'block'; }
+    }
+
+    if (step === 1 && (!show.breed_scope || show.breed_scope === 'all')) initBreedCombobox();
+
+    // Back button
+    document.getElementById('btn-back')?.addEventListener('click', () => { step--; render(); });
+
+    // Step 1: validate pet name/breed
+    if (step === 1) {
+      document.getElementById('btn-next')?.addEventListener('click', () => {
+        animalName = (document.getElementById('f-animal') as HTMLInputElement).value.trim();
+        breed      = (document.getElementById('f-breed')  as HTMLInputElement)?.value.trim() ?? breed;
+        if (!animalName) return showErr("Please enter your pet's name.");
+        if (show.breed_scope === 'breed_specific' && !breed) return showErr("Please enter your pet's breed.");
+        step = 2; render();
+      });
+    }
+
+    // Step 2: category selection
+    if (step === 2) {
+      document.querySelectorAll('.cat-card').forEach(btn => {
+        btn.addEventListener('click', () => {
+          categoryId = (btn as HTMLElement).dataset.id || null;
+          render();
+        });
+      });
+      document.getElementById('btn-next')?.addEventListener('click', () => {
+        if (!categoryId) return showErr('Please select a class.');
+        step = 3; render();
+      });
+    }
+
+    // Step 3: photo + exhibitor name
+    if (step === 3) {
+      const photoInput = document.getElementById('photo-input') as HTMLInputElement;
+      photoInput?.addEventListener('change', () => {
+        const file = photoInput.files?.[0];
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) { showErr('Photo must be under 5 MB.'); photoInput.value = ''; return; }
+        photoFile = file;
+        photoUrl  = null; // reset uploaded URL; will re-upload on Next
+        const reader = new FileReader();
+        reader.onload = ev => { photoPreview = ev.target?.result as string; render(); };
+        reader.readAsDataURL(file);
+      });
+
+      document.getElementById('btn-next')?.addEventListener('click', async () => {
+        exhibitorName = (document.getElementById('f-exhibitor') as HTMLInputElement).value.trim();
+        const btn = document.getElementById('btn-next') as HTMLButtonElement;
+
+        if (photoFile && !photoUrl) {
+          btn.disabled = true;
+          showModal('Uploading photo…', 'Please wait while we upload your photo.');
+          await new Promise(r => setTimeout(r, 80));
+          try {
+            const ext  = photoFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+            const path = `entries/${showId}/${crypto.randomUUID()}.${ext}`;
+            const { error } = await supabase.storage.from('show-assets').upload(path, photoFile, { contentType: photoFile.type });
+            if (error) throw error;
+            photoUrl = supabase.storage.from('show-assets').getPublicUrl(path).data.publicUrl;
+          } catch (err: any) {
+            hideModal();
+            btn.disabled = false;
+            showErr('Photo upload failed: ' + err.message);
+            return;
+          }
+          hideModal();
+        }
+        step = 4; render();
+      });
+    }
+
+    // Step 4: add another entry
+    if (step === 4) {
+      document.getElementById('btn-add-another')?.addEventListener('click', () => {
+        pendingEntries.push({ animalName, breed, categoryId, photoPreview, photoUrl, exhibitorName });
+        resetEntryState();
+        step = 1; render();
+      });
+    }
+
+    // Step 4: submit all entries
+    if (step === 4) {
+      document.getElementById('btn-submit')?.addEventListener('click', async () => {
+        if (submitting) return;
+        submitting = true;
+        const totalEntries = pendingEntries.length + 1;
+        const grandTotal   = totalFee * totalEntries;
+        const btn = document.getElementById('btn-submit') as HTMLButtonElement;
+        if (btn) { btn.textContent = isFree ? 'Submitting…' : 'Redirecting to payment…'; btn.disabled = true; }
+        if (!isFree) showModal('Redirecting to payment…', "Please don't close this window.");
+        await new Promise(r => setTimeout(r, 80));
+
+        try {
+          const allEntries = [
+            ...pendingEntries.map(e => ({ category_id: e.categoryId, animal_name: e.animalName, breed: e.breed || null, photo_url: e.photoUrl || null, exhibitor_name: e.exhibitorName || null })),
+            { category_id: categoryId, animal_name: animalName, breed: breed || null, photo_url: photoUrl || null, exhibitor_name: exhibitorName || null },
+          ];
+          const resp = await fetch(`${import.meta.env.PUBLIC_SUPABASE_URL}/functions/v1/create-checkout-session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+            body: JSON.stringify({ show_id: showId, entries: allEntries }),
+          });
+          const json = await resp.json();
+          if (!resp.ok) throw new Error(json.error || 'Submission failed. Please try again.');
+          if (json.redirect)          window.location.href = json.redirect;
+          else if (json.checkout_url) window.location.href = json.checkout_url;
+        } catch (err: any) {
+          hideModal();
+          submitting = false;
+          showErr(err.message);
+          const totalEntries2 = pendingEntries.length + 1;
+          if (btn) { btn.textContent = isFree ? `Submit ${totalEntries2 > 1 ? totalEntries2 + ' entries' : 'entry'} →` : `Pay ${sym}${(totalFee * totalEntries2).toFixed(2)} →`; btn.disabled = false; }
+        }
+      });
+    }
+  }
+
+  render();
+</script>

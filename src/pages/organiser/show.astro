@@ -554,6 +554,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           </div>
         </div>
 
+        <!-- Website -->
+        <div>
+          <label class="block text-[12px] font-semibold text-[#4a4357] mb-1.5">Club / Cause / Company Website <span class="text-[#9b94a8] font-normal">(optional)</span></label>
+          <input type="url" id="branding-website-url" placeholder="https://yourclub.org"
+            class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        </div>
+
         <!-- Banner -->
         <div>
           <p class="text-[12px] font-semibold text-[#4a4357] mb-1.5">Show Banner <span class="text-[#9b94a8] font-normal">(optional · recommended 1600×400)</span></p>
@@ -1093,6 +1100,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           <span style="font-size:10.5px;font-weight:700;color:#c4bed0;text-transform:uppercase;letter-spacing:0.05em;width:84px;flex-shrink:0;">Banner</span>
           <span style="font-size:12.5px;color:#4a4357;font-weight:500;">${show.banner_url ? 'Uploaded' : 'Not set'}</span>
         </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:10.5px;font-weight:700;color:#c4bed0;text-transform:uppercase;letter-spacing:0.05em;width:84px;flex-shrink:0;">Website</span>
+          ${show.website_url
+            ? `<a href="${show.website_url}" target="_blank" rel="noopener noreferrer" style="font-size:12.5px;color:#1ba89a;font-weight:500;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px;">${show.website_url}</a>`
+            : `<span style="font-size:12.5px;color:#4a4357;font-weight:500;">Not set</span>`}
+        </div>
       </div>`;
   }
 
@@ -1107,6 +1120,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.getElementById('mgmt-contact-email').value  = show.contact_email || '';
     document.getElementById('mgmt-contact-phone').value  = show.contact_phone || '';
     document.getElementById('mgmt-charity-number').value = show.charity_number || '';
+    (document.getElementById('branding-website-url') as HTMLInputElement).value = show.website_url || '';
     if (show.org_type) {
       selectCard(document.getElementById('mgmt-org-type-cards'), show.org_type);
       document.getElementById('mgmt-charity-field').style.display = (show.org_type === 'registered_charity' || show.org_type === 'non_profit') ? 'block' : 'none';
@@ -1365,7 +1379,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
     if (saveBtn) { saveBtn.textContent = 'Saving…'; saveBtn.disabled = true; }
     try {
-      const updates = { logo_source: getSelectedCard('branding-logo-source-cards') || 'show' };
+      const updates: any = {
+        logo_source: getSelectedCard('branding-logo-source-cards') || 'show',
+        website_url: (document.getElementById('branding-website-url') as HTMLInputElement).value.trim() || null,
+      };
       if (pendingBranding.logo)    updates.logo_url     = await uploadImage(`shows/${showId}/logo`,     pendingBranding.logo);
       if (pendingBranding.orgLogo) updates.org_logo_url = await uploadImage(`shows/${showId}/org-logo`, pendingBranding.orgLogo);
       if (pendingBranding.banner)  updates.banner_url   = await uploadImage(`shows/${showId}/banner`,   pendingBranding.banner);

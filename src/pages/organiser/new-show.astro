@@ -85,6 +85,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       </div>
 
       <div class="mb-5">
+        <label for="s1-website-url" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Club / Cause / Company Website <span class="text-[#9b94a8] font-normal">(optional)</span></label>
+        <input type="url" id="s1-website-url" placeholder="https://yourclub.org"
+          class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+      </div>
+
+      <div class="mb-5">
         <p class="text-[13px] font-semibold text-[#4a4357] mb-2.5">Type of Organisation <span class="text-red-400">*</span></p>
         <div class="grid grid-cols-3 gap-3" id="org-type-cards">
           <button type="button" data-value="non_profit" class="sel-card flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#b8e4e0] bg-white px-2 py-4 text-center transition-all cursor-pointer">
@@ -953,6 +959,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       show.show_date      = document.getElementById('s1-show-date').value || null;
       show.host_org       = document.getElementById('s1-host-org').value.trim();
       show.description    = document.getElementById('s1-description').value.trim() || null;
+      show.website_url    = document.getElementById('s1-website-url').value.trim() || null;
       show.org_type       = getSelectedCard('org-type-cards');
       show.charity_number = document.getElementById('s1-charity-number').value.trim();
       show.contact_email  = document.getElementById('s1-contact-email').value.trim();
@@ -1024,6 +1031,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       prize_source: show.prize_source, is_fundraising: show.is_fundraising,
       donation_type: show.donation_type, fundraising_goal: show.fundraising_goal || null,
       show_fundraising_publicly: show.show_fundraising_publicly, donation_receipts: show.donation_receipts,
+      description: show.description || null, website_url: show.website_url || null,
       logo_url: show.logo_url || null, banner_url: show.banner_url || null, org_logo_url: show.org_logo_url || null,
       logo_source: show.logo_source || 'show',
       currency: show.currency, entry_fee: show.entry_fee, status: 'draft',
@@ -1488,6 +1496,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       id: data.id,
       title: data.title || '',
       host_org: data.host_org || '',
+      description: data.description || null,
+      website_url: data.website_url || null,
       org_type: data.org_type,
       charity_number: data.charity_number || '',
       contact_email: data.contact_email || '',
@@ -1535,6 +1545,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     // Step 1
     document.getElementById('s1-title').value         = show.title;
     document.getElementById('s1-host-org').value      = show.host_org;
+    document.getElementById('s1-description').value   = show.description || '';
+    document.getElementById('s1-website-url').value   = show.website_url || '';
     document.getElementById('s1-entry-open').value    = show.entry_open_date;
     document.getElementById('s1-entry-close').value   = show.entry_close_date;
     document.getElementById('s1-show-date').value     = show.show_date;

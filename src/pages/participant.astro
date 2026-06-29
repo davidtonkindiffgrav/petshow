@@ -39,15 +39,16 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   // Fetch entries, then related shows and categories separately
   const { data: rawEntries } = await supabase
     .from('show_entries')
-    .select('id, show_id, status, photo_url, created_at')
+    .select('id, show_id, category_id, animal_name, breed, photo_url, status, created_at')
     .eq('user_id', session.user.id)
+    .eq('status', 'confirmed')
     .order('created_at', { ascending: false });
 
   const showIds    = [...new Set((rawEntries ?? []).map(e => e.show_id).filter(Boolean))];
   const catIds     = [...new Set((rawEntries ?? []).map(e => e.category_id).filter(Boolean))];
 
   const [showsRes, catsRes] = await Promise.all([
-    showIds.length ? supabase.from('shows').select('id, title, organisation_name, host_org, show_date, entry_close_date, results_published_at, currency').in('id', showIds) : { data: [] },
+    showIds.length ? supabase.from('shows').select('id, title, host_org, show_date, entry_close_date, currency').in('id', showIds) : { data: [] },
     catIds.length  ? supabase.from('show_categories').select('id, name').in('id', catIds) : { data: [] },
   ]);
 
@@ -209,7 +210,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
           <button class="filter-btn" data-filter="results" style="${tabStyle(filter === 'results')}">Results</button>
         </div>
       </div>
-      <div id="cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;">
+      <div id="cards-grid" style="display:flex;flex-direction:column;gap:12px;">
         ${visible.map((e, i) => renderCard(e, i)).join('')}
       </div>
       ${visible.length === 0 ? `<p style="text-align:center;color:#6b7c89;padding:32px 0;font-size:15px;">No entries match this filter.</p>` : ''}

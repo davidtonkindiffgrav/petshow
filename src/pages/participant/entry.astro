@@ -53,7 +53,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
   if (!error && entry) {
     const [showRes, catRes] = await Promise.all([
-      entry.show_id    ? supabase.from('shows').select('id, title, organisation_name, host_org, show_date, entry_close_date, results_published_at, currency').eq('id', entry.show_id).single() : { data: null },
+      entry.show_id    ? supabase.from('shows').select('id, title, host_org, show_date, entry_close_date, currency').eq('id', entry.show_id).single() : { data: null },
       entry.category_id ? supabase.from('show_categories').select('id, name').eq('id', entry.category_id).single() : { data: null },
     ]);
     entry.shows           = showRes.data  || null;
@@ -97,7 +97,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   const show    = entry.shows || {};
   const cat     = entry.show_categories?.name || '';
   const sym     = currSymbols[show.currency] || '$';
-  const host    = show.host_org || show.organisation_name || '';
+  const host    = show.host_org || '';
   const entryNo = entry.entry_number ? `#FTF-${entry.entry_number}` : `#${entry.id.slice(0,8).toUpperCase()}`;
 
   const statusPills = {
