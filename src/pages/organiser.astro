@@ -57,23 +57,40 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     <!-- Show banner header -->
     <div id="dash-header"></div>
 
-    <!-- Top stat cards: flex so a 4th card auto-fits -->
-    <div id="dash-stats" class="flex gap-4 mt-4"></div>
-
     <!--
-      Lower grid: 3 columns (2fr 2fr 1fr), 2 rows
-        col 1, rows 1+2 → Entries by Category (donut, spans full height)
-        col 2, row 1    → Recent Entries (4 items)
-        col 3, row 1    → Timeline (portrait list)
-        col 2+3, row 2  → Entry Trend
+      Left col (2fr): stats (entries+raised | judges) + donut
+      Right col (3fr): recent entries | timeline (top row), trend full-width below
     -->
-    <div class="grid gap-4 mt-4" style="grid-template-columns:2fr 2fr 1fr; grid-template-rows:auto auto;">
-      <div id="dash-categories" class="bg-white rounded-card border border-[#b8e4e0] p-5" style="grid-column:1; grid-row:1/3;"></div>
-      <div id="dash-entries"    class="bg-white rounded-card border border-[#b8e4e0] p-5"></div>
-      <div id="dash-timeline"   class="bg-white rounded-card border border-[#b8e4e0] p-5" style="display:flex;flex-direction:column;"></div>
-      <div id="dash-activity"   class="bg-white rounded-card border border-[#b8e4e0] p-5" style="grid-column:2/4;"></div>
+    <div id="dash-main-grid" class="grid gap-4 mt-4">
+
+      <!-- Left column -->
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div id="dash-stats"></div>
+        <div id="dash-categories" class="bg-white rounded-card border border-[#b8e4e0] p-5" style="flex:1;"></div>
+      </div>
+
+      <!-- Right column -->
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:16px;">
+          <div id="dash-entries"  class="bg-white rounded-card border border-[#b8e4e0] p-5"></div>
+          <div id="dash-timeline" class="bg-white rounded-card border border-[#b8e4e0] p-5" style="display:flex;flex-direction:column;"></div>
+        </div>
+        <div id="dash-activity" class="bg-white rounded-card border border-[#b8e4e0] p-5" style="flex:1;"></div>
+      </div>
+
     </div>
   </div>
+
+<style>
+  #dash-main-grid {
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 768px) {
+    #dash-main-grid {
+      grid-template-columns: 2fr 3fr;
+    }
+  }
+</style>
 
 </DashboardLayout>
 
@@ -187,17 +204,19 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   function renderStats() {
     const el = document.getElementById('dash-stats');
 
-    function card(title, value) {
-      return `<div class="bg-white rounded-card border border-[#b8e4e0] px-5 py-4" style="flex:1;min-width:0;">
-        ${sectionLabel(title, 6)}
-        <p style="font-size:22px;font-weight:800;color:#1c1626;line-height:1.2;">${esc(value)}</p>
+    function card(title, value, style = '') {
+      return `<div class="bg-white rounded-card border border-[#b8e4e0] px-4 py-3" style="${style}">
+        ${sectionLabel(title, 4)}
+        <p style="font-size:20px;font-weight:800;color:#1c1626;line-height:1.2;">${esc(value)}</p>
       </div>`;
     }
 
-    el.innerHTML =
-      card('Total Entries', String(entryCount)) +
-      card('Total Raised',  fmtMoney(totalRaised)) +
-      card('Judges', '—');
+    el.innerHTML = `
+      <div style="display:flex;gap:12px;margin-bottom:12px;">
+        ${card('Total Entries', String(entryCount), 'flex:1;min-width:0;')}
+        ${card('Total Raised',  fmtMoney(totalRaised), 'flex:1;min-width:0;')}
+      </div>
+      ${card('Judges', '—')}`;
   }
 
   // ── Render: Recent Entries (left column, full height) ─────────────────────────
@@ -336,7 +355,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
             ${centerText}
           </svg>
         </div>
-        <div style="flex:1;min-width:0;">${legendRows}</div>
+        <div style="flex:1;min-width:0;max-width:150px;">${legendRows}</div>
       </div>`;
 
     // Wire up floating tooltip for donut segments
@@ -460,7 +479,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     const values  = days.map(d => trendDayValue(d));
     const maxVal  = Math.max(...values, 1);
     // Wide viewBox keeps text small as the SVG scales up on large screens
-    const W = 420, H = 103;
+    const W = 420, H = 125;
     const padL = 28, padR = 6, padT = 16, padB = 18;
     const chartW = W - padL - padR;
     const chartH = H - padT - padB;
