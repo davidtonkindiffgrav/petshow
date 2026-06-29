@@ -99,7 +99,13 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
   const sym = SYMS[show.currency] || '£';
   const feeLookup: Record<string,number> = {};
   (feeRes.data || []).forEach((r: any) => { feeLookup[r.key] = parseFloat(r.value) || 0; });
-  const svcFee   = feeLookup[`service_fee_${show.currency}`] ?? 1.10;
+  const pct   = feeLookup['service_fee_pct'];
+  const floor = feeLookup[`service_fee_floor_${show.currency}`];
+  if (pct == null || floor == null) {
+    root.innerHTML = `<div style="text-align:center;padding:60px 0;"><p style="font-size:15px;color:#ef4444;font-weight:700;">Error</p></div>`;
+    throw 0;
+  }
+  const svcFee   = Math.max(floor, (show.entry_fee || 0) * pct / 100);
   const totalFee = (show.entry_fee || 0) + svcFee;
   const isFree   = totalFee <= 0;
 
@@ -434,10 +440,13 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
           ? `<img src="${esc(e.photoPreview)}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;flex-shrink:0;" alt="" />`
           : `<div style="width:40px;height:40px;border-radius:8px;background:linear-gradient(135deg,#1ba89a,#0f6f8f);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;flex-shrink:0;">${esc((e.animalName||'?')[0].toUpperCase())}</div>`}
         <div style="flex:1;min-width:0;">
-          <p style="font-size:14px;font-weight:700;color:#1c1626;margin:0;">${esc(e.animalName)}</p>
-          ${cat ? `<p style="font-size:12px;color:#6b7c89;margin:0;">${esc(cat.name)}</p>` : ''}
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:2px;">
+            <p style="font-size:14px;font-weight:700;color:#1c1626;margin:0;">${esc(e.animalName)}</p>
+            <span style="font-size:10px;font-weight:700;color:#6b7c89;background:#eef0f4;padding:1px 7px;border-radius:99px;flex-shrink:0;">${label}</span>
+          </div>
+          ${e.breed ? `<p style="font-size:12px;color:#6b7c89;margin:0 0 4px;">${esc(e.breed)}</p>` : ''}
+          ${cat ? `<span style="font-size:11px;font-weight:700;color:#1ba89a;background:#e3f5f2;padding:2px 8px;border-radius:99px;">${esc(cat.name)}</span>` : ''}
         </div>
-        <span style="font-size:11px;font-weight:700;color:#1ba89a;background:#e3f5f2;padding:2px 9px;border-radius:99px;flex-shrink:0;">${label}</span>
       </div>`;
   }
 
@@ -460,19 +469,7 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
 
         ${pendingSummary}
 
-        <div style="background:#f0faf9;border:1.5px solid #b8e4e0;border-radius:12px;padding:16px 18px;margin-bottom:16px;display:flex;gap:14px;align-items:flex-start;">
-          ${photoPreview
-            ? `<img src="${esc(photoPreview)}" style="width:64px;height:64px;border-radius:10px;object-fit:cover;flex-shrink:0;" alt="" />`
-            : `<div style="width:64px;height:64px;border-radius:10px;background:linear-gradient(135deg,#1ba89a,#0f6f8f);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:rgba(255,255,255,0.8);flex-shrink:0;">${esc((animalName||'?')[0].toUpperCase())}</div>`}
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
-              <p style="font-size:17px;font-weight:800;color:#1c1626;margin:0;">${esc(animalName)}</p>
-              <span style="font-size:11px;font-weight:700;color:#1ba89a;background:#e3f5f2;padding:2px 9px;border-radius:99px;">${currentLabel}</span>
-            </div>
-            ${breed ? `<p style="font-size:13px;color:#6b7c89;margin:0 0 8px;">${esc(breed)}</p>` : '<div style="margin-bottom:8px;"></div>'}
-            ${selectedCat ? `<span style="font-size:12px;font-weight:700;color:#1ba89a;background:#e3f5f2;padding:3px 11px;border-radius:99px;">${esc(selectedCat.name)}</span>` : ''}
-          </div>
-        </div>
+        ${renderEntryCard({ animalName, breed, categoryId, photoPreview, photoUrl, exhibitorName }, currentLabel)}
 
         ${exhibitorName ? `<p style="font-size:13px;color:#6b7c89;margin:0 0 16px;">Exhibitor: <strong style="color:#1c1626;">${esc(exhibitorName)}</strong></p>` : ''}
 
@@ -505,10 +502,15 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
           + Add another entry
         </button>
 
+        <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;cursor:pointer;">
+          <input id="chk-terms" type="checkbox" style="margin-top:2px;width:16px;height:16px;accent-color:#1ba89a;flex-shrink:0;" />
+          <span style="font-size:13px;color:#4a4357;line-height:1.5;">I agree to the <a href="${base}terms" target="_blank" style="color:#1ba89a;font-weight:600;">Terms &amp; Conditions</a>, including that service fees are non-refundable.</span>
+        </label>
+
         ${errorEl()}
         <div style="display:flex;gap:10px;">
           <button id="btn-back" style="${backBtnStyle}" ${submitting ? 'disabled' : ''}>← Back</button>
-          <button id="btn-submit" style="${nextBtnStyle}${submitting ? 'opacity:0.7;cursor:not-allowed;' : ''}" ${submitting ? 'disabled' : ''}>
+          <button id="btn-submit" style="${nextBtnStyle}opacity:0.5;cursor:not-allowed;" disabled>
             ${isFree ? `Submit ${totalEntries > 1 ? totalEntries + ' entries' : 'entry'} →` : `Pay ${sym}${grandTotal.toFixed(2)} →`}
           </button>
         </div>
@@ -611,12 +613,23 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
         resetEntryState();
         step = 1; render();
       });
+
+      // Enable submit only when T&C checkbox is ticked
+      const chkTerms  = document.getElementById('chk-terms')  as HTMLInputElement;
+      const btnSubmit = document.getElementById('btn-submit')  as HTMLButtonElement;
+      chkTerms?.addEventListener('change', () => {
+        btnSubmit.disabled = !chkTerms.checked;
+        btnSubmit.style.opacity = chkTerms.checked ? '1' : '0.5';
+        btnSubmit.style.cursor  = chkTerms.checked ? 'pointer' : 'not-allowed';
+      });
     }
 
     // Step 4: submit all entries
     if (step === 4) {
       document.getElementById('btn-submit')?.addEventListener('click', async () => {
         if (submitting) return;
+        const chk = document.getElementById('chk-terms') as HTMLInputElement;
+        if (!chk?.checked) return;
         submitting = true;
         const totalEntries = pendingEntries.length + 1;
         const grandTotal   = totalFee * totalEntries;

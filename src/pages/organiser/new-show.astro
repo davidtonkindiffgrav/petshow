@@ -742,7 +742,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     }
 
     const { data: feeSettings } = await supabase
-      .from('platform_settings').select('key, value').in('key', ['service_fee_AUD', 'service_fee_NZD', 'max_upload_mb']);
+      .from('platform_settings').select('key, value').or('key.like.service_fee_%,key.eq.max_upload_mb');
     (feeSettings || []).forEach(r => {
       if (r.key === 'max_upload_mb') maxUploadMb = parseFloat(r.value) || 5;
       else serviceFees[r.key] = parseFloat(r.value) || 0;
@@ -1850,12 +1850,20 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
   function updateFeeBreakdown(code) {
     const sym    = CURRENCY_SYMBOLS[code] || code;
-    const svcFee = serviceFees[`service_fee_${code}`] ?? 1.10;
     const entry  = parseFloat(document.getElementById('s8-entry-fee')?.value) || 0;
-    const total  = entry + svcFee;
+    const pct    = serviceFees['service_fee_pct'];
+    const floor  = serviceFees[`service_fee_floor_${code}`];
     const amountEl  = document.getElementById('s8-svc-amount');
     const totalEl   = document.getElementById('s8-total-charge');
     const previewEl = document.getElementById('s8-entrant-preview');
+    if (pct == null || floor == null) {
+      if (amountEl)  amountEl.textContent  = 'Error';
+      if (totalEl)   totalEl.textContent   = 'Error';
+      if (previewEl) previewEl.textContent = 'Error';
+      return;
+    }
+    const svcFee = Math.max(floor, entry * pct / 100);
+    const total  = entry + svcFee;
     if (amountEl)  amountEl.textContent  = `${sym}${svcFee.toFixed(2)}`;
     if (totalEl)   totalEl.textContent   = `${sym}${total.toFixed(2)}`;
     if (previewEl) previewEl.textContent = `Entry = ${sym}${total.toFixed(2)} (${sym}${entry.toFixed(2)} + ${sym}${svcFee.toFixed(2)} platform fee)`;

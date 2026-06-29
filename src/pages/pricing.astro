@@ -1,0 +1,139 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const raw  = import.meta.env.BASE_URL;
+const base = raw.endsWith('/') ? raw : raw + '/';
+
+const rows = [
+  { entry: 5,  fee: 0.75,  note: 'min' },
+  { entry: 8,  fee: 0.75,  note: 'min' },
+  { entry: 10, fee: 0.80  },
+  { entry: 15, fee: 1.20  },
+  { entry: 20, fee: 1.60  },
+  { entry: 30, fee: 2.40  },
+  { entry: 50, fee: 4.00  },
+];
+
+const currencies = [
+  { code: 'AUD', sym: 'A$',   floor: '0.75' },
+  { code: 'NZD', sym: 'NZ$',  floor: '0.80' },
+  { code: 'USD', sym: '$',    floor: '0.75' },
+  { code: 'GBP', sym: '£',    floor: '0.50' },
+  { code: 'EUR', sym: '€',    floor: '0.70' },
+  { code: 'CAD', sym: 'C$',   floor: '0.90' },
+  { code: 'SGD', sym: 'S$',   floor: '0.90' },
+  { code: 'ZAR', sym: 'R',    floor: '10.00' },
+];
+---
+
+<BaseLayout title="Pricing — Fur to Feathers" description="Simple, transparent pricing for pet show organisers and exhibitors.">
+
+  <div style="max-width:780px;margin:0 auto;padding:60px 24px 100px;">
+
+    <!-- Hero -->
+    <div style="text-align:center;margin-bottom:56px;">
+      <p style="font-size:13px;font-weight:700;color:#1ba89a;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 10px;">Pricing</p>
+      <h1 style="font-size:36px;font-weight:900;color:#1c1626;margin:0 0 14px;line-height:1.15;">Free to run a show.</h1>
+      <p style="font-size:17px;color:#6b7c89;max-width:520px;margin:0 auto;line-height:1.6;">
+        There are no setup costs, subscription fees, or hidden charges for clubs. We charge exhibitors a small service fee at checkout. That's it.
+      </p>
+    </div>
+
+    <!-- Two-column pitch -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:48px;">
+      <div style="background:#f0faf9;border:1.5px solid #b8e4e0;border-radius:16px;padding:28px 24px;">
+        <p style="font-size:12px;font-weight:700;color:#1ba89a;text-transform:uppercase;letter-spacing:0.07em;margin:0 0 10px;">For Clubs & Organisers</p>
+        <p style="font-size:28px;font-weight:900;color:#1c1626;margin:0 0 10px;">$0</p>
+        <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;">
+          {['No setup fee','No monthly subscription','Keep 100% of your entry fees','Unlimited shows & entries','Full fundraising dashboard'].map(item => (
+            <li style="display:flex;align-items:center;gap:8px;font-size:14px;color:#4a4357;">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="8" fill="#1ba89a"/><path d="M4.5 8l2.5 2.5 4.5-4.5" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              {item}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div style="background:#fff;border:1.5px solid #e7eef0;border-radius:16px;padding:28px 24px;">
+        <p style="font-size:12px;font-weight:700;color:#6b7c89;text-transform:uppercase;letter-spacing:0.07em;margin:0 0 10px;">For Exhibitors</p>
+        <p style="font-size:28px;font-weight:900;color:#1c1626;margin:0 0 4px;">8% <span style="font-size:16px;font-weight:600;color:#6b7c89;">per entry</span></p>
+        <p style="font-size:13px;color:#9b94a8;margin:0 0 14px;">minimum applies (see table below)</p>
+        <ul style="margin:0 0 14px;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;">
+          {['Charged at checkout only','On top of the entry fee set by the organiser','Secure payment via Stripe'].map(item => (
+            <li style="display:flex;align-items:center;gap:8px;font-size:14px;color:#4a4357;">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="8" fill="#e7eef0"/><path d="M4.5 8l2.5 2.5 4.5-4.5" stroke="#6b7c89" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              {item}
+            </li>
+          ))}
+        </ul>
+        <div style="display:flex;align-items:flex-start;gap:7px;background:#fef9ec;border:1px solid #fde68a;border-radius:8px;padding:9px 11px;">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" style="flex-shrink:0;margin-top:1px;"><circle cx="8" cy="8" r="7.5" stroke="#d97706" stroke-width="1.2"/><path d="M8 7v4" stroke="#d97706" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="5.5" r="0.7" fill="#d97706"/></svg>
+          <span style="font-size:12px;color:#92400e;line-height:1.5;">Service fees are non-refundable. <a href={`${base}terms`} style="color:#b45309;font-weight:700;text-decoration:underline;">See Terms</a></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Example table (AUD) -->
+    <div style="margin-bottom:48px;">
+      <h2 style="font-size:20px;font-weight:800;color:#1c1626;margin:0 0 4px;">Fee examples</h2>
+      <p style="font-size:14px;color:#6b7c89;margin:0 0 20px;">Shown in AUD. The percentage applies in all currencies, with a currency-specific minimum.</p>
+      <div style="border:1.5px solid #e7eef0;border-radius:14px;overflow:hidden;">
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          <thead>
+            <tr style="background:#f5f8f9;">
+              <th style="text-align:left;padding:12px 16px;font-weight:700;color:#4a4357;border-bottom:1px solid #e7eef0;">Entry fee</th>
+              <th style="text-align:left;padding:12px 16px;font-weight:700;color:#4a4357;border-bottom:1px solid #e7eef0;">Service fee</th>
+              <th style="text-align:left;padding:12px 16px;font-weight:700;color:#4a4357;border-bottom:1px solid #e7eef0;">Total paid by exhibitor</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr style={i % 2 === 0 ? 'background:#fff;' : 'background:#fafbfc;'}>
+                <td style="padding:11px 16px;color:#1c1626;font-weight:600;border-bottom:1px solid #f0f2f4;">A${r.entry.toFixed(2)}</td>
+                <td style="padding:11px 16px;border-bottom:1px solid #f0f2f4;">
+                  <span style="color:#1ba89a;font-weight:700;">A${r.fee.toFixed(2)}</span>
+                  {r.note && <span style="font-size:11px;color:#9b94a8;margin-left:5px;">(minimum)</span>}
+                </td>
+                <td style="padding:11px 16px;color:#1c1626;font-weight:700;border-bottom:1px solid #f0f2f4;">A${(r.entry + r.fee).toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Currency floors -->
+    <div style="margin-bottom:56px;">
+      <h2 style="font-size:20px;font-weight:800;color:#1c1626;margin:0 0 4px;">Minimum service fee by currency</h2>
+      <p style="font-size:14px;color:#6b7c89;margin:0 0 20px;">
+        Because card processing has a fixed cost per transaction, a minimum applies so we're never out of pocket on low-value entries.
+      </p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;">
+        {currencies.map(c => (
+          <div style="background:#fff;border:1.5px solid #e7eef0;border-radius:12px;padding:14px 16px;">
+            <p style="font-size:11px;font-weight:700;color:#9b94a8;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 4px;">{c.code}</p>
+            <p style="font-size:18px;font-weight:800;color:#1c1626;margin:0;">{c.sym}{c.floor}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div style="text-align:center;">
+      <a href={`${base}organiser/new-show`}
+        style="display:inline-block;background:#1ba89a;color:white;font-weight:800;font-size:15px;padding:14px 32px;border-radius:12px;text-decoration:none;">
+        Run a Show for Free →
+      </a>
+      <p style="font-size:13px;color:#9b94a8;margin:14px 0 0;">No credit card required to get started.</p>
+    </div>
+
+  </div>
+
+  <style>
+    @media (max-width: 600px) {
+      div[style*="grid-template-columns:1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+      }
+    }
+  </style>
+
+</BaseLayout>

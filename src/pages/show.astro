@@ -124,8 +124,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     const feeLookup = {};
     (feeRes.data || []).forEach(r => { feeLookup[r.key] = parseFloat(r.value) || 0; });
-    const svcFee = feeLookup[`service_fee_${show.currency}`] ?? 1.10;
-    displayFee = (show.entry_fee || 0) + svcFee;
+    const pct   = feeLookup['service_fee_pct'];
+    const floor = feeLookup[`service_fee_floor_${show.currency}`];
+    const svcFee = (pct != null && floor != null)
+      ? Math.max(floor, (show.entry_fee || 0) * pct / 100)
+      : null;
+    displayFee = svcFee != null ? (show.entry_fee || 0) + svcFee : null;
 
     document.title = show.title || 'Pet Show';
     document.getElementById('state-loading').style.display = 'none';
@@ -363,7 +367,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <ul style="flex:1;margin:0;padding:0">${bulletList}</ul>
           <div style="background:rgba(255,255,255,0.18);border-radius:12px;padding:14px 12px;text-align:center;flex-shrink:0;min-width:88px">
             <p style="color:rgba(255,255,255,0.7);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 2px">Entry fee</p>
-            <p style="color:white;font-size:38px;font-weight:900;margin:0;line-height:1">${sym}${fee}</p>
+            <p style="color:white;font-size:38px;font-weight:900;margin:0;line-height:1">${fee != null ? sym + fee.toFixed(2) : '—'}</p>
             <p style="color:rgba(255,255,255,0.65);font-size:10px;margin:0 0 10px">per entry</p>
             <div style="border-top:1px solid rgba(255,255,255,0.22);padding-top:10px">
               ${closeDate
@@ -451,7 +455,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;${border}">
         <span style="color:#1E8E7E;font-size:14px;flex-shrink:0">🐾</span>
         <span style="flex:1;font-size:13px;font-weight:600;color:#143A37;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(cat.name)}</span>
-        ${!resultsMode ? `<span style="font-size:12px;color:#6B7C79;flex-shrink:0">${sym}${fee}</span>` : ''}
+        ${!resultsMode ? `<span style="font-size:12px;color:#6B7C79;flex-shrink:0">${fee != null ? sym + fee.toFixed(2) : '—'}</span>` : ''}
         <span style="font-size:12px;color:#6B7C79;flex-shrink:0;min-width:20px;text-align:right">${count}</span>
       </div>`;
     }).join('');
@@ -668,7 +672,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const btnEl   = document.getElementById('sticky-btn');
 
     textEl.textContent = 'Enter Your Pet Today!';
-    feeEl.textContent  = `${sym}${fee} per class`;
+    feeEl.textContent  = fee != null ? `${sym}${fee.toFixed(2)} per class` : '';
     btnEl.textContent  = 'Enter Now →';
 
     btnEl.addEventListener('click', handleEnterNow);
@@ -704,7 +708,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <span style="color:#1E8E7E;font-size:14px;flex-shrink:0">🐾</span>
         <span style="flex:1;font-size:14px;font-weight:600;color:#143A37">${esc(cat.name)}</span>
         <div style="display:flex;gap:24px;align-items:center;flex-shrink:0">
-          ${!resultsMode ? `<span style="font-size:13px;color:#6B7C79;min-width:40px;text-align:right">${sym}${displayFee}</span>` : ''}
+          ${!resultsMode ? `<span style="font-size:13px;color:#6B7C79;min-width:40px;text-align:right">${displayFee != null ? sym + displayFee.toFixed(2) : '—'}</span>` : ''}
           <span style="font-size:13px;color:#6B7C79;min-width:40px;text-align:right">${count}</span>
         </div>
       </div>`;

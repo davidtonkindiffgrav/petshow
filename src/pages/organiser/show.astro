@@ -722,7 +722,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       supabase.from('show_judges').select('*').eq('show_id', showId),
       supabase.from('show_sponsors').select('*').eq('show_id', showId),
       supabase.from('show_prizes').select('description').eq('show_id', showId),
-      supabase.from('platform_settings').select('key, value').in('key', ['service_fee_AUD', 'service_fee_NZD', 'max_upload_mb']),
+      supabase.from('platform_settings').select('key, value').or('key.like.service_fee_%,key.eq.max_upload_mb'),
       supabase.from('saved_judges').select('*').eq('organiser_id', uid).order('first_name'),
     ]);
 
@@ -1018,11 +1018,15 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       ], 'Set Up');
     }
 
-    const sym     = CURRENCY_SYMBOLS[show.currency] || 'A$';
-    const svcFee  = serviceFees[`service_fee_${show.currency || 'AUD'}`] ?? 1.10;
-    const feeTotal = (show.entry_fee || 0) + svcFee;
+    const sym    = CURRENCY_SYMBOLS[show.currency] || 'A$';
+    const pct    = serviceFees['service_fee_pct'];
+    const floor  = serviceFees[`service_fee_floor_${show.currency || 'AUD'}`];
+    const svcFee = (pct != null && floor != null)
+      ? Math.max(floor, (show.entry_fee || 0) * pct / 100)
+      : null;
+    const feeTotal = svcFee != null ? (show.entry_fee || 0) + svcFee : null;
     const feeText = show.entry_fee > 0
-      ? `${sym}${feeTotal.toFixed(2)} (${sym}${Number(show.entry_fee).toFixed(2)} + ${sym}${svcFee.toFixed(2)} platform fee)`
+      ? (feeTotal != null ? `${sym}${feeTotal.toFixed(2)} (${sym}${Number(show.entry_fee).toFixed(2)} + ${sym}${svcFee.toFixed(2)} platform fee)` : 'Error')
       : 'Free';
     if (show.is_fundraising === true) {
       setHeader('fundraising', '#22c55e', 'Configured', 'Fundraising & Fees', [
@@ -1935,12 +1939,20 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
   function updateFeeBreakdown(code) {
     const sym    = CURRENCY_SYMBOLS[code] || code;
-    const svcFee = serviceFees[`service_fee_${code}`] ?? 1.10;
     const entry  = parseFloat(document.getElementById('mgmt-entry-fee')?.value) || 0;
-    const total  = entry + svcFee;
+    const pct    = serviceFees['service_fee_pct'];
+    const floor  = serviceFees[`service_fee_floor_${code}`];
     const amountEl  = document.getElementById('mgmt-svc-amount');
     const totalEl   = document.getElementById('mgmt-total-charge');
     const previewEl = document.getElementById('mgmt-entrant-preview');
+    if (pct == null || floor == null) {
+      if (amountEl)  amountEl.textContent  = 'Error';
+      if (totalEl)   totalEl.textContent   = 'Error';
+      if (previewEl) previewEl.textContent = 'Error';
+      return;
+    }
+    const svcFee = Math.max(floor, entry * pct / 100);
+    const total  = entry + svcFee;
     if (amountEl)  amountEl.textContent  = `${sym}${svcFee.toFixed(2)}`;
     if (totalEl)   totalEl.textContent   = `${sym}${total.toFixed(2)}`;
     if (previewEl) previewEl.textContent = `Entry = ${sym}${total.toFixed(2)} (${sym}${entry.toFixed(2)} + ${sym}${svcFee.toFixed(2)} platform fee)`;
