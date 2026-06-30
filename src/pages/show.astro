@@ -143,13 +143,15 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   }
 
   function getShowState(s) {
-    const now = new Date();
+    const now     = new Date();
     if (s.results_published_at) return 'results';
-    const open  = s.entry_open_date  ? new Date(s.entry_open_date)  : null;
-    const close = s.entry_close_date ? new Date(s.entry_close_date) : null;
+    const open    = s.entry_open_date  ? new Date(s.entry_open_date)  : null;
+    const close   = s.entry_close_date ? new Date(s.entry_close_date) : null;
+    const showDay = s.show_date        ? new Date(s.show_date)        : null;
     if (!open || open > now) return 'upcoming';
     if (!close || close >= now) return 'entries_open';
-    return s.is_judged === false ? 'voting' : 'judging';
+    if (!showDay || showDay > now) return s.is_judged === false ? 'voting' : 'judging';
+    return 'show_day';
   }
 
   // ── Hero ──────────────────────────────────────────────────────────────────────
@@ -162,6 +164,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       entries_open: { label: 'ENTRIES OPEN',           bg: '#1E9E5A' },
       judging:      { label: 'JUDGING UNDERWAY',       bg: '#D97706' },
       voting:       { label: 'VOTING OPEN',            bg: '#5B43C4' },
+      show_day:     { label: '🎉 SHOW DAY!',            bg: '#7c3aed' },
       results:      { label: '🏆 RESULTS PUBLISHED',   bg: '#5B43C4' },
     }[showState];
 

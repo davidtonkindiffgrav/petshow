@@ -186,10 +186,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
   let base = '';
   let uid  = '';
-  let allShows     = [];
-  let savedJudges  = [];
-  let judgesByShow = {};
-  let catsByShow   = {};
+  let allShows      = [];
+  let savedJudges   = [];
+  let judgesByShow  = {};
+  let catsByShow    = {};
+  let rankingsByShow  = {};  // [show_id][category_id] = Set of judge emails that submitted
+  let entryCountsByShow = {}; // [show_id][category_id] = number of confirmed entries
   let currentEditJudge = null;
   let drawerPhotoUrl   = null;
 
@@ -312,15 +314,52 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
             <a class="text-brand font-semibold hover:text-brand-dark" href="${base}organiser/show?id=${esc(show.id)}">Add judges in show settings →</a>
            </p>`;
 
+      const judgeEmails  = judges.map(j => (j.email || '').toLowerCase());
+      const judgeTotal   = judgeEmails.length;
+      const catRankings  = rankingsByShow[show.id]    || {};
+      const entryCounts  = entryCountsByShow[show.id] || {};
+
       const catRows = cats.length > 0
-        ? cats.map(c => `
-            <div class="flex items-center justify-between py-2 border-b border-[#f5f3fa] last:border-0">
-              <p class="text-[13px] text-[#1c1626]">${esc(c.name)}</p>
-              <span class="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#9b94a8] bg-[#f5f3fa] px-2.5 py-1 rounded-full">
-                <span class="w-1.5 h-1.5 rounded-full bg-[#c4bed0]"></span>Pending
-              </span>
-            </div>`).join('')
+        ? cats.map(c => {
+            const entryCount = entryCounts[c.id] || 0;
+            const submitted  = judgeTotal === 0 ? 0
+              : judgeEmails.filter(e => catRankings[c.id]?.has(e)).length;
+            const badge = entryCount === 0
+              ? `<span class="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#9b94a8] bg-[#f5f3fa] px-2.5 py-1 rounded-full">
+                   <span class="w-1.5 h-1.5 rounded-full bg-[#c4bed0]"></span>No entries
+                 </span>`
+              : submitted === 0
+              ? `<span class="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#9b94a8] bg-[#f5f3fa] px-2.5 py-1 rounded-full">
+                   <span class="w-1.5 h-1.5 rounded-full bg-[#c4bed0]"></span>Pending
+                 </span>`
+              : submitted < judgeTotal
+              ? `<span class="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full" style="background:#fffbeb;color:#92400e">
+                   <span class="w-1.5 h-1.5 rounded-full" style="background:#d97706"></span>${submitted}/${judgeTotal} judges done
+                 </span>`
+              : `<span class="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full" style="background:#dcf6e3;color:#166534">
+                   <span class="w-1.5 h-1.5 rounded-full" style="background:#16a34a"></span>Complete ✓
+                 </span>`;
+            return `
+              <div class="flex items-center justify-between py-2 border-b border-[#f5f3fa] last:border-0">
+                <p class="text-[13px] ${entryCount === 0 ? 'text-[#9b94a8]' : 'text-[#1c1626]'}">${esc(c.name)}</p>
+                ${badge}
+              </div>`;
+          }).join('')
         : `<p class="text-[13px] text-[#9b94a8]">No classes configured for this show.</p>`;
+
+      const nowMs          = Date.now();
+      const showDayArrived = show.show_date && new Date(show.show_date).getTime() <= nowMs;
+      const allJudgingDone = cats.every(c => {
+        if ((entryCounts[c.id] || 0) === 0) return true;
+        return judgeTotal > 0 && judgeEmails.filter(e => catRankings[c.id]?.has(e)).length >= judgeTotal;
+      });
+      const alreadyPublished = !!show.results_published_at;
+      const canPublish       = showDayArrived && allJudgingDone && judgeTotal > 0 && !alreadyPublished;
+      const disabledReason   = alreadyPublished ? ''
+        : !showDayArrived ? 'Available on show day'
+        : judgeTotal === 0 ? 'No judges assigned'
+        : !allJudgingDone ? 'Judging not yet complete for all classes'
+        : '';
 
       bodyHTML = `
         <div class="mt-4 pt-4 border-t border-[#efebf5]">
@@ -343,6 +382,21 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           <div id="cats-${show.id}" style="display:none" class="mt-2">
             ${catRows}
           </div>
+        </div>
+        <div class="mt-4 pt-4 border-t border-[#efebf5] flex items-center justify-between gap-4">
+          <p class="text-[12px] text-[#9b94a8] min-w-0">
+            ${alreadyPublished
+              ? `<span style="color:#16a34a;font-weight:600">Published ${fmtDate(show.results_published_at)}</span>`
+              : disabledReason}
+          </p>
+          <button class="publish-results-btn shrink-0 text-[13px] font-bold px-4 py-2 rounded-btn transition-colors
+            ${alreadyPublished ? 'bg-[#dcf6e3] text-[#166534] cursor-default'
+              : canPublish     ? 'bg-brand text-white shadow-btn-primary hover:bg-brand-dark'
+              :                  'bg-[#f5f3fa] text-[#c4bed0] cursor-not-allowed'}"
+            data-show-id="${esc(show.id)}"
+            ${!canPublish || alreadyPublished ? 'disabled' : ''}>
+            ${alreadyPublished ? '✓ Results Published' : 'Publish Results'}
+          </button>
         </div>`;
 
     } else if (isPublic) {
@@ -413,15 +467,39 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   }
 
   function attachShowStatusListeners() {
-    document.getElementById('shows-container')?.addEventListener('click', e => {
-      const btn = e.target.closest('.cat-toggle');
-      if (!btn) return;
-      const panel   = document.getElementById(btn.dataset.target);
-      const chevron = btn.querySelector('.cat-chevron');
-      if (!panel) return;
-      const open = panel.style.display !== 'none';
-      panel.style.display = open ? 'none' : 'block';
-      if (chevron) chevron.style.transform = open ? '' : 'rotate(180deg)';
+    document.getElementById('shows-container')?.addEventListener('click', async e => {
+      const toggleBtn = e.target.closest('.cat-toggle');
+      if (toggleBtn) {
+        const panel   = document.getElementById(toggleBtn.dataset.target);
+        const chevron = toggleBtn.querySelector('.cat-chevron');
+        if (!panel) return;
+        const open = panel.style.display !== 'none';
+        panel.style.display = open ? 'none' : 'block';
+        if (chevron) chevron.style.transform = open ? '' : 'rotate(180deg)';
+        return;
+      }
+
+      const publishBtn = e.target.closest('.publish-results-btn');
+      if (publishBtn && !publishBtn.disabled) {
+        const showId = publishBtn.dataset.showId;
+        publishBtn.disabled = true;
+        publishBtn.textContent = 'Publishing…';
+        const ts = new Date().toISOString();
+        const { error } = await supabase.from('shows')
+          .update({ results_published_at: ts })
+          .eq('id', showId);
+        if (error) {
+          publishBtn.disabled = false;
+          publishBtn.textContent = 'Publish Results';
+          showToast('Failed to publish — please try again');
+        } else {
+          const show = allShows.find(s => s.id === showId);
+          if (show) show.results_published_at = ts;
+          renderShowStatus();
+          attachShowStatusListeners();
+          showToast('Results published!');
+        }
+      }
     });
   }
 
@@ -740,9 +818,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     if (allShows.length > 0) {
       const showIds = allShows.map(s => s.id);
-      const [judgesRes, catsRes] = await Promise.all([
+      const [judgesRes, catsRes, rankingsRes, entriesRes] = await Promise.all([
         supabase.from('show_judges').select('*').in('show_id', showIds),
         supabase.from('show_categories').select('*').in('show_id', showIds),
+        supabase.from('judge_rankings').select('show_id,category_id,judge_email').in('show_id', showIds),
+        supabase.from('show_entries').select('show_id,category_id').eq('status','confirmed').in('show_id', showIds),
       ]);
       for (const j of (judgesRes.data || [])) {
         if (!judgesByShow[j.show_id]) judgesByShow[j.show_id] = [];
@@ -751,6 +831,15 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       for (const c of (catsRes.data || [])) {
         if (!catsByShow[c.show_id]) catsByShow[c.show_id] = [];
         catsByShow[c.show_id].push(c);
+      }
+      for (const r of (rankingsRes.data || [])) {
+        if (!rankingsByShow[r.show_id]) rankingsByShow[r.show_id] = {};
+        if (!rankingsByShow[r.show_id][r.category_id]) rankingsByShow[r.show_id][r.category_id] = new Set();
+        rankingsByShow[r.show_id][r.category_id].add((r.judge_email || '').toLowerCase());
+      }
+      for (const e of (entriesRes.data || [])) {
+        if (!entryCountsByShow[e.show_id]) entryCountsByShow[e.show_id] = {};
+        entryCountsByShow[e.show_id][e.category_id] = (entryCountsByShow[e.show_id][e.category_id] || 0) + 1;
       }
     }
 

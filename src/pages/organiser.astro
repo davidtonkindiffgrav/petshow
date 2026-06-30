@@ -189,10 +189,12 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     const openTime  = show.entry_open_date  ? new Date(show.entry_open_date).getTime()  : null;
     const closeTime = show.entry_close_date ? new Date(show.entry_close_date).getTime() : null;
     const showTime  = show.show_date        ? new Date(show.show_date).getTime()        : null;
-    if (openTime && openTime > now)     return { label: 'Scheduled',       color: '#2563eb', bg: '#eff6ff' };
+    if (openTime && openTime > now)     return { label: 'Scheduled',        color: '#2563eb', bg: '#eff6ff' };
     if (!closeTime || closeTime >= now) return { label: 'Open for Entries', color: '#16a34a', bg: '#f0fdf4' };
-    if (showTime && showTime >= now)    return { label: 'Entries Closed',  color: '#d97706', bg: '#fffbeb' };
-    return                                     { label: 'Ended',           color: '#6b7280', bg: '#f9fafb' };
+    if (showTime && showTime > now)     return { label: 'Entries Closed',   color: '#d97706', bg: '#fffbeb' };
+    if (show.results_published_at)      return { label: 'Results Live',     color: '#16a34a', bg: '#f0fdf4' };
+    if (showTime)                       return { label: 'Show Day',         color: '#7c3aed', bg: '#f5f3ff' };
+    return                                     { label: 'Ended',            color: '#6b7280', bg: '#f9fafb' };
   }
 
   function fmtDate(d) {
