@@ -304,7 +304,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       <div class="grid grid-cols-3 gap-3 mb-6" id="judging-choice">
         <button type="button" data-value="yes" class="yna flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#b8e4e0] bg-white p-4 transition-all cursor-pointer">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          <span class="text-[13px] font-bold text-[#1c1626]">Expert Judges</span>
+          <span class="text-[13px] font-bold text-[#1c1626]">Expert Judge</span>
         </button>
         <button type="button" data-value="no" class="yna flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#b8e4e0] bg-white p-4 transition-all cursor-pointer">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -317,14 +317,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       </div>
 
       <div id="s6-judge-form" style="display:none">
-        <div class="flex items-center gap-4 mb-5">
-          <p class="text-[13px] font-semibold text-[#4a4357]">Number of Judges</p>
-          <div class="flex items-center gap-2">
-            <button type="button" id="judge-minus" class="w-8 h-8 rounded-full border border-[#b8e4e0] flex items-center justify-center text-brand hover:bg-brand-tint transition-colors">−</button>
-            <span id="judge-count-display" class="text-[16px] font-extrabold text-[#1c1626] w-6 text-center">1</span>
-            <button type="button" id="judge-plus" class="w-8 h-8 rounded-full border border-[#b8e4e0] flex items-center justify-center text-brand hover:bg-brand-tint transition-colors">+</button>
-          </div>
-        </div>
+        <div id="judge-current" class="flex items-center gap-3 p-3.5 rounded-[12px] border border-[#efebf5] mb-5"></div>
 
         <p class="text-[13px] font-semibold text-[#4a4357] mb-2.5">Judge Setup</p>
         <div class="grid grid-cols-2 gap-3 mb-5" id="judge-setup-cards">
@@ -920,11 +913,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         const setup = getSelectedCard('judge-setup-cards');
         if (!setup) return showError('Please choose a judge setup option.'), false;
         if (setup === 'now') {
-          for (let i = 0; i < show.judge_count; i++) {
-            const fn = document.getElementById(`judge-fn-${i}`)?.value.trim();
-            const ln = document.getElementById(`judge-ln-${i}`)?.value.trim();
-            const em = document.getElementById(`judge-em-${i}`)?.value.trim();
-            if (!fn || !ln || !em) return showError(`Please fill in all required fields for Judge ${i + 1}.`), false;
+          {
+            const fn = document.getElementById('judge-fn-0')?.value.trim();
+            const ln = document.getElementById('judge-ln-0')?.value.trim();
+            const em = document.getElementById('judge-em-0')?.value.trim();
+            if (!fn || !ln || !em) return showError('Please fill in all required fields for the judge.'), false;
           }
         }
       }
@@ -989,13 +982,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       show.is_judged    = choice === 'yes' ? true : choice === 'no' ? false : null;
       show.judge_setup  = getSelectedCard('judge-setup-cards') || 'later';
       if (choice === 'yes' && show.judge_setup === 'now') {
-        show.judges = Array.from({ length: show.judge_count }, (_, i) => ({
-          first_name: document.getElementById(`judge-fn-${i}`)?.value.trim() || '',
-          last_name:  document.getElementById(`judge-ln-${i}`)?.value.trim() || '',
-          email:      document.getElementById(`judge-em-${i}`)?.value.trim() || '',
-          phone:      document.getElementById(`judge-ph-${i}`)?.value.trim() || '',
-          photo_url:  show.judges[i]?.photo_url || '',
-        }));
+        show.judges = [{
+          first_name: document.getElementById('judge-fn-0')?.value.trim() || '',
+          last_name:  document.getElementById('judge-ln-0')?.value.trim() || '',
+          email:      document.getElementById('judge-em-0')?.value.trim() || '',
+          phone:      document.getElementById('judge-ph-0')?.value.trim() || '',
+          photo_url:  show.judges[0]?.photo_url || '',
+        }];
       }
     }
     if (n === 7) {
@@ -1026,7 +1019,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       show_type: show.show_type, animal_type: show.animal_type,
       breed_scope: show.breed_scope, breed_filter: show.breed_filter || null, group_filter: show.group_filter || null,
       has_sponsor: show.has_sponsor, is_judged: show.is_judged,
-      judge_count: show.judge_count, judge_setup: show.judge_setup,
+      judge_count: 1, judge_setup: show.judge_setup,
       has_digital_certs: show.has_digital_certs, has_physical_prizes: show.has_physical_prizes,
       prize_source: show.prize_source, is_fundraising: show.is_fundraising,
       donation_type: show.donation_type, fundraising_goal: show.fundraising_goal || null,
@@ -1077,16 +1070,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         await supabase.from('show_judges').insert(show.judges.map(j => ({ show_id: show.id, ...j })));
       }
       // Save ticked judges to saved_judges (skip duplicates by email)
-      if (show.is_judged && show.judge_setup === 'now') {
-        for (let i = 0; i < show.judge_count; i++) {
-          if (!document.getElementById(`judge-save-${i}`)?.checked) continue;
-          const fn = document.getElementById(`judge-fn-${i}`)?.value.trim();
-          const ln = document.getElementById(`judge-ln-${i}`)?.value.trim();
-          const em = document.getElementById(`judge-em-${i}`)?.value.trim() || null;
-          const ph = document.getElementById(`judge-ph-${i}`)?.value.trim() || null;
-          if (!fn || !ln) continue;
-          if (em && savedJudges.some(sj => sj.email?.toLowerCase() === em.toLowerCase())) continue;
-          const pu = show.judges[i]?.photo_url || null;
+      if (show.is_judged && show.judge_setup === 'now' && document.getElementById('judge-save-0')?.checked) {
+        const fn = document.getElementById('judge-fn-0')?.value.trim();
+        const ln = document.getElementById('judge-ln-0')?.value.trim();
+        const em = document.getElementById('judge-em-0')?.value.trim() || null;
+        const ph = document.getElementById('judge-ph-0')?.value.trim() || null;
+        if (fn && ln && (!em || !savedJudges.some(sj => sj.email?.toLowerCase() === em.toLowerCase()))) {
+          const pu = show.judges[0]?.photo_url || null;
           const { data: newSJ } = await supabase.from('saved_judges')
             .insert({ organiser_id: session.user.id, first_name: fn, last_name: ln, email: em, phone: ph, photo_url: pu })
             .select().single();
@@ -1219,11 +1209,37 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   }
 
   // ─── Judge panels ────────────────────────────────────────────────────────────
+  function renderJudgeDisplay(judge) {
+    const el = document.getElementById('judge-current');
+    if (!el) return;
+    if (judge?.first_name) {
+      const photo = judge.photo_url
+        ? `<img src="${esc(judge.photo_url)}" class="w-10 h-10 rounded-full object-cover shrink-0" />`
+        : `<div class="w-10 h-10 rounded-full bg-brand-tint flex items-center justify-center text-brand font-extrabold text-[14px] shrink-0">${esc(judge.first_name[0].toUpperCase())}</div>`;
+      el.className = 'flex items-center gap-3 p-3.5 rounded-[12px] border border-[#b8e4e0] bg-[#f0fafa] mb-5';
+      el.innerHTML = `${photo}<div>
+        <p class="text-[13.5px] font-bold text-[#1c1626]">${esc(judge.first_name)} ${esc(judge.last_name || '')}</p>
+        ${judge.email ? `<p class="text-[12px] text-[#9b94a8]">${esc(judge.email)}</p>` : ''}
+      </div>`;
+    } else {
+      el.className = 'flex items-center gap-3 p-3.5 rounded-[12px] border border-[#efebf5] mb-5';
+      el.innerHTML = `
+        <div class="w-10 h-10 rounded-full border-2 border-dashed border-[#c4bed0] flex items-center justify-center shrink-0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c4bed0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+        </div>
+        <div>
+          <p class="text-[13px] font-semibold text-[#9b94a8]">No judge assigned yet</p>
+          <p class="text-[12px] text-[#c4bed0]">Fill in the details below ↓</p>
+        </div>`;
+    }
+  }
+
   function updateJudgePanels() {
     const container = document.getElementById('s6-judge-panels');
     container.innerHTML = '';
-    for (let i = 0; i < show.judge_count; i++) {
-      const j = show.judges[i] || { first_name: '', last_name: '', email: '', phone: '', photo_url: '' };
+    renderJudgeDisplay(show.judges[0]);
+    const i = 0;
+    const j = show.judges[i] || { first_name: '', last_name: '', email: '', phone: '', photo_url: '' };
       const panel = document.createElement('div');
       panel.className = 'border border-[#efebf5] rounded-[14px] p-4 space-y-3';
       panel.dataset.judgeIdx = i;
@@ -1241,7 +1257,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
       panel.innerHTML = `
         <div class="flex items-center justify-between">
-          <p class="text-[13px] font-bold text-brand">Judge ${i + 1}</p>
+          <p class="text-[13px] font-bold text-brand">Judge</p>
           ${pickerHtml}
         </div>
         <div class="grid grid-cols-2 gap-3">
@@ -1341,8 +1357,17 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         processJudgePhoto(e.dataTransfer.files[0]);
       });
 
+      // Live-update the judge display as the organiser types
+      const liveUpdate = () => renderJudgeDisplay({
+        first_name: document.getElementById('judge-fn-0')?.value || '',
+        last_name:  document.getElementById('judge-ln-0')?.value || '',
+        email:      document.getElementById('judge-em-0')?.value || '',
+        photo_url:  show.judges[0]?.photo_url || '',
+      });
+      panel.querySelector(`#judge-fn-${i}`)?.addEventListener('input', liveUpdate);
+      panel.querySelector(`#judge-ln-${i}`)?.addEventListener('input', liveUpdate);
+
       container.appendChild(panel);
-    }
   }
 
   function showWizardDuplicatePrompt(panel, match) {
@@ -1424,7 +1449,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const ORG_TYPE_LABELS  = { non_profit: 'Non-Profit Fundraiser', registered_charity: 'Registered Charity', commercial: 'Commercial Organisation' };
     const SCOPE_LABELS     = { all: 'All Breeds', breed_specific: `Breed Specific: ${show.breed_filter || '—'}`, group_specific: `Group Specific: ${show.group_filter || '—'}` };
     const classes = show.classes.filter(c => c.enabled).map(c => c.name).join(', ') || '—';
-    const judges  = show.is_judged === true ? (show.judge_setup === 'now' ? `${show.judge_count} judge(s) — set up` : `${show.judge_count} judge(s) — invite later`) : show.is_judged === false ? 'Public voting' : null;
+    const judgeName = show.judges[0]?.first_name ? `${show.judges[0].first_name}${show.judges[0].last_name ? ' ' + show.judges[0].last_name : ''}` : null;
+    const judges  = show.is_judged === true ? (show.judge_setup === 'now' ? (judgeName || 'Judge details entered') : 'Judge to be invited after publishing') : show.is_judged === false ? 'Public voting' : null;
 
     document.getElementById('s10-review').innerHTML = `
       <div class="border border-[#efebf5] rounded-[14px] overflow-hidden">
@@ -1515,7 +1541,6 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         ? sponsorData.map(s => ({ name: s.name || '', website: s.website || '', logo_url: s.logo_url || '' }))
         : [{ name: '', website: '', logo_url: '' }],
       is_judged: data.is_judged,
-      judge_count: data.judge_count || 1,
       judge_setup: data.judge_setup || 'later',
       judges: judgesData?.length > 0
         ? judgesData.map(j => ({ first_name: j.first_name || '', last_name: j.last_name || '', email: j.email || '', phone: j.phone || '', photo_url: j.photo_url || '' }))
@@ -1583,7 +1608,6 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       setYNA('judging-choice', show.is_judged === true ? 'yes' : show.is_judged === false ? 'no' : 'later');
       if (show.is_judged) {
         document.getElementById('s6-judge-form').style.display = 'block';
-        document.getElementById('judge-count-display').textContent = String(show.judge_count);
         if (show.judge_setup) {
           selectCard(document.getElementById('judge-setup-cards'), show.judge_setup);
           if (show.judge_setup === 'now') {
@@ -1776,12 +1800,6 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     // Step 6: judging YNA + judge count + setup cards
     setupYNA('judging-choice', val => {
       document.getElementById('s6-judge-form').style.display = val === 'yes' ? 'block' : 'none';
-    });
-    document.getElementById('judge-minus').addEventListener('click', () => {
-      if (show.judge_count > 1) { show.judge_count--; document.getElementById('judge-count-display').textContent = String(show.judge_count); updateJudgePanels(); }
-    });
-    document.getElementById('judge-plus').addEventListener('click', () => {
-      if (show.judge_count < 7) { show.judge_count++; document.getElementById('judge-count-display').textContent = String(show.judge_count); updateJudgePanels(); }
     });
     document.getElementById('judge-setup-cards').querySelectorAll('[data-value]').forEach(btn => {
       btn.addEventListener('click', () => {

@@ -71,7 +71,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
       <!-- Right column -->
       <div style="display:flex;flex-direction:column;gap:16px;">
-        <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:16px;">
+        <div class="dash-entries-row" style="display:grid;gap:16px;">
           <div id="dash-entries"  class="bg-white rounded-card border border-[#b8e4e0] p-5"></div>
           <div id="dash-timeline" class="bg-white rounded-card border border-[#b8e4e0] p-5" style="display:flex;flex-direction:column;"></div>
         </div>
@@ -85,9 +85,77 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   #dash-main-grid {
     grid-template-columns: 1fr;
   }
+  #dash-main-grid > div {
+    min-width: 0;
+  }
+  /* Mobile header: banner on top, logo+name below */
+  :global(.header-split) {
+    display: flex;
+    flex-direction: column-reverse;
+  }
+  :global(.header-left) {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 20px;
+    border-top: 1px solid #efebf5;
+  }
+  :global(.header-banner) {
+    height: 110px;
+    flex-shrink: 0;
+  }
+
   @media (min-width: 768px) {
     #dash-main-grid {
       grid-template-columns: 2fr 3fr;
+    }
+    .dash-entries-row {
+      grid-template-columns: 1.2fr 1fr;
+    }
+    :global(.header-split) {
+      flex-direction: row;
+      height: 130px;
+    }
+    :global(.header-left) {
+      width: 40%;
+      border-top: none;
+      border-right: 1px solid #efebf5;
+    }
+    :global(.header-banner) {
+      height: auto;
+      flex: 1;
+    }
+  }
+
+  /* Desktop (default): side-by-side, matching original inline layout */
+  :global(.donut-layout) {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  :global(.donut-chart) {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  :global(.donut-legend) {
+    flex: 1;
+    min-width: 0;
+    max-width: 150px;
+  }
+  /* Mobile: stack legend below donut */
+  @media (max-width: 767px) {
+    :global(.donut-layout) {
+      flex-direction: column;
+    }
+    :global(.donut-chart) {
+      width: 140px;
+      flex: none;
+    }
+    :global(.donut-legend) {
+      width: 100%;
+      max-width: none;
     }
   }
 </style>
@@ -105,6 +173,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   let categories    = [];
   let recentEntries = [];
   let trendData     = [];
+  let judge         = null;
   let chartMode     = 'bar';    // 'bar' | 'line'
   let chartMetric   = 'entries'; // 'entries' | 'revenue'
   let base          = '';
@@ -166,11 +235,10 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
     el.innerHTML = `
       <div class="bg-white rounded-card border border-[#b8e4e0] overflow-hidden">
-        <!-- 2-column split: left=logo+name (2/5), right=banner (3/5) -->
-        <div style="display:flex;height:130px;">
+        <div class="header-split">
 
           <!-- Left: logo + show name -->
-          <div style="width:40%;display:flex;align-items:center;gap:14px;padding:18px 20px;border-right:1px solid #efebf5;min-width:0;">
+          <div class="header-left" style="min-width:0;">
             ${logoHtml}
             <div style="min-width:0;">
               <p style="font-size:16px;font-weight:800;color:#1c1626;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${esc(show.title || 'Untitled Show')}</p>
@@ -179,7 +247,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
           </div>
 
           <!-- Right: banner + status badge -->
-          <div style="flex:1;${bannerStyle};position:relative;">
+          <div class="header-banner" style="${bannerStyle};position:relative;">
             <span style="position:absolute;bottom:12px;right:14px;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;background:${status.bg};color:${status.color};">${esc(status.label)}</span>
           </div>
 
@@ -211,12 +279,28 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       </div>`;
     }
 
+    let judgeCard;
+    if (judge) {
+      const name = `${judge.first_name}${judge.last_name ? ' ' + judge.last_name : ''}`;
+      const avatar = judge.photo_url
+        ? `<img src="${esc(judge.photo_url)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;" />`
+        : `<div style="width:40px;height:40px;border-radius:50%;background:#e8f5f4;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#1ba89a;flex-shrink:0;">${esc(judge.first_name[0].toUpperCase())}</div>`;
+      judgeCard = `<div class="bg-white rounded-card border border-[#b8e4e0] px-4 py-3" style="display:flex;align-items:center;gap:12px;">
+        <div style="flex:1;min-width:0;">${sectionLabel('Judge', 4)}<p style="font-size:17px;font-weight:800;color:#1c1626;line-height:1.2;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(name)}</p></div>
+        ${avatar}
+      </div>`;
+    } else {
+      judgeCard = `<div class="bg-white rounded-card border border-[#b8e4e0] px-4 py-3">
+        ${sectionLabel('Judge', 4)}
+        <p style="font-size:20px;font-weight:800;color:#1c1626;line-height:1.2;">—</p>
+      </div>`;
+    }
     el.innerHTML = `
       <div style="display:flex;gap:12px;margin-bottom:12px;">
         ${card('Total Entries', String(entryCount), 'flex:1;min-width:0;')}
         ${card('Total Raised',  fmtMoney(totalRaised), 'flex:1;min-width:0;')}
       </div>
-      ${card('Judges', '—')}`;
+      ${judgeCard}`;
   }
 
   // ── Render: Recent Entries (left column, full height) ─────────────────────────
@@ -348,14 +432,14 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
     el.innerHTML = `
       ${sectionLabel('Entries by Category', 14)}
-      <div style="display:flex;gap:12px;align-items:center;">
-        <div style="flex:1;display:flex;align-items:center;justify-content:center;">
+      <div class="donut-layout">
+        <div class="donut-chart">
           <svg viewBox="0 0 120 120" style="width:100%;height:auto;" aria-hidden="true">
             ${donutArcs}
             ${centerText}
           </svg>
         </div>
-        <div style="flex:1;min-width:0;max-width:150px;">${legendRows}</div>
+        <div class="donut-legend">${legendRows}</div>
       </div>`;
 
     // Wire up floating tooltip for donut segments
@@ -658,16 +742,18 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       document.getElementById(count === 0 ? 'state-no-shows' : 'state-no-published').style.display = 'flex';
     } else {
       const sevenDaysAgo = new Date(Date.now() - 5 * 86400000).toISOString();
-      const [countRes, catsRes, catCountRes, recentRes, trendRes] = await Promise.all([
+      const [countRes, catsRes, catCountRes, recentRes, trendRes, judgeRes] = await Promise.all([
         supabase.from('show_entries').select('*', { count: 'exact', head: true }).eq('show_id', show.id).eq('status', 'confirmed'),
         supabase.from('show_categories').select('id, name').eq('show_id', show.id),
         supabase.from('show_entries').select('category_id').eq('show_id', show.id).eq('status', 'confirmed'),
         supabase.from('show_entries').select('id, animal_name, exhibitor_name, breed, photo_url, category_id, created_at').eq('show_id', show.id).eq('status', 'confirmed').order('created_at', { ascending: false }).limit(3),
         supabase.from('show_entries').select('created_at').eq('show_id', show.id).eq('status', 'confirmed').gte('created_at', sevenDaysAgo),
+        supabase.from('show_judges').select('first_name, last_name, photo_url').eq('show_id', show.id).limit(1).maybeSingle(),
       ]);
       entryCount  = countRes.count ?? 0;
       totalRaised = entryCount * (show.entry_fee || 0);
       categories  = catsRes.data || [];
+      judge       = judgeRes.data || null;
 
       // Build per-category count map
       const catCounts = {};

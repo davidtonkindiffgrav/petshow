@@ -1,67 +1,1381 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
+import '../styles/global.css';
 const raw = import.meta.env.BASE_URL;
 const base = raw.endsWith('/') ? raw : raw + '/';
 ---
 
-<BaseLayout title="Judge Dashboard — Fur to Feathers">
-  <div class="min-h-[80vh] flex items-center justify-center px-4 py-16" style="background:#d6f5f0/30">
-    <div class="w-full max-w-lg bg-white rounded-card-lg shadow-card-float overflow-hidden">
-      <!-- Colour accent bar (teal) -->
-      <div class="h-2 w-full" style="background:#0d9488"></div>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Judge Panel — Fur to Feathers</title>
+  <link rel="icon" type="image/x-icon" href={`${base}images/favicon.ico`} />
+  <link rel="icon" type="image/png" sizes="32x32" href={`${base}images/favicon-32x32.png`} />
+  <link rel="icon" type="image/png" sizes="16x16" href={`${base}images/favicon-16x16.png`} />
+  <link rel="apple-touch-icon" sizes="180x180" href={`${base}images/apple-touch-icon.png`} />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500;1,600&display=swap" rel="stylesheet" />
+</head>
 
-      <div class="px-10 pt-10 pb-12 text-center">
-        <!-- Icon -->
-        <div class="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style="background:#d6f5f0">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-          </svg>
-        </div>
+<body class="flex h-screen overflow-hidden bg-[#f0fafa] font-sans antialiased text-[#1c1626]">
 
-        <h1 class="text-[36px] font-extrabold tracking-[-0.02em] leading-tight mb-2" style="color:#0d9488">Welcome, Judge!</h1>
-        <p class="text-[18px] font-semibold text-[#1c1626] mb-3">Your scoring panel is coming soon.</p>
-        <p class="text-[15px] text-[#6f6880] leading-relaxed mb-10 max-w-sm mx-auto">
-          We're hard at work building the full platform. In the meantime, explore the landing page or try a different role.
-        </p>
+  <!-- Mobile sidebar backdrop -->
+  <div id="sidebar-backdrop"
+    class="fixed inset-0 bg-black/40 z-40 opacity-0 pointer-events-none transition-opacity duration-300 min-[900px]:hidden"
+    aria-hidden="true"></div>
 
-        <div class="flex flex-col sm:flex-row gap-3 justify-center">
-          <a href={base}
-            class="inline-flex items-center justify-center gap-2 text-white font-bold rounded-btn px-6 py-3 transition-colors hover:opacity-90"
-            style="background:#0d9488;box-shadow:0 10px 24px rgba(13,148,136,0.3)">
-            Back to Home
-          </a>
-          <a id="switch-mode" href={`${base}choose`}
-            class="hidden items-center justify-center gap-2 font-bold rounded-btn px-6 py-3 border-[1.5px] transition-colors"
-            style="color:#0d9488;border-color:#2dd4bf">
-            Switch Mode
-          </a>
-          <button
-            id="sign-out"
-            class="inline-flex items-center justify-center gap-2 text-[#9b94a8] border-[1.5px] border-[#efebf5] font-bold rounded-btn px-6 py-3 hover:bg-gray-50 transition-colors">
-            Log Out
-          </button>
+  <!-- ── SIDEBAR ─────────────────────────────────────────────────────── -->
+  <aside id="judge-sidebar"
+    class="fixed inset-y-0 left-0 z-50 w-[220px] bg-[#002d6b] flex flex-col h-full overflow-y-auto
+           -translate-x-full transition-transform duration-300 ease-in-out
+           min-[900px]:relative min-[900px]:translate-x-0 min-[900px]:z-auto min-[900px]:shrink-0">
+
+    <!-- White logo header -->
+    <div class="bg-white px-4 h-[72px] flex items-center justify-between gap-2 shrink-0">
+      <a href={base} class="flex-1 min-w-0 flex items-center no-underline">
+        <img src={`${base}images/ftf_logo_2048x648.png`} alt="Fur to Feathers"
+             style="width:100%;height:auto" class="block" />
+      </a>
+      <button id="sidebar-close"
+        class="min-[900px]:hidden w-7 h-7 rounded-full bg-brand-tint flex items-center justify-center text-[#002d6b] hover:bg-brand/20 transition-colors shrink-0"
+        aria-label="Close navigation">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Shows navigation list -->
+    <div class="flex-1 px-3 py-5 overflow-y-auto">
+      <p class="text-[10px] font-bold text-white/40 uppercase tracking-[0.1em] px-3 mb-2">My Shows</p>
+      <div id="sidebar-show-list" class="space-y-0.5">
+        <!-- Populated by JS after auth -->
+        <div class="px-3 py-2">
+          <div class="h-4 rounded bg-white/10 w-4/5 mb-1.5"></div>
+          <div class="h-3 rounded bg-white/[0.06] w-3/5"></div>
         </div>
       </div>
     </div>
+
+    <!-- User info + sign out -->
+    <div class="px-4 py-5 border-t border-white/10 shrink-0">
+      <div class="flex items-center gap-3 mb-3">
+        <button id="btn-avatar" title="Update profile photo"
+          class="shrink-0 hover:opacity-80 transition-opacity cursor-pointer">
+          <div class="w-8 h-8 rounded-full overflow-hidden border-2 border-[#b8e4e0] bg-[#e8f7f6] flex items-center justify-center">
+            <span id="topbar-avatar-inner" class="text-[12px] font-extrabold text-brand"></span>
+          </div>
+        </button>
+        <div class="min-w-0 flex-1">
+          <p id="judge-display-name" class="text-[13px] font-semibold text-white truncate">Loading…</p>
+          <p class="text-[11px] text-white/40">Judge</p>
+        </div>
+      </div>
+      <button id="btn-signout"
+        class="flex items-center gap-1.5 text-[12px] text-white/35 hover:text-white/70 transition-colors">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Sign out
+      </button>
+      <input type="file" id="avatar-file-input" accept="image/jpeg,image/png,image/webp" class="hidden" />
+    </div>
+  </aside>
+
+  <!-- ── MAIN AREA ──────────────────────────────────────────────────── -->
+  <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+    <!-- Top bar -->
+    <header class="h-[72px] bg-white border-b border-[#efebf5] flex items-center
+                   px-4 min-[900px]:px-8 justify-between shrink-0 gap-3">
+      <!-- Hamburger — mobile only -->
+      <button id="sidebar-toggle"
+        class="min-[900px]:hidden w-9 h-9 rounded-lg flex items-center justify-center
+               text-[#4a4357] hover:bg-[#f0fafa] transition-colors shrink-0"
+        aria-label="Open navigation" aria-expanded="false">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+      <!-- Page title (updated dynamically) -->
+      <h1 id="topbar-title"
+        class="text-[17px] min-[900px]:text-[19px] font-extrabold text-[#1c1626] tracking-[-0.01em]
+               flex-1 min-[900px]:flex-none truncate">
+        Judge Panel
+      </h1>
+      <!-- Right spacer (mobile) — keeps title centered -->
+      <div class="w-9 min-[900px]:hidden shrink-0"></div>
+    </header>
+
+    <!-- Scrollable content area -->
+    <main class="flex-1 overflow-y-auto p-4 min-[900px]:p-8">
+      <div style="max-width:680px;margin:0 auto;">
+
+        <!-- LOADING ──────────────────────────────────────────────────── -->
+        <div id="panel-loading" class="flex items-center justify-center" style="min-height:60vh;">
+          <div class="w-10 h-10 rounded-full border-[3px] border-brand/20 border-t-brand judge-spin"></div>
+        </div>
+
+        <!-- NO_SHOWS ─────────────────────────────────────────────────── -->
+        <div id="panel-no-shows" style="display:none"
+             class="flex flex-col items-center justify-center text-center py-24 gap-5">
+          <div class="w-16 h-16 rounded-full flex items-center justify-center bg-[#f5f3fa]">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9b94a8"
+                 stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-[20px] font-extrabold text-[#1c1626] mb-2">No shows to judge</h2>
+            <p class="text-[14px] text-[#6f6880] leading-relaxed max-w-[300px] mx-auto">
+              You haven't been assigned to any shows yet, or your assigned shows are not yet open for judging.
+              Please contact your organiser.
+            </p>
+          </div>
+        </div>
+
+        <!-- NOT_READY ──────────────────────────────────────────────── -->
+        <div id="panel-not-ready" style="display:none"
+             class="flex flex-col items-center justify-center text-center py-24 gap-5">
+          <div class="w-16 h-16 rounded-full flex items-center justify-center bg-[#fef9c3]">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#92400e"
+                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </div>
+          <div>
+            <h2 id="not-ready-show-name" class="text-[20px] font-extrabold text-[#1c1626] mb-2"></h2>
+            <p class="text-[14px] text-[#6f6880] leading-relaxed max-w-[300px] mx-auto">
+              This show hasn't been opened for judging yet. Check back closer to the show date,
+              or contact your organiser.
+            </p>
+          </div>
+        </div>
+
+        <!-- SHOW_PICKER ──────────────────────────────────────────────── -->
+        <div id="panel-show-picker" style="display:none">
+          <p class="text-[11px] font-bold uppercase tracking-wider text-[#9b94a8] mb-1">Judging Panel</p>
+          <h1 class="text-[24px] font-extrabold text-[#1c1626] tracking-tight mb-6">Your Shows</h1>
+          <div id="show-picker-list" class="space-y-3"></div>
+        </div>
+
+        <!-- CATEGORY_GRID ────────────────────────────────────────────── -->
+        <div id="panel-category-grid" style="display:none">
+          <button id="btn-back-to-shows"
+            class="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand
+                   hover:text-brand-dark transition-colors mb-4">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+            All Shows
+          </button>
+          <p class="text-[11px] font-bold uppercase tracking-wider text-[#9b94a8] mb-1">Judging</p>
+          <h1 id="cat-grid-show-name"
+              class="text-[22px] font-extrabold text-[#1c1626] tracking-tight mb-6 leading-tight"></h1>
+          <div id="category-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+        </div>
+
+        <!-- ROUND1_SCORING ───────────────────────────────────────────── -->
+        <div id="panel-round1" style="display:none">
+
+          <button id="btn-back-to-cats-r1"
+            class="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand
+                   hover:text-brand-dark transition-colors mb-3">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+            Categories
+          </button>
+
+          <div class="mb-3">
+            <h2 id="r1-cat-name" class="text-[20px] font-extrabold text-[#1c1626] leading-tight"></h2>
+            <p id="r1-criteria" class="text-[13px] text-[#9b94a8] leading-relaxed mt-1"></p>
+          </div>
+
+          <!-- Progress bar -->
+          <div class="flex items-center gap-3 mb-3">
+            <div class="flex-1 h-1.5 bg-[#efebf5] rounded-full overflow-hidden">
+              <div id="r1-progress-bar" class="h-full rounded-full transition-all duration-300"
+                   style="background:#1ba89a;width:0%"></div>
+            </div>
+            <span id="r1-progress-text"
+                  class="text-[12px] font-semibold text-[#9b94a8] shrink-0 tabular-nums"></span>
+          </div>
+
+          <!-- Photo card -->
+          <div class="bg-white rounded-card border border-[#b8e4e0] overflow-hidden mb-3">
+            <div id="r1-photo-container"
+                 style="position:relative;height:clamp(220px,38vh,340px);background:#f5f3fa;overflow:hidden;cursor:default;">
+              <img id="r1-photo" src="" alt=""
+                   style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:none;
+                          transform-origin:top left;will-change:transform;user-select:none;-webkit-user-drag:none;" />
+              <div id="r1-no-photo"
+                   style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;">
+                <span style="font-size:52px;opacity:0.2;">🐾</span>
+                <p class="text-[12px] font-semibold text-[#c4bed0]">No photo submitted</p>
+              </div>
+              <!-- Zoom controls -->
+              <div id="r1-zoom-controls"
+                   style="display:none;position:absolute;top:8px;right:8px;z-index:10;flex-direction:column;gap:4px;">
+                <button id="btn-zoom-in"
+                  class="w-8 h-8 rounded-lg bg-white/80 hover:bg-white border border-[#b8e4e0]
+                         flex items-center justify-center text-[#4a4357] font-bold shadow-sm
+                         transition-colors text-[18px] leading-none select-none">+</button>
+                <button id="btn-zoom-out"
+                  class="w-8 h-8 rounded-lg bg-white/80 hover:bg-white border border-[#b8e4e0]
+                         flex items-center justify-center text-[#4a4357] font-bold shadow-sm
+                         transition-colors text-[18px] leading-none select-none">−</button>
+                <button id="btn-zoom-reset"
+                  class="w-8 h-8 rounded-lg bg-white/80 hover:bg-white border border-[#b8e4e0]
+                         flex items-center justify-center text-[#9b94a8] shadow-sm
+                         transition-colors text-[13px] font-bold select-none">⟲</button>
+                <button id="btn-zoom-maximize"
+                  class="w-8 h-8 rounded-lg bg-white/80 hover:bg-white border border-[#b8e4e0]
+                         flex items-center justify-center text-[#4a4357] shadow-sm
+                         transition-colors select-none" title="View fullscreen">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+                    <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="px-5 py-2 border-t border-[#efebf5]">
+              <p id="r1-entry-num" class="text-[13px] font-bold text-[#9b94a8]"></p>
+            </div>
+          </div>
+
+          <!-- Slider card -->
+          <div class="bg-white rounded-card border border-[#b8e4e0] px-5 pt-4 pb-3 mb-3">
+            <input id="score-slider" type="range" min="1" max="100" value="50"
+                   class="score-slider w-full mb-3" />
+            <div class="flex justify-between">
+              <span class="text-[12px] font-semibold text-[#9b94a8]">Not This Time</span>
+              <span class="text-[12px] font-semibold text-[#9b94a8]">Top Contender</span>
+            </div>
+          </div>
+
+          <!-- Entry navigation: Prev | pills | Next -->
+          <div class="flex items-center gap-2">
+            <button id="btn-prev-entry"
+              class="shrink-0 w-10 h-10 flex items-center justify-center rounded-[10px]
+                     border border-[#b8e4e0] bg-white text-[17px] text-[#6f6880] font-bold
+                     hover:bg-[#f0fafa] transition-colors disabled:opacity-35 disabled:cursor-not-allowed">
+              ←
+            </button>
+            <div class="flex-1 min-w-0 overflow-x-auto" style="-ms-overflow-style:none;scrollbar-width:none;">
+              <div id="r1-entry-pills" class="flex gap-1.5 justify-center py-0.5 px-1" style="min-width:max-content;"></div>
+            </div>
+            <button id="btn-next-entry"
+              class="shrink-0 flex items-center justify-center bg-brand text-white
+                     text-[13px] font-bold rounded-[10px] px-4 h-10 shadow-btn-primary
+                     hover:bg-brand-dark transition-colors whitespace-nowrap">
+              <span id="btn-next-label">Next →</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- R1_INTERSTITIAL ──────────────────────────────────────────── -->
+        <div id="panel-interstitial" style="display:none"
+             class="flex flex-col items-center justify-center text-center py-20 gap-6">
+          <div class="w-20 h-20 rounded-full flex items-center justify-center bg-[#e8f7f6]">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#1ba89a"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-[24px] font-extrabold text-[#1c1626] mb-3">Round 1 Complete!</h2>
+            <p id="interstit-body"
+               class="text-[15px] text-[#6f6880] leading-relaxed max-w-[320px] mx-auto"></p>
+          </div>
+          <button id="btn-start-final"
+            class="inline-flex items-center gap-2 bg-brand text-white text-[15px] font-bold
+                   rounded-btn px-8 py-3.5 shadow-btn-primary hover:bg-brand-dark transition-colors">
+            Start Final Round →
+          </button>
+        </div>
+
+        <!-- FINAL_ROUND ──────────────────────────────────────────────── -->
+        <div id="panel-final-round" style="display:none">
+          <button id="btn-back-to-cats-final"
+            class="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand
+                   hover:text-brand-dark transition-colors mb-4">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+            Categories
+          </button>
+          <p class="text-[11px] font-bold uppercase tracking-wider text-[#9b94a8] mb-1">Final Round</p>
+          <h2 id="final-cat-name"
+              class="text-[20px] font-extrabold text-[#1c1626] tracking-tight mb-1"></h2>
+          <p class="text-[13px] text-[#9b94a8] mb-6">Drag to rank — top is 1st place.</p>
+          <div id="final-rank-list" class="space-y-3 mb-6"></div>
+          <button id="btn-confirm-rankings"
+            class="w-full flex items-center justify-center gap-2 bg-brand text-white
+                   text-[15px] font-bold rounded-btn py-4 shadow-btn-primary
+                   hover:bg-brand-dark transition-colors">
+            Confirm Rankings ✓
+          </button>
+          <button id="btn-change-rankings" style="display:none"
+            class="w-full text-center text-[13px] font-semibold text-[#9b94a8]
+                   hover:text-[#1c1626] transition-colors mt-3 py-1">
+            Change rankings
+          </button>
+        </div>
+
+        <!-- ALL_DONE ─────────────────────────────────────────────────── -->
+        <div id="panel-all-done" style="display:none"
+             class="flex flex-col items-center justify-center text-center py-20 gap-5">
+          <div class="text-6xl animate-bounce">🏆</div>
+          <div>
+            <h2 class="text-[26px] font-extrabold text-[#1c1626] mb-2">All done!</h2>
+            <p class="text-[15px] text-[#6f6880] leading-relaxed">
+              You've ranked all categories for<br />
+              <span id="done-show-name" class="font-bold text-[#1c1626]"></span>.
+            </p>
+          </div>
+          <button id="btn-another-show" style="display:none"
+            class="inline-flex items-center gap-2 bg-brand text-white text-[14px] font-bold
+                   rounded-btn px-6 py-3 shadow-btn-primary hover:bg-brand-dark transition-colors">
+            Judge Another Show →
+          </button>
+        </div>
+
+      </div><!-- /max-width container -->
+    </main>
+  </div><!-- /main area -->
+
+  <!-- ── Photo fullscreen modal ──────────────────────────────────────────── -->
+  <div id="photo-modal"
+       style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.92);
+              align-items:center;justify-content:center;">
+    <!-- Close button -->
+    <button id="photo-modal-close"
+      style="position:absolute;top:20px;right:24px;z-index:1;
+             width:52px;height:52px;border-radius:50%;border:2px solid rgba(255,255,255,0.25);
+             background:rgba(255,255,255,0.10);color:#fff;font-size:26px;font-weight:700;
+             line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;
+             transition:background 0.15s;"
+      onmouseover="this.style.background='rgba(255,255,255,0.22)'"
+      onmouseout="this.style.background='rgba(255,255,255,0.10)'"
+      aria-label="Close">✕</button>
+    <!-- Image -->
+    <img id="photo-modal-img" src="" alt=""
+         style="max-width:95vw;max-height:92vh;object-fit:contain;border-radius:8px;
+                display:block;user-select:none;" />
   </div>
-</BaseLayout>
+
+</body>
+</html>
+
+<style is:global>
+  @keyframes judge-spin { to { transform: rotate(360deg); } }
+  .judge-spin { animation: judge-spin 0.8s linear infinite; }
+
+  /* ── Range slider ─────────────────────────────────────────────── */
+  input[type="range"].score-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: #e5e7eb;
+    outline: none;
+    cursor: pointer;
+    display: block;
+  }
+  input[type="range"].score-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #1ba89a;
+    border: 3px solid #fff;
+    box-shadow: 0 2px 8px rgba(27,168,154,0.35);
+    cursor: grab;
+    transition: transform 0.12s;
+  }
+  input[type="range"].score-slider::-webkit-slider-thumb:active {
+    cursor: grabbing;
+    transform: scale(1.15);
+  }
+  input[type="range"].score-slider::-moz-range-track {
+    height: 6px;
+    border-radius: 3px;
+    background: #e5e7eb;
+    border: none;
+  }
+  input[type="range"].score-slider::-moz-range-progress {
+    height: 6px;
+    border-radius: 3px;
+    background: #1ba89a;
+  }
+  input[type="range"].score-slider::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #1ba89a;
+    border: 3px solid #fff;
+    box-shadow: 0 2px 8px rgba(27,168,154,0.35);
+    cursor: grab;
+  }
+
+  /* ── SortableJS drag states ───────────────────────────────────── */
+  .rank-item { touch-action: none; }
+  .rank-item.sortable-ghost  { opacity: 0.3; }
+  .rank-item.sortable-chosen {
+    box-shadow: 0 12px 32px rgba(28,22,38,0.15);
+    transform: scale(1.01);
+  }
+</style>
 
 <script>
-  import { getAuth } from '../lib/auth.js';
-  import { supabase } from '../lib/supabase.js';
+  import { getAuth }     from '../lib/auth.js';
+  import { supabase }    from '../lib/supabase.js';
+  import { uploadImage } from '../lib/storage.js';
+  import Sortable        from 'sortablejs';
 
-  const { session, profile, base } = await getAuth();
-  if (!session) {
-    window.location.replace(base + 'login');
-  } else {
-    if (profile?.roles?.length > 1) {
-      const btn = document.getElementById('switch-mode');
-      btn?.classList.remove('hidden');
-      btn?.classList.add('inline-flex');
+  // ── Helpers ─────────────────────────────────────────────────────────────
+  function esc(s) {
+    return String(s ?? '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function ordinal(n) {
+    const v = n % 100;
+    const s = ['th','st','nd','rd'];
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+
+  function fmtDate(d) {
+    if (!d) return '';
+    return new Date(d).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+  }
+
+  function showToast(msg, isError = false) {
+    let t = document.getElementById('judge-toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'judge-toast';
+      Object.assign(t.style, {
+        position:'fixed', bottom:'24px', left:'50%', transform:'translateX(-50%)',
+        padding:'10px 20px', borderRadius:'11px', fontSize:'13px', fontWeight:'600',
+        zIndex:'9999', transition:'opacity 0.3s', whiteSpace:'nowrap',
+        opacity:'0', pointerEvents:'none',
+      });
+      document.body.appendChild(t);
     }
-    document.getElementById('sign-out')?.addEventListener('click', async () => {
-      await supabase.auth.signOut();
-      window.location.href = base + 'login';
+    t.textContent = msg;
+    t.style.background = isError ? '#ef4444' : '#1c1626';
+    t.style.color = '#fff';
+    t.style.opacity = '1';
+    clearTimeout(t._tid);
+    t._tid = setTimeout(() => { t.style.opacity = '0'; }, 3000);
+  }
+
+  function updateSliderFill(slider) {
+    const pct = ((slider.value - slider.min) / (slider.max - slider.min)) * 100;
+    slider.style.background =
+      `linear-gradient(to right, #1ba89a ${pct}%, #e5e7eb ${pct}%)`;
+  }
+
+  // ── Photo zoom/pan state ─────────────────────────────────────────────────
+  let photoScale    = 1;
+  let photoPanX     = 0;
+  let photoPanY     = 0;
+  let photoDragging = false;
+  let photoDragStartX = 0;
+  let photoDragStartY = 0;
+  let photoPanStartX  = 0;
+  let photoPanStartY  = 0;
+
+  function applyPhotoTransform() {
+    const img = document.getElementById('r1-photo');
+    if (img) img.style.transform = `translate(${photoPanX}px,${photoPanY}px) scale(${photoScale})`;
+    const container = document.getElementById('r1-photo-container');
+    if (container) container.style.cursor = photoScale > 1 ? 'grab' : 'default';
+  }
+
+  function resetPhotoTransform() {
+    photoScale = 1; photoPanX = 0; photoPanY = 0;
+    applyPhotoTransform();
+  }
+
+  function zoomPhoto(delta, cx, cy) {
+    const container = document.getElementById('r1-photo-container');
+    if (!container) return;
+    const rect  = container.getBoundingClientRect();
+    const ox    = (cx ?? rect.left + rect.width  / 2) - rect.left;
+    const oy    = (cy ?? rect.top  + rect.height / 2) - rect.top;
+    const prev  = photoScale;
+    photoScale  = Math.min(5, Math.max(1, photoScale * delta));
+    const ratio = photoScale / prev;
+    photoPanX   = ox + (photoPanX - ox) * ratio;
+    photoPanY   = oy + (photoPanY - oy) * ratio;
+    if (photoScale === 1) { photoPanX = 0; photoPanY = 0; }
+    applyPhotoTransform();
+  }
+
+  function setupPhotoInteraction() {
+    const container = document.getElementById('r1-photo-container');
+    if (!container) return;
+
+    container.addEventListener('wheel', e => {
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+      zoomPhoto(factor, e.clientX, e.clientY);
+    }, { passive: false });
+
+    container.addEventListener('mousedown', e => {
+      if (photoScale <= 1) return;
+      photoDragging   = true;
+      photoDragStartX = e.clientX;
+      photoDragStartY = e.clientY;
+      photoPanStartX  = photoPanX;
+      photoPanStartY  = photoPanY;
+      container.style.cursor = 'grabbing';
+      e.preventDefault();
+    });
+
+    window.addEventListener('mousemove', e => {
+      if (!photoDragging) return;
+      photoPanX = photoPanStartX + (e.clientX - photoDragStartX);
+      photoPanY = photoPanStartY + (e.clientY - photoDragStartY);
+      applyPhotoTransform();
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (!photoDragging) return;
+      photoDragging = false;
+      const container = document.getElementById('r1-photo-container');
+      if (container) container.style.cursor = photoScale > 1 ? 'grab' : 'default';
+    });
+
+    document.getElementById('btn-zoom-in')?.addEventListener('click',    () => zoomPhoto(1.3));
+    document.getElementById('btn-zoom-out')?.addEventListener('click',   () => zoomPhoto(1 / 1.3));
+    document.getElementById('btn-zoom-reset')?.addEventListener('click', () => resetPhotoTransform());
+
+    document.getElementById('btn-zoom-maximize')?.addEventListener('click', () => {
+      const src = document.getElementById('r1-photo')?.src;
+      if (!src) return;
+      const modal    = document.getElementById('photo-modal');
+      const modalImg = document.getElementById('photo-modal-img');
+      modalImg.src   = src;
+      modal.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    });
+
+    function closePhotoModal() {
+      document.getElementById('photo-modal').style.display = 'none';
+      document.body.style.overflow = '';
+    }
+    document.getElementById('photo-modal-close')?.addEventListener('click', closePhotoModal);
+    document.getElementById('photo-modal')?.addEventListener('click', e => {
+      if (e.target === e.currentTarget) closePhotoModal();
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && document.getElementById('photo-modal')?.style.display === 'flex') {
+        closePhotoModal();
+      }
     });
   }
+
+  // ── Sidebar mobile helpers ───────────────────────────────────────────────
+  function openSidebar() {
+    const sidebar  = document.getElementById('judge-sidebar');
+    const backdrop = document.getElementById('sidebar-backdrop');
+    if (sidebar)  sidebar.style.transform = 'translateX(0)';
+    if (backdrop) { backdrop.style.opacity = '1'; backdrop.style.pointerEvents = 'auto'; }
+    document.getElementById('sidebar-toggle')?.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeSidebar() {
+    const sidebar  = document.getElementById('judge-sidebar');
+    const backdrop = document.getElementById('sidebar-backdrop');
+    if (sidebar)  sidebar.style.transform = '';
+    if (backdrop) { backdrop.style.opacity = '0'; backdrop.style.pointerEvents = 'none'; }
+    document.getElementById('sidebar-toggle')?.setAttribute('aria-expanded', 'false');
+  }
+
+  // ── State ────────────────────────────────────────────────────────────────
+  const state = {
+    status:           'LOADING',
+    judgeEmail:       null,
+    judgeUserId:      null,
+    judgeName:        '',
+    judgePhoto:       null,
+    base:             '',
+    shows:            [],
+    activeShowId:     null,
+    activeShow:       null,
+    categories:       [],
+    entries:          {},   // { [category_id]: entry[] }
+    scores:           {},   // { [entry_id]: integer 0-100 }
+    rankings:         {},   // { [category_id]: [{entry_id, rank}] }
+    activeCategoryId: null,
+    currentEntryIndex:0,
+    sortableInstance: null,
+  };
+
+  const PANELS = [
+    'loading','no-shows','not-ready','show-picker','category-grid',
+    'round1','interstitial','final-round','all-done',
+  ];
+
+  function transition(newStatus, overrides = {}) {
+    Object.assign(state, overrides, { status: newStatus });
+    render();
+  }
+
+  function render() {
+    updateTopbarTitle();
+    renderSidebarShows();
+    PANELS.forEach(p => {
+      const el = document.getElementById('panel-' + p);
+      if (el) el.style.display = 'none';
+    });
+    switch (state.status) {
+      case 'LOADING':         showPanel('loading');                              break;
+      case 'NO_SHOWS':        showPanel('no-shows');                             break;
+      case 'NOT_READY':       renderNotReady();     showPanel('not-ready');      break;
+      case 'SHOW_PICKER':     renderShowPicker();   showPanel('show-picker');    break;
+      case 'CATEGORY_GRID':   renderCategoryGrid(); showPanel('category-grid');  break;
+      case 'ROUND1_SCORING':  renderRound1();       showPanel('round1');         break;
+      case 'R1_INTERSTITIAL': renderInterstitial(); showPanel('interstitial');   break;
+      case 'FINAL_ROUND':     renderFinalRound();   showPanel('final-round');    break;
+      case 'ALL_DONE':        renderAllDone();      showPanel('all-done');       break;
+    }
+  }
+
+  function showPanel(name) {
+    const el = document.getElementById('panel-' + name);
+    if (el) el.style.display = '';
+  }
+
+  function updateTopbarTitle() {
+    const el = document.getElementById('topbar-title');
+    if (!el) return;
+    switch (state.status) {
+      case 'LOADING':
+      case 'NO_SHOWS':
+      case 'SHOW_PICKER':
+        el.textContent = 'Judge Panel'; break;
+      case 'NOT_READY':
+        el.textContent = state.activeShow?.title || 'Not Yet Open'; break;
+      case 'CATEGORY_GRID':
+        el.textContent = state.activeShow?.title || 'Judging'; break;
+      case 'ROUND1_SCORING':
+      case 'R1_INTERSTITIAL':
+      case 'FINAL_ROUND': {
+        const cat = state.categories.find(c => c.id === state.activeCategoryId);
+        el.textContent = cat?.name || 'Scoring'; break;
+      }
+      case 'ALL_DONE':
+        el.textContent = 'All Done!'; break;
+      default:
+        el.textContent = 'Judge Panel';
+    }
+  }
+
+  // ── Category helpers ─────────────────────────────────────────────────────
+  function getCategoryStatus(catId) {
+    const entries = state.entries[catId] || [];
+    const scored  = entries.filter(e => (state.scores[e.id] ?? 0) > 0).length;
+    const hasRank = (state.rankings[catId] || []).length > 0;
+
+    if (hasRank)                 return { type:'complete',    label:'Complete ✓',           color:'#16a34a', bg:'#dcf6e3' };
+    if (entries.length === 0)    return { type:'empty',       label:'No entries',            color:'#9b94a8', bg:'#f5f3fa' };
+    if (scored === 0)            return { type:'not-started', label:'Not started',           color:'#9b94a8', bg:'#f5f3fa' };
+    if (scored < entries.length) return { type:'in-progress', label:`${scored}/${entries.length} scored`, color:'#1ba89a', bg:'#e3f5f2' };
+    return                              { type:'final-round', label:'Final round ready',     color:'#002d6b', bg:'#e8edf6' };
+  }
+
+  function getShortlist(catId) {
+    const cat = state.categories.find(c => c.id === catId);
+    const N   = cat?.shortlist_count ?? 3;
+    return (state.entries[catId] || [])
+      .filter(e => (state.scores[e.id] ?? 0) > 0)
+      .sort((a, b) => (state.scores[b.id] ?? 0) - (state.scores[a.id] ?? 0))
+      .slice(0, N);
+  }
+
+  // ── Supabase ─────────────────────────────────────────────────────────────
+  async function loadShow(showId) {
+    transition('LOADING');
+
+    const [catsRes, entriesRes, scoresRes, rankingsRes, showRes] = await Promise.all([
+      supabase.from('show_categories')
+        .select('id, name, description, shortlist_count')
+        .eq('show_id', showId).order('name'),
+      supabase.from('show_entries')
+        .select('id, category_id, entry_number, breed, photo_url')
+        .eq('show_id', showId).eq('status', 'confirmed').order('entry_number'),
+      supabase.from('judge_scores')
+        .select('entry_id, score')
+        .eq('show_id', showId).eq('judge_email', state.judgeEmail),
+      supabase.from('judge_rankings')
+        .select('category_id, entry_id, rank')
+        .eq('show_id', showId).eq('judge_email', state.judgeEmail),
+      supabase.from('shows')
+        .select('id, title, host_org, logo_url, show_date')
+        .eq('id', showId).single(),
+    ]);
+
+    if (catsRes.error)     console.error('show_categories error:', catsRes.error);
+    if (entriesRes.error)  console.error('show_entries error:',    entriesRes.error);
+    if (scoresRes.error)   console.error('judge_scores error:',    scoresRes.error);
+    if (rankingsRes.error) console.error('judge_rankings error:',  rankingsRes.error);
+    if (showRes.error)     console.error('shows error:',           showRes.error);
+
+    state.activeShowId = showId;
+    state.activeShow   = showRes.data;
+    state.categories   = catsRes.data || [];
+
+    state.entries = {};
+    for (const e of (entriesRes.data || [])) {
+      if (!e.category_id) continue;
+      (state.entries[e.category_id] ??= []).push(e);
+    }
+
+    state.scores = {};
+    for (const s of (scoresRes.data || [])) {
+      state.scores[s.entry_id] = s.score;
+    }
+
+    state.rankings = {};
+    for (const r of (rankingsRes.data || [])) {
+      (state.rankings[r.category_id] ??= []).push(r);
+    }
+
+    transition('CATEGORY_GRID');
+  }
+
+  async function saveScore(entryId, score) {
+    const { error } = await supabase.from('judge_scores').upsert(
+      {
+        show_id:     state.activeShowId,
+        category_id: state.activeCategoryId,
+        entry_id:    entryId,
+        judge_email: state.judgeEmail,
+        score,
+        updated_at:  new Date().toISOString(),
+      },
+      { onConflict: 'entry_id,judge_email' }
+    );
+    if (!error) state.scores[entryId] = score;
+    return !error;
+  }
+
+  async function saveRankings(categoryId, orderedEntryIds) {
+    const btn = document.getElementById('btn-confirm-rankings');
+    btn.disabled    = true;
+    btn.textContent = 'Saving…';
+
+    const { error: delErr } = await supabase.from('judge_rankings')
+      .delete()
+      .eq('category_id', categoryId)
+      .eq('judge_email', state.judgeEmail);
+
+    if (delErr) {
+      btn.disabled    = false;
+      btn.textContent = 'Confirm Rankings ✓';
+      showToast('Failed to save — please try again', true);
+      return;
+    }
+
+    const rows = orderedEntryIds.map((entryId, i) => ({
+      show_id:     state.activeShowId,
+      category_id: categoryId,
+      entry_id:    entryId,
+      judge_email: state.judgeEmail,
+      rank:        i + 1,
+    }));
+
+    const { error: insErr } = await supabase.from('judge_rankings').insert(rows);
+    if (insErr) {
+      btn.disabled    = false;
+      btn.textContent = 'Confirm Rankings ✓';
+      showToast('Failed to save — please try again', true);
+      return;
+    }
+
+    state.rankings[categoryId] = rows;
+    showToast('Rankings saved!');
+
+    const allDone = state.categories.every(c =>
+      (state.rankings[c.id] || []).length > 0 ||
+      (state.entries[c.id] || []).length === 0
+    );
+    transition(allDone ? 'ALL_DONE' : 'CATEGORY_GRID');
+  }
+
+  // ── Render functions ─────────────────────────────────────────────────────
+  function renderSidebarShows() {
+    const el = document.getElementById('sidebar-show-list');
+    if (!el) return;
+    if (state.shows.length === 0) {
+      el.innerHTML = '<p style="font-size:12px;color:rgba(255,255,255,0.3);padding:8px 12px;">No shows assigned</p>';
+      return;
+    }
+    el.innerHTML = state.shows.map(show => {
+      const ready  = show.is_judged === true;
+      const active = show.id === state.activeShowId;
+      const cls = active
+        ? 'sidebar-show-btn flex items-center gap-2.5 w-full text-left px-3 py-2.5 rounded-[10px] text-[13px] font-semibold bg-brand/20 text-white transition-colors'
+        : ready
+          ? 'sidebar-show-btn flex items-center gap-2.5 w-full text-left px-3 py-2.5 rounded-[10px] text-[13px] font-semibold text-white/55 hover:text-white hover:bg-white/[0.06] transition-colors'
+          : 'sidebar-show-btn flex items-center gap-2.5 w-full text-left px-3 py-2.5 rounded-[10px] text-[13px] font-semibold text-white/25 cursor-not-allowed';
+      return `
+        <button class="${cls}" data-show-id="${esc(show.id)}" ${ready ? '' : 'disabled'}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+               style="flex-shrink:0;opacity:${active ? '1' : '0.6'}" aria-hidden="true">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+          <div style="flex:1;min-width:0;">
+            <p style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0;">${esc(show.title || 'Untitled')}</p>
+            ${!ready ? '<p style="font-size:10px;color:#fbbf24;margin:1px 0 0;font-weight:600;">Not yet open</p>' : ''}
+          </div>
+          ${active ? '<div style="width:6px;height:6px;border-radius:50%;background:#1ba89a;flex-shrink:0;"></div>' : ''}
+        </button>`;
+    }).join('');
+  }
+
+  function renderNotReady() {
+    const title = state.activeShow?.title || 'This show';
+    const el = document.getElementById('not-ready-show-name');
+    if (el) el.textContent = title;
+  }
+
+  function renderShowPicker() {
+    document.getElementById('show-picker-list').innerHTML = state.shows.map(show => {
+      const ready = show.is_judged === true;
+      const logo = show.logo_url
+        ? `<img src="${esc(show.logo_url)}" style="width:52px;height:52px;border-radius:10px;object-fit:contain;background:#f5f3fa;border:1.5px solid #efebf5;flex-shrink:0;" alt="" />`
+        : `<div style="width:52px;height:52px;border-radius:10px;background:#e8f7f6;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+             <img src="${esc(state.base)}images/ftf_logo_256x212.png" width="28" style="height:auto;display:block;opacity:0.55;" alt="" />
+           </div>`;
+      return `
+        <button class="select-show w-full text-left bg-white rounded-card border p-4 flex items-center gap-4 transition-colors
+                       ${ready ? 'border-[#b8e4e0] hover:border-brand cursor-pointer' : 'border-[#efebf5] opacity-60 cursor-not-allowed'}"
+                data-show-id="${esc(show.id)}"
+                ${ready ? '' : 'disabled'}>
+          ${logo}
+          <div class="flex-1 min-w-0">
+            <p class="text-[15px] font-bold text-[#1c1626] truncate">${esc(show.title || 'Untitled Show')}</p>
+            ${show.host_org  ? `<p class="text-[12px] text-[#9b94a8] truncate">${esc(show.host_org)}</p>` : ''}
+            ${show.show_date ? `<p class="text-[12px] text-[#9b94a8] mt-0.5">${fmtDate(show.show_date)}</p>` : ''}
+            ${!ready ? `<p class="text-[11px] font-semibold mt-0.5" style="color:#b45309;">Not yet open for judging</p>` : ''}
+          </div>
+          ${ready
+            ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c4bed0" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                 <polyline points="9 18 15 12 9 6"/>
+               </svg>`
+            : ''}
+        </button>`;
+    }).join('');
+  }
+
+  function renderCategoryGrid() {
+    document.getElementById('cat-grid-show-name').textContent = state.activeShow?.title || '';
+
+    const backBtn = document.getElementById('btn-back-to-shows');
+    if (backBtn) backBtn.style.display = state.shows.length > 1 ? '' : 'none';
+
+    const el = document.getElementById('category-grid');
+    if (state.categories.length === 0) {
+      el.innerHTML = `
+        <div class="col-span-2 bg-white rounded-card border border-[#b8e4e0] p-6 text-center">
+          <div class="w-12 h-12 rounded-full bg-[#f5f3fa] flex items-center justify-center mx-auto mb-4">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          </div>
+          <p class="text-[15px] font-bold text-[#1c1626] mb-1">No categories set up yet</p>
+          <p class="text-[13px] text-[#9b94a8]">The organiser hasn't configured judging categories for this show yet.</p>
+        </div>`;
+      return;
+    }
+
+    const sortedCats = [...state.categories].sort((a, b) => {
+      const aComplete = getCategoryStatus(a.id).type === 'complete' ? 1 : 0;
+      const bComplete = getCategoryStatus(b.id).type === 'complete' ? 1 : 0;
+      return aComplete - bComplete;
+    });
+
+    el.innerHTML = sortedCats.map(cat => {
+      const status  = getCategoryStatus(cat.id);
+      const entries = state.entries[cat.id] || [];
+      const scored  = entries.filter(e => (state.scores[e.id] ?? 0) > 0).length;
+      const pct     = entries.length ? Math.round((scored / entries.length) * 100) : 0;
+
+      const progressBar = status.type === 'in-progress'
+        ? `<div class="mt-3 h-1.5 bg-[#efebf5] rounded-full overflow-hidden">
+             <div class="h-full rounded-full transition-all"
+                  style="background:#1ba89a;width:${pct}%;"></div>
+           </div>`
+        : '';
+
+      return `
+        <button class="select-category w-full text-left bg-white rounded-card border border-[#b8e4e0]
+                       p-4 transition-colors ${status.type === 'empty' ? 'opacity-50 cursor-not-allowed' : 'hover:border-brand cursor-pointer'}"
+                data-cat-id="${esc(cat.id)}"
+                ${status.type === 'empty' ? 'disabled' : ''}>
+          <div class="flex items-start justify-between gap-2 mb-2">
+            <p class="text-[15px] font-extrabold text-[#1c1626] leading-tight text-left">${esc(cat.name)}</p>
+            <span class="shrink-0 rounded-full text-[11px] font-bold px-2.5 py-0.5 whitespace-nowrap"
+                  style="background:${status.bg};color:${status.color};">
+              ${status.label}
+            </span>
+          </div>
+          ${cat.description
+            ? `<p class="text-[12.5px] text-[#9b94a8] leading-relaxed text-left"
+                  style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+                 ${esc(cat.description)}
+               </p>`
+            : ''}
+          ${progressBar}
+        </button>`;
+    }).join('');
+  }
+
+  function renderRound1() {
+    const entries = state.entries[state.activeCategoryId] || [];
+    const idx     = state.currentEntryIndex;
+    const entry   = entries[idx];
+    const cat     = state.categories.find(c => c.id === state.activeCategoryId);
+
+    document.getElementById('r1-cat-name').textContent = cat?.name || '';
+    document.getElementById('r1-criteria').textContent = cat?.description || '';
+
+    document.getElementById('r1-progress-text').textContent = `Entry ${idx + 1} of ${entries.length}`;
+    document.getElementById('r1-progress-bar').style.width  =
+      `${entries.length ? Math.round(((idx + 1) / entries.length) * 100) : 0}%`;
+
+    resetPhotoTransform();
+    const photo       = document.getElementById('r1-photo');
+    const noPhoto     = document.getElementById('r1-no-photo');
+    const zoomControls = document.getElementById('r1-zoom-controls');
+    if (entry?.photo_url) {
+      photo.src             = entry.photo_url;
+      photo.style.display   = 'block';
+      noPhoto.style.display = 'none';
+      if (zoomControls) { zoomControls.style.display = 'flex'; }
+    } else {
+      photo.style.display   = 'none';
+      noPhoto.style.display = 'flex';
+      if (zoomControls) { zoomControls.style.display = 'none'; }
+    }
+
+    document.getElementById('r1-entry-num').textContent =
+      entry ? `Entry #${entry.entry_number ?? '—'}` : '';
+
+    const slider  = document.getElementById('score-slider');
+    slider.value  = String(state.scores[entry?.id] ?? 50);
+    updateSliderFill(slider);
+
+    document.getElementById('btn-prev-entry').disabled = (idx === 0);
+
+    const otherUnscored   = entries.filter((e, i) => i !== idx && (state.scores[e.id] ?? 0) === 0).length;
+    const allWillBeScored = otherUnscored === 0;
+    const labelEl         = document.getElementById('btn-next-label');
+    labelEl.textContent = allWillBeScored
+      ? 'Complete ✓'
+      : idx === entries.length - 1
+        ? 'Review →'
+        : 'Next →';
+
+    const anyScored = entries.some(e => (state.scores[e.id] ?? 0) > 0);
+    document.getElementById('r1-entry-pills').innerHTML = entries.map((e, i) => {
+      const isScored  = (state.scores[e.id] ?? 0) > 0;
+      const isCurrent = i === idx;
+      // Unscored pills turn amber-warning once judging has started, so skipped ones stand out
+      const bg  = isCurrent ? '#1ba89a'
+                : isScored  ? '#dcf6e3'
+                : anyScored ? '#fef3c7'
+                :             '#f5f3fa';
+      const col = isCurrent ? '#fff'
+                : isScored  ? '#166534'
+                : anyScored ? '#92400e'
+                :             '#9b94a8';
+      const ring = isCurrent ? 'box-shadow:0 0 0 2px #fff,0 0 0 4px #1ba89a;' : '';
+      return `<button class="entry-pill" data-idx="${i}"
+        style="width:32px;height:32px;border-radius:50%;border:none;cursor:pointer;flex-shrink:0;
+               background:${bg};color:${col};font-size:11px;font-weight:700;transition:all 0.15s;${ring}"
+        aria-label="Go to entry ${i + 1}">${i + 1}</button>`;
+    }).join('');
+  }
+
+  function renderInterstitial() {
+    const cat       = state.categories.find(c => c.id === state.activeCategoryId);
+    const shortlist = getShortlist(state.activeCategoryId);
+    const n         = shortlist.length;
+    document.getElementById('interstit-body').textContent =
+      `${n} ${n === 1 ? 'entry advances' : 'entries advance'} to the Final Round for ${cat?.name || 'this category'}.`;
+  }
+
+  function renderFinalRound() {
+    const cat       = state.categories.find(c => c.id === state.activeCategoryId);
+    const shortlist = getShortlist(state.activeCategoryId);
+    document.getElementById('final-cat-name').textContent = cat?.name || '';
+
+    let ordered = shortlist;
+    const existing = (state.rankings[state.activeCategoryId] || []).sort((a, b) => a.rank - b.rank);
+    if (existing.length > 0) {
+      const byId = Object.fromEntries(shortlist.map(e => [e.id, e]));
+      ordered = existing.map(r => byId[r.entry_id]).filter(Boolean);
+    }
+
+    const listEl = document.getElementById('final-rank-list');
+    listEl.innerHTML = ordered.map((entry, i) => `
+      <div class="rank-item bg-white rounded-card border border-[#b8e4e0] p-4
+                  flex items-center gap-4 select-none"
+           data-entry-id="${esc(entry.id)}">
+        <div class="rank-badge w-10 h-10 rounded-full flex items-center justify-center
+                    text-[12px] font-extrabold text-white shrink-0"
+             style="background:#1ba89a;">
+          ${ordinal(i + 1)}
+        </div>
+        ${entry.photo_url
+          ? `<div class="w-14 h-14 rounded-[11px] overflow-hidden shrink-0 border border-[#efebf5]">
+               <img src="${esc(entry.photo_url)}" class="w-full h-full object-cover" alt="" loading="lazy" />
+             </div>`
+          : `<div class="w-14 h-14 rounded-[11px] bg-[#f5f3fa] shrink-0 flex items-center justify-center">
+               <span style="font-size:24px;">🐾</span>
+             </div>`
+        }
+        <div class="flex-1 min-w-0">
+          <p class="text-[15px] font-bold text-[#1c1626]">Entry #${esc(entry.entry_number ?? '—')}</p>
+          ${entry.breed ? `<p class="text-[13px] text-[#9b94a8]">${esc(entry.breed)}</p>` : ''}
+        </div>
+        <div class="drag-handle text-[#c4bed0] shrink-0 px-1 cursor-grab" style="line-height:0;">
+          <svg width="14" height="18" viewBox="0 0 14 18" fill="currentColor" aria-hidden="true">
+            <circle cx="4" cy="4"  r="1.8"/><circle cx="10" cy="4"  r="1.8"/>
+            <circle cx="4" cy="9"  r="1.8"/><circle cx="10" cy="9"  r="1.8"/>
+            <circle cx="4" cy="14" r="1.8"/><circle cx="10" cy="14" r="1.8"/>
+          </svg>
+        </div>
+      </div>
+    `).join('');
+
+    if (state.sortableInstance) {
+      state.sortableInstance.destroy();
+      state.sortableInstance = null;
+    }
+    state.sortableInstance = Sortable.create(listEl, {
+      animation:   180,
+      handle:      '.drag-handle',
+      ghostClass:  'sortable-ghost',
+      chosenClass: 'sortable-chosen',
+      onEnd() {
+        listEl.querySelectorAll('.rank-badge').forEach((badge, i) => {
+          badge.textContent = ordinal(i + 1);
+        });
+      },
+    });
+
+    // Lock / unlock confirm button based on whether rankings are already saved
+    const hasRankings = (state.rankings[state.activeCategoryId] || []).length > 0;
+    const confirmBtn  = document.getElementById('btn-confirm-rankings');
+    const changeBtn   = document.getElementById('btn-change-rankings');
+    if (hasRankings) {
+      confirmBtn.disabled       = true;
+      confirmBtn.textContent    = 'Rankings Locked ✓';
+      confirmBtn.style.background = '#16a34a';
+      confirmBtn.style.boxShadow  = 'none';
+      confirmBtn.style.cursor     = 'default';
+      if (changeBtn) changeBtn.style.display = '';
+    } else {
+      confirmBtn.disabled         = false;
+      confirmBtn.textContent      = 'Confirm Rankings ✓';
+      confirmBtn.style.background = '';
+      confirmBtn.style.boxShadow  = '';
+      confirmBtn.style.cursor     = '';
+      if (changeBtn) changeBtn.style.display = 'none';
+    }
+  }
+
+  function renderAllDone() {
+    document.getElementById('done-show-name').textContent = state.activeShow?.title || '';
+    document.getElementById('btn-another-show').style.display =
+      state.shows.length > 1 ? '' : 'none';
+  }
+
+  // ── Top bar avatar ────────────────────────────────────────────────────────
+  function renderTopbarAvatar() {
+    const inner = document.getElementById('topbar-avatar-inner');
+    if (!inner) return;
+    if (state.judgePhoto) {
+      inner.innerHTML = `<img src="${esc(state.judgePhoto)}" class="w-full h-full object-cover" alt="" />`;
+    } else {
+      inner.textContent = state.judgeName ? state.judgeName[0].toUpperCase() : '?';
+    }
+  }
+
+  // ── Event wiring ─────────────────────────────────────────────────────────
+  function setupEvents() {
+    // Sidebar mobile toggle
+    document.getElementById('sidebar-toggle')?.addEventListener('click', openSidebar);
+    document.getElementById('sidebar-close')?.addEventListener('click', closeSidebar);
+    document.getElementById('sidebar-backdrop')?.addEventListener('click', closeSidebar);
+
+    // Sign out
+    const signOut = async () => {
+      await supabase.auth.signOut();
+      window.location.href = state.base + 'login';
+    };
+    document.getElementById('btn-signout').addEventListener('click', signOut);
+
+    // Show picker cards
+    document.getElementById('show-picker-list').addEventListener('click', async e => {
+      const btn = e.target.closest('.select-show');
+      if (!btn) return;
+      await loadShow(btn.dataset.showId);
+    });
+
+    // Sidebar show navigation
+    document.getElementById('sidebar-show-list').addEventListener('click', async e => {
+      const btn = e.target.closest('.sidebar-show-btn');
+      if (!btn || btn.disabled) return;
+      closeSidebar();
+      const showId = btn.dataset.showId;
+      if (showId !== state.activeShowId) await loadShow(showId);
+    });
+
+    // Back to shows from category grid
+    document.getElementById('btn-back-to-shows').addEventListener('click', () => {
+      state.activeShowId = null;
+      state.activeShow   = null;
+      transition('SHOW_PICKER');
+    });
+
+    // Category grid click
+    document.getElementById('category-grid').addEventListener('click', e => {
+      const btn = e.target.closest('.select-category');
+      if (!btn || btn.disabled) return;
+      const catId  = btn.dataset.catId;
+      const status = getCategoryStatus(catId);
+      state.activeCategoryId = catId;
+
+      if (status.type === 'complete') {
+        transition('FINAL_ROUND');
+      } else if (status.type === 'final-round') {
+        transition('R1_INTERSTITIAL');
+      } else {
+        const entries       = state.entries[catId] || [];
+        const firstUnscored = entries.findIndex(e => (state.scores[e.id] ?? 0) === 0);
+        transition('ROUND1_SCORING', { currentEntryIndex: Math.max(0, firstUnscored) });
+      }
+    });
+
+    // Back to categories from round 1
+    document.getElementById('btn-back-to-cats-r1').addEventListener('click', () => {
+      transition('CATEGORY_GRID');
+    });
+
+    // Slider live fill
+    document.getElementById('score-slider').addEventListener('input', e => {
+      updateSliderFill(e.target);
+    });
+
+    // Round 1 — Next / Complete
+    document.getElementById('btn-next-entry').addEventListener('click', async () => {
+      const entries = state.entries[state.activeCategoryId] || [];
+      const entry   = entries[state.currentEntryIndex];
+      if (!entry) return;
+
+      const slider = document.getElementById('score-slider');
+      const ok     = await saveScore(entry.id, parseInt(slider.value, 10));
+      if (!ok) { showToast('Could not save — check your connection', true); return; }
+
+      const allScored = entries.every(e => (state.scores[e.id] ?? 0) > 0);
+      if (allScored) { transition('R1_INTERSTITIAL'); return; }
+
+      const nextIdx = state.currentEntryIndex + 1;
+      if (nextIdx >= entries.length) {
+        const firstUnscored = entries.findIndex(e => (state.scores[e.id] ?? 0) === 0);
+        transition('ROUND1_SCORING', { currentEntryIndex: Math.max(0, firstUnscored) });
+      } else {
+        transition('ROUND1_SCORING', { currentEntryIndex: nextIdx });
+      }
+    });
+
+    // Round 1 — Prev
+    document.getElementById('btn-prev-entry').addEventListener('click', async () => {
+      const entries = state.entries[state.activeCategoryId] || [];
+      const entry   = entries[state.currentEntryIndex];
+      if (entry) {
+        const slider = document.getElementById('score-slider');
+        await saveScore(entry.id, parseInt(slider.value, 10));
+      }
+      transition('ROUND1_SCORING', {
+        currentEntryIndex: Math.max(0, state.currentEntryIndex - 1),
+      });
+    });
+
+    // Round 1 — Entry pill navigation
+    document.getElementById('r1-entry-pills').addEventListener('click', async e => {
+      const btn = e.target.closest('.entry-pill');
+      if (!btn) return;
+      const idx = parseInt(btn.dataset.idx, 10);
+      if (isNaN(idx) || idx === state.currentEntryIndex) return;
+
+      const entries = state.entries[state.activeCategoryId] || [];
+      const current = entries[state.currentEntryIndex];
+      if (current) {
+        const slider = document.getElementById('score-slider');
+        await saveScore(current.id, parseInt(slider.value, 10));
+      }
+      transition('ROUND1_SCORING', { currentEntryIndex: idx });
+    });
+
+    // Interstitial — start final round
+    document.getElementById('btn-start-final').addEventListener('click', () => {
+      transition('FINAL_ROUND');
+    });
+
+    // Back to categories from final round
+    document.getElementById('btn-back-to-cats-final').addEventListener('click', () => {
+      transition('CATEGORY_GRID');
+    });
+
+    // Unlock rankings for re-ordering
+    document.getElementById('btn-change-rankings').addEventListener('click', () => {
+      const confirmBtn = document.getElementById('btn-confirm-rankings');
+      const changeBtn  = document.getElementById('btn-change-rankings');
+      confirmBtn.disabled         = false;
+      confirmBtn.textContent      = 'Confirm Rankings ✓';
+      confirmBtn.style.background = '';
+      confirmBtn.style.boxShadow  = '';
+      confirmBtn.style.cursor     = '';
+      changeBtn.style.display     = 'none';
+    });
+
+    // Confirm rankings
+    document.getElementById('btn-confirm-rankings').addEventListener('click', () => {
+      const listEl     = document.getElementById('final-rank-list');
+      const orderedIds = [...listEl.querySelectorAll('[data-entry-id]')]
+        .map(el => el.dataset.entryId);
+      saveRankings(state.activeCategoryId, orderedIds);
+    });
+
+    // Profile photo upload
+    const avatarFileInput = document.getElementById('avatar-file-input');
+    document.getElementById('btn-avatar').addEventListener('click', () => avatarFileInput.click());
+    avatarFileInput.addEventListener('change', async () => {
+      const file = avatarFileInput.files?.[0];
+      if (!file) return;
+      const btn = document.getElementById('btn-avatar');
+      btn.style.opacity = '0.4';
+      try {
+        const url = await uploadImage(`judges/profile/${state.judgeUserId}`, file);
+        state.judgePhoto = url;
+        renderTopbarAvatar();
+        await supabase.from('show_judges')
+          .update({ photo_url: url })
+          .ilike('email', state.judgeEmail);
+      } catch {
+        // silently fail
+      } finally {
+        btn.style.opacity = '1';
+        avatarFileInput.value = '';
+      }
+    });
+
+    // All done — judge another show
+    document.getElementById('btn-another-show').addEventListener('click', () => {
+      state.activeShowId = null;
+      state.activeShow   = null;
+      transition('SHOW_PICKER');
+    });
+
+    setupPhotoInteraction();
+  }
+
+  // ── Init ─────────────────────────────────────────────────────────────────
+  (async () => {
+    const { session, profile, base } = await getAuth();
+    state.base = base;
+
+    if (!session) {
+      window.location.replace(base + 'login');
+      return;
+    }
+    if (!profile?.roles?.includes('judge')) {
+      const roles = profile?.roles || [];
+      window.location.replace(base + (roles.length === 1 ? roles[0] : 'choose'));
+      return;
+    }
+
+    state.judgeEmail  = session.user.email;
+    state.judgeUserId = session.user.id;
+    state.judgeName   = profile?.first_name || session.user.email.split('@')[0];
+
+    // Update sidebar name display
+    const nameEl = document.getElementById('judge-display-name');
+    if (nameEl) nameEl.textContent = state.judgeName;
+
+    setupEvents();
+
+    // Load existing profile photo
+    const { data: photoRow } = await supabase
+      .from('show_judges')
+      .select('photo_url')
+      .ilike('email', state.judgeEmail)
+      .limit(1)
+      .maybeSingle();
+    state.judgePhoto = photoRow?.photo_url || null;
+    renderTopbarAvatar();
+
+    // Discover assigned shows
+    const { data: assignments, error: assignErr } = await supabase
+      .from('show_judges')
+      .select('show_id')
+      .ilike('email', state.judgeEmail);
+
+    if (assignErr) console.error('show_judges query error:', assignErr);
+
+    const showIds = [...new Set((assignments || []).map(a => a.show_id))];
+    console.log('Assigned show IDs:', showIds);
+    if (showIds.length === 0) { transition('NO_SHOWS'); return; }
+
+    const { data: shows, error: showsErr } = await supabase
+      .from('shows')
+      .select('id, title, host_org, logo_url, show_date, is_judged')
+      .in('id', showIds);
+
+    if (showsErr) console.error('shows query error:', showsErr);
+    console.log('Shows returned:', shows?.length, shows?.map(s => s.title));
+
+    state.shows = shows || [];
+
+    if (state.shows.length === 0) {
+      transition('NO_SHOWS');
+    } else {
+      const readyShows = state.shows.filter(s => s.is_judged === true);
+      if (readyShows.length === 0 && state.shows.length === 1) {
+        transition('NOT_READY', { activeShow: state.shows[0], activeShowId: state.shows[0].id });
+      } else if (readyShows.length === 1 && state.shows.length === 1) {
+        // Single ready show — go straight to its categories
+        await loadShow(readyShows[0].id);
+      } else {
+        transition('SHOW_PICKER');
+      }
+    }
+  })();
 </script>

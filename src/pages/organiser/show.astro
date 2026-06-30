@@ -342,7 +342,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         <div class="grid grid-cols-2 gap-3 mb-5" id="mgmt-judging-yn">
           <button type="button" data-value="yes" class="yn flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#b8e4e0] bg-white p-3 transition-all cursor-pointer">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            <span class="text-[12px] font-bold text-[#1c1626]">Expert Judges</span>
+            <span class="text-[12px] font-bold text-[#1c1626]">Expert Judge</span>
           </button>
           <button type="button" data-value="no" class="yn flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#b8e4e0] bg-white p-3 transition-all cursor-pointer">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -350,14 +350,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           </button>
         </div>
         <div id="mgmt-judge-form" style="display:none" class="space-y-4 mb-4">
-          <div class="flex items-center gap-4">
-            <p class="text-[13px] font-semibold text-[#4a4357]">Number of Judges</p>
-            <div class="flex items-center gap-2">
-              <button type="button" id="mgmt-judge-minus" class="w-7 h-7 rounded-full border border-[#b8e4e0] flex items-center justify-center text-brand hover:bg-brand-tint transition-colors text-lg leading-none">−</button>
-              <span id="mgmt-judge-count" class="text-[15px] font-extrabold text-[#1c1626] w-5 text-center">1</span>
-              <button type="button" id="mgmt-judge-plus" class="w-7 h-7 rounded-full border border-[#b8e4e0] flex items-center justify-center text-brand hover:bg-brand-tint transition-colors text-lg leading-none">+</button>
-            </div>
-          </div>
+          <div id="mgmt-judge-current" class="flex items-center gap-3 p-3.5 rounded-[12px] border border-[#efebf5]"></div>
           <div id="mgmt-judge-panels" class="space-y-3"></div>
           <p class="text-[11.5px] text-[#9b94a8]">Judges will receive an invitation email when you publish the show.</p>
         </div>
@@ -741,8 +734,6 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.querySelectorAll('.upload-size-hint').forEach(el => {
       el.textContent = el.textContent.replace(/\d+ MB/, `${maxUploadMb} MB`);
     });
-    judgeCount = judges.length || show.judge_count || 1;
-
     document.getElementById('page-loading').style.display = 'none';
     document.getElementById('page-content').style.display = 'block';
 
@@ -770,6 +761,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     // Re-init panels that need fresh state each open
     if (id === 'classes')  initClassesPanel();
+    if (id === 'judging' && show.is_judged === true) {
+      rebuildJudgePanels();
+      renderMgmtJudgeDisplay();
+    }
     if (id === 'branding') {
       initBrandingWidget('branding-logo-widget',   'logo');
       initBrandingWidget('branding-org-widget',    'orgLogo');
@@ -981,11 +976,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     }
 
     if (show.is_judged === true) {
-      const rows = [
-        ['Method', 'Expert judges'],
-        ['Count',  Number(judgeCount) === 1 ? '1 judge' : `${judgeCount} judges`],
-      ];
-      if (judges[0]?.first_name) rows.push(['Lead', `${judges[0].first_name} ${judges[0].last_name || ''}`.trim()]);
+      const rows = [['Method', 'Expert judges']];
+      if (judges[0]?.first_name) {
+        rows.push(['Judge', `${judges[0].first_name} ${judges[0].last_name || ''}`.trim()]);
+      } else {
+        rows.push(['Judge', 'Not yet assigned']);
+      }
       setHeader('judging', '#22c55e', 'Configured', 'Judging', rows, 'Edit');
     } else if (show.is_judged === false) {
       setHeader('judging', '#c4bed0', 'Public voting', 'Judging', [
@@ -1150,8 +1146,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (show.is_judged === true) {
       setYN('mgmt-judging-yn', 'yes');
       document.getElementById('mgmt-judge-form').style.display = 'block';
-      document.getElementById('mgmt-judge-count').textContent  = String(judgeCount);
       rebuildJudgePanels();
+      renderMgmtJudgeDisplay();
     } else if (show.is_judged === false) {
       setYN('mgmt-judging-yn', 'no');
     }
@@ -1261,12 +1257,6 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       if (val === 'yes' && document.getElementById('mgmt-judge-panels').children.length === 0) {
         rebuildJudgePanels();
       }
-    });
-    document.getElementById('mgmt-judge-minus').addEventListener('click', () => {
-      if (judgeCount > 1) { judgeCount--; document.getElementById('mgmt-judge-count').textContent = String(judgeCount); rebuildJudgePanels(); }
-    });
-    document.getElementById('mgmt-judge-plus').addEventListener('click', () => {
-      if (judgeCount < 7) { judgeCount++; document.getElementById('mgmt-judge-count').textContent = String(judgeCount); rebuildJudgePanels(); }
     });
     document.addEventListener('click', () => {
       document.querySelectorAll('.judge-picker-dropdown').forEach(d => { d.style.display = 'none'; });
@@ -1520,12 +1510,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           .select().single();
         if (newSJ) savedJudges.push(newSJ);
       }
-      await saveSection('judging', { is_judged: true, judge_count: judgeCount }, async () => {
+      await saveSection('judging', { is_judged: true, judge_count: 1 }, async () => {
         await supabase.from('show_judges').delete().eq('show_id', showId);
         if (newJudges.some(j => j.first_name)) await supabase.from('show_judges').insert(newJudges.filter(j => j.first_name));
         const { data } = await supabase.from('show_judges').select('*').eq('show_id', showId);
         judges = data || [];
-        judgeCount = judges.length || judgeCount;
+        renderMgmtJudgeDisplay();
       });
     } else {
       await saveSection('judging', { is_judged: false }, async () => {
@@ -1824,10 +1814,36 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     emailInput.after(prompt);
   }
 
+  function renderMgmtJudgeDisplay() {
+    const el = document.getElementById('mgmt-judge-current');
+    if (!el) return;
+    const judge = judges[0];
+    if (judge?.first_name) {
+      const photo = judge.photo_url
+        ? `<img src="${escAttr(judge.photo_url)}" class="w-10 h-10 rounded-full object-cover shrink-0" />`
+        : `<div class="w-10 h-10 rounded-full bg-brand-tint flex items-center justify-center text-brand font-extrabold text-[14px] shrink-0">${escAttr(judge.first_name[0].toUpperCase())}</div>`;
+      el.className = 'flex items-center gap-3 p-3.5 rounded-[12px] border border-[#b8e4e0] bg-[#f0fafa]';
+      el.innerHTML = `${photo}<div>
+        <p class="text-[13.5px] font-bold text-[#1c1626]">${escAttr(judge.first_name)} ${escAttr(judge.last_name || '')}</p>
+        ${judge.email ? `<p class="text-[12px] text-[#9b94a8]">${escAttr(judge.email)}</p>` : ''}
+      </div>`;
+    } else {
+      el.className = 'flex items-center gap-3 p-3.5 rounded-[12px] border border-[#efebf5]';
+      el.innerHTML = `
+        <div class="w-10 h-10 rounded-full border-2 border-dashed border-[#c4bed0] flex items-center justify-center shrink-0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c4bed0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+        </div>
+        <div>
+          <p class="text-[13px] font-semibold text-[#9b94a8]">No judge assigned yet</p>
+          <p class="text-[12px] text-[#c4bed0]">Fill in the details below ↓</p>
+        </div>`;
+    }
+  }
+
   function rebuildJudgePanels() {
     const container = document.getElementById('mgmt-judge-panels');
     container.innerHTML = '';
-    for (let i = 0; i < judgeCount; i++) {
+    { const i = 0;
       const j = judges[i] || { first_name: '', last_name: '', email: '', phone: '', photo_url: '' };
       const p = document.createElement('div');
       p.className = 'judge-panel border border-[#efebf5] rounded-[12px] p-4 space-y-3';
@@ -1849,7 +1865,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
       p.innerHTML = `
         <div class="flex items-center justify-between">
-          <p class="text-[12px] font-bold text-[#6f6880] uppercase tracking-wide">Judge ${i + 1}</p>
+          <p class="text-[12px] font-bold text-[#6f6880] uppercase tracking-wide">Judge</p>
           ${pickerHtml}
         </div>
         <div class="grid grid-cols-2 gap-3">
@@ -1890,6 +1906,16 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
             p.querySelector('.j-last').value  = sj.last_name;
             p.querySelector('.j-email').value = sj.email || '';
             p.querySelector('.j-phone').value = sj.phone || '';
+            p.querySelector('.j-photo-url').value = sj.photo_url || '';
+            const circle = p.querySelector('.judge-photo-circle');
+            const pBtn   = p.querySelector('.judge-photo-btn');
+            if (sj.photo_url) {
+              circle.innerHTML = `<img src="${sj.photo_url}" class="w-full h-full object-cover" />`;
+              pBtn.textContent = 'Replace photo';
+            } else {
+              circle.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c4bed0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>`;
+              pBtn.textContent = 'Upload photo';
+            }
             p.dataset.savedId = sj.id;
             dropdown.style.display = 'none';
           });

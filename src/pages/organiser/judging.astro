@@ -114,6 +114,27 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     <div class="flex-1 overflow-y-auto p-6 space-y-4">
       <p id="drawer-error" style="display:none"
         class="text-[13px] text-red-600 bg-red-50 border border-red-100 rounded-[11px] px-4 py-3"></p>
+
+      <!-- Photo upload -->
+      <div class="flex flex-col items-center gap-3 pb-2">
+        <div id="drawer-photo-circle"
+          class="w-20 h-20 rounded-full overflow-hidden border-2 border-[#b8e4e0] bg-[#f5f3fa]
+                 flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
+          title="Click to upload photo">
+          <svg id="drawer-photo-placeholder" width="28" height="28" viewBox="0 0 24 24" fill="none"
+               stroke="#c4bed0" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+        </div>
+        <button type="button" id="drawer-photo-btn"
+          class="text-[12.5px] font-semibold text-brand hover:underline">
+          Upload photo
+        </button>
+        <input type="file" id="drawer-photo-input" accept="image/jpeg,image/png,image/webp"
+               class="hidden" />
+      </div>
+
       <div class="grid grid-cols-2 gap-3">
         <div>
           <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">First Name <span class="text-red-400">*</span></label>
@@ -157,8 +178,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 </DashboardLayout>
 
 <script>
-  import { getAuth } from '../../lib/auth.js';
-  import { supabase } from '../../lib/supabase.js';
+  import { getAuth }     from '../../lib/auth.js';
+  import { supabase }    from '../../lib/supabase.js';
+  import { uploadImage } from '../../lib/storage.js';
 
   const MOCK_VOTES = [23, 41, 17, 35, 28, 19, 44, 31];
 
@@ -169,6 +191,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   let judgesByShow = {};
   let catsByShow   = {};
   let currentEditJudge = null;
+  let drawerPhotoUrl   = null;
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -254,7 +277,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     let typeBadge = '';
     if (isExpert) {
-      typeBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700">Expert Judges · ${show.judge_count || 1}</span>`;
+      typeBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700">Expert Judge</span>`;
     } else if (isPublic) {
       typeBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold" style="background:#f5f3ff;color:#7c3aed">Public Voting</span>`;
     } else {
@@ -566,6 +589,22 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
   // ── Drawer ────────────────────────────────────────────────────────────────────
 
+  function setDrawerPhoto(url) {
+    drawerPhotoUrl = url || null;
+    const circle = document.getElementById('drawer-photo-circle');
+    const btn    = document.getElementById('drawer-photo-btn');
+    if (url) {
+      circle.innerHTML = `<img src="${url}" class="w-full h-full object-cover" alt="" />`;
+      btn.textContent  = 'Change photo';
+    } else {
+      circle.innerHTML = `<svg id="drawer-photo-placeholder" width="28" height="28" viewBox="0 0 24 24" fill="none"
+        stroke="#c4bed0" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+      </svg>`;
+      btn.textContent = 'Upload photo';
+    }
+  }
+
   function openDrawer(judge = null) {
     currentEditJudge = judge;
     document.getElementById('drawer-label').textContent  = judge ? 'Editing' : 'Adding';
@@ -575,6 +614,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.getElementById('f-email').value = judge?.email      || '';
     document.getElementById('f-phone').value = judge?.phone      || '';
     document.getElementById('drawer-error').style.display = 'none';
+    document.getElementById('drawer-photo-input').value  = '';
+    setDrawerPhoto(judge?.photo_url || null);
     const backdrop = document.getElementById('drawer-backdrop');
     backdrop.style.opacity = '1';
     backdrop.style.pointerEvents = 'auto';
@@ -588,6 +629,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     backdrop.style.pointerEvents = 'none';
     document.getElementById('edit-drawer').style.transform = 'translateX(100%)';
     currentEditJudge = null;
+    drawerPhotoUrl   = null;
   }
 
   async function saveJudge() {
@@ -610,7 +652,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     if (currentEditJudge) {
       const { data, error } = await supabase.from('saved_judges')
-        .update({ first_name: first, last_name: last, email, phone })
+        .update({ first_name: first, last_name: last, email, phone, photo_url: drawerPhotoUrl })
         .eq('id', currentEditJudge.id)
         .select().single();
       if (!error && data) {
@@ -619,7 +661,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       }
     } else {
       const { data, error } = await supabase.from('saved_judges')
-        .insert({ organiser_id: uid, first_name: first, last_name: last, email, phone })
+        .insert({ organiser_id: uid, first_name: first, last_name: last, email, phone, photo_url: drawerPhotoUrl })
         .select().single();
       if (!error && data) {
         savedJudges.push(data);
@@ -727,6 +769,26 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.getElementById('drawer-save')?.addEventListener('click', saveJudge);
     document.getElementById('btn-add-judge')?.addEventListener('click', () => openDrawer());
     document.getElementById('btn-add-first')?.addEventListener('click', () => openDrawer());
+
+    // Photo upload in drawer
+    const photoInput  = document.getElementById('drawer-photo-input');
+    const photoBtn    = document.getElementById('drawer-photo-btn');
+    const photoCircle = document.getElementById('drawer-photo-circle');
+    const triggerPhotoInput = () => photoInput.click();
+    photoBtn.addEventListener('click', triggerPhotoInput);
+    photoCircle.addEventListener('click', triggerPhotoInput);
+    photoInput.addEventListener('change', async () => {
+      const file = photoInput.files?.[0];
+      if (!file) return;
+      photoBtn.textContent = 'Uploading…';
+      try {
+        const path = `judges/book/${uid}/${currentEditJudge?.id || 'new-' + Date.now()}`;
+        const url  = await uploadImage(path, file);
+        setDrawerPhoto(url);
+      } catch {
+        photoBtn.textContent = 'Upload failed — try again';
+      }
+    });
 
     // Close assign dropdowns on outside click
     document.addEventListener('click', () => {
