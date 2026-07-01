@@ -48,6 +48,57 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     <div id="shows-list" class="space-y-3"></div>
   </div>
 
+  <!-- Archive confirmation modal -->
+  <div id="archive-modal" style="display:none" class="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="archive-modal-title">
+    <div class="bg-white rounded-[20px] w-full max-w-[440px] shadow-2xl">
+      <div class="p-6">
+        <div class="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center mb-4">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/>
+            <line x1="10" y1="12" x2="14" y2="12"/>
+          </svg>
+        </div>
+        <h2 id="archive-modal-title" style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 8px">Archive This Show?</h2>
+        <p style="font-size:14px;color:#6b7c89;line-height:1.55;margin:0 0 16px">The show will be hidden from your dashboard and replaced with a lightweight results page showing winners and sponsors only.</p>
+        <div id="archive-photo-summary" style="background:#fef3c7;border:1px solid #fde68a;border-radius:10px;padding:12px 16px;margin-bottom:20px"></div>
+        <div style="display:flex;gap:12px">
+          <button id="archive-cancel" style="flex:1;padding:11px;border-radius:10px;border:1.5px solid #e0dce8;background:white;font-size:14px;font-weight:600;color:#4a4357;cursor:pointer">Cancel</button>
+          <button id="archive-confirm" style="flex:1;padding:11px;border-radius:10px;border:none;background:#f59e0b;color:white;font-size:14px;font-weight:700;cursor:pointer">Archive Show</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete confirmation modal -->
+  <div id="delete-modal" style="display:none" class="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+    <div class="bg-white rounded-[20px] w-full max-w-[460px] shadow-2xl">
+      <div class="p-6">
+        <div class="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-4">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            <path d="M10 11v6"/><path d="M14 11v6"/>
+            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+          </svg>
+        </div>
+        <h2 id="delete-modal-title" style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 8px">Permanently Delete Show?</h2>
+        <p style="font-size:14px;color:#6b7c89;line-height:1.55;margin:0 0 12px">This will <strong style="color:#1c1626">permanently remove</strong> everything associated with <strong id="delete-show-name" style="color:#1c1626"></strong> and <strong style="color:#ef4444">cannot be undone</strong>:</p>
+        <ul style="margin:0 0 16px;padding:0 0 0 20px;font-size:13px;color:#4a4357;line-height:2">
+          <li>All entries and participant data</li>
+          <li>All uploaded photos and images</li>
+          <li>All categories and class settings</li>
+          <li>All judging scores and results</li>
+          <li>All payout and financial records</li>
+        </ul>
+        <div id="delete-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:#ef4444"></div>
+        <div style="display:flex;gap:12px">
+          <button id="delete-cancel" style="flex:1;padding:11px;border-radius:10px;border:1.5px solid #e0dce8;background:white;font-size:14px;font-weight:600;color:#4a4357;cursor:pointer">Cancel</button>
+          <button id="delete-confirm" style="flex:1;padding:11px;border-radius:10px;border:none;background:#ef4444;color:white;font-size:14px;font-weight:700;cursor:pointer">Permanently Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </DashboardLayout>
 
 <script>
@@ -57,6 +108,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   const SHOW_TYPE_LABELS   = { beauty_contest: 'Beauty Contest', fun_stakes: 'Fun Stakes', memorial: 'Memorial Show', other: 'Other' };
   const BREED_SCOPE_LABELS = { all: 'All Breeds', breed_specific: 'Breed Specific', group_specific: 'Group Specific' };
   const CURRENCY_SYMBOLS   = { GBP: '£', USD: '$', EUR: '€', AUD: 'A$', CAD: 'C$', NZD: 'NZ$', ZAR: 'R', SGD: 'S$' };
+
+  let pendingArchiveShow    = null;
+  let pendingArchiveEntries = null;
+  let pendingDeleteShow     = null;
 
   const { session, profile, base } = await getAuth();
 
@@ -91,9 +146,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const shows         = activeRes.data || [];
     const archivedCount = (archivedRes.data || []).length;
 
-    // Inject "Show archived" link if there are archived shows
     if (archivedCount > 0) {
-      const actionsSlot = document.querySelector('[slot="actions"]')?.parentElement;
       const archLink = document.createElement('a');
       archLink.href = `${base}organiser/shows?archived=1`;
       archLink.className = 'text-[13px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-3 py-2 rounded-btn hover:bg-[#f0fafa] transition-colors';
@@ -103,7 +156,6 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       if (newBtn) newBtn.parentElement.insertBefore(archLink, newBtn);
     }
 
-    // If ?archived=1, load archived shows instead
     const viewingArchived = new URLSearchParams(window.location.search).get('archived') === '1';
     if (viewingArchived) {
       const { data: archived } = await supabase.from('shows').select('*').eq('created_by', session.user.id).not('archived_at', 'is', null).order('archived_at', { ascending: false });
@@ -129,13 +181,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     } else {
       const catCounts = {};
       await Promise.all(shows.map(async s => {
-        const { count } = await supabase
-          .from('show_categories')
-          .select('*', { count: 'exact', head: true })
-          .eq('show_id', s.id);
+        const { count } = await supabase.from('show_categories').select('*', { count: 'exact', head: true }).eq('show_id', s.id);
         catCounts[s.id] = count || 0;
       }));
-
       if (listEl) listEl.style.display = 'block';
       const container = document.getElementById('shows-list');
       shows.forEach(show => container.appendChild(buildRow(show, catCounts[show.id] || 0)));
@@ -145,13 +193,20 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   // ── Helpers ───────────────────────────────────────────────────────────────────
 
   function showStatus(s) {
-    if (s.status === 'draft') return { label: 'Draft', color: '#6f6880', bg: '#f5f3fa' };
+    if (s.archived_at)        return { label: 'Archived',          color: '#92400e', bg: '#fef3c7' };
+    if (s.status === 'draft') return { label: 'Draft',             color: '#6f6880', bg: '#f5f3fa' };
     const now = Date.now();
-    if (s.entry_open_date && new Date(s.entry_open_date).getTime() > now) return { label: 'Scheduled', color: '#2563eb', bg: '#eff6ff' };
+    if (s.entry_open_date  && new Date(s.entry_open_date).getTime()  > now) return { label: 'Scheduled',        color: '#2563eb', bg: '#eff6ff' };
     if (s.entry_close_date && new Date(s.entry_close_date).getTime() >= now) return { label: 'Open for Entries', color: '#16a34a', bg: '#f0fdf4' };
     return { label: 'Closed', color: '#6b7280', bg: '#f9fafb' };
   }
 
+  function archiveBlockedReason(show) {
+    if (show.status !== 'published')                                   return 'Show must be published before archiving.';
+    if (!show.results_published_at)                                    return 'Results must be published before archiving.';
+    if (!show.show_date || new Date(show.show_date) > new Date())      return 'The show date must have passed before archiving.';
+    return null;
+  }
 
   function dot(state) {
     return state === 'ok' ? '#22c55e' : state === 'pending' ? '#fbbf24' : '#c4bed0';
@@ -190,8 +245,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   function buildRow(show, catCount) {
     const showUrl    = `${window.location.origin}${base}show?id=${show.id}`;
     const previewUrl = `${base}show?id=${show.id}&preview=1`;
-    const status   = showStatus(show);
-    const showDate = show.show_date
+    const status     = showStatus(show);
+    const showDate   = show.show_date
       ? new Date(show.show_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
       : '—';
     const sym = CURRENCY_SYMBOLS[show.currency] || '£';
@@ -199,6 +254,21 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const feeText = show.is_fundraising === true
       ? `${sym}${show.entry_fee || 0} entry fee`
       : show.is_fundraising === false ? 'No fundraising' : 'Fees: not set';
+
+    const isArchived    = !!show.archived_at;
+    const isDraft       = show.status === 'draft';
+    const archiveReason = !isArchived ? archiveBlockedReason(show) : null;
+    const canDel        = isDraft || isArchived;
+
+    const archiveBtnHtml = !isArchived
+      ? archiveReason
+        ? `<button class="btn-archive" disabled title="${esc(archiveReason)}" style="font-size:13px;font-weight:600;color:#d97706;border:1.5px solid #fde68a;background:#fefce8;padding:8px 14px;border-radius:8px;cursor:not-allowed;opacity:0.5">Archive</button>`
+        : `<button class="btn-archive" style="font-size:13px;font-weight:600;color:#92400e;border:1.5px solid #fde68a;background:#fef3c7;padding:8px 14px;border-radius:8px;cursor:pointer">Archive</button>`
+      : '';
+
+    const deleteBtnHtml = canDel
+      ? `<button class="btn-delete" style="font-size:13px;font-weight:700;color:white;background:#ef4444;border:none;padding:8px 14px;border-radius:8px;cursor:pointer">Delete</button>`
+      : `<button class="btn-delete" disabled title="Only draft or archived shows can be deleted." style="font-size:13px;font-weight:600;color:#c4bed0;background:transparent;border:1.5px solid #e0dce8;padding:8px 14px;border-radius:8px;cursor:not-allowed">Delete</button>`;
 
     const row = document.createElement('div');
     row.className = 'bg-white rounded-card border border-[#b8e4e0] overflow-hidden';
@@ -234,17 +304,23 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           ${sectionTiles(show, catCount)}
         </div>
 
-        <div class="flex items-center gap-3 px-5 py-4">
-          ${show.status === 'published'
+        <div class="flex items-center gap-3 px-5 py-4 flex-wrap">
+          ${!isArchived && show.status === 'published'
             ? `<button class="btn-dashboard inline-flex items-center gap-2 bg-brand text-white text-[13px] font-bold px-4 py-2 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Dashboard</button>`
-            : `<button class="btn-wizard inline-flex items-center gap-2 bg-brand text-white text-[13px] font-bold px-4 py-2 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Continue in Wizard</button>`
+            : !isArchived
+            ? `<button class="btn-wizard inline-flex items-center gap-2 bg-brand text-white text-[13px] font-bold px-4 py-2 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Continue in Wizard</button>`
+            : ''
           }
           <button class="btn-manage text-[13px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-4 py-2 rounded-btn hover:bg-[#f0fafa] transition-colors">Settings</button>
-          ${show.status === 'published'
+          ${isArchived
+            ? `<a href="${showUrl}" target="_blank" class="text-[13px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-4 py-2 rounded-btn hover:bg-[#f0fafa] transition-colors" style="text-decoration:none">View Archive ↗</a>`
+            : show.status === 'published'
             ? `<a href="${showUrl}" target="_blank" class="btn-view-show text-[13px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-4 py-2 rounded-btn hover:bg-[#f0fafa] transition-colors" style="text-decoration:none">View Show ↗</a>
                <button class="btn-copy-url text-[13px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-4 py-2 rounded-btn hover:bg-[#f0fafa] transition-colors">Copy URL</button>`
             : `<a href="${previewUrl}" target="_blank" class="btn-preview text-[13px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-4 py-2 rounded-btn hover:bg-[#f0fafa] transition-colors" style="text-decoration:none">Preview →</a>`
           }
+          ${archiveBtnHtml}
+          ${deleteBtnHtml}
           <div class="ml-auto flex items-center gap-1.5 text-[#9b94a8]">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             <span class="text-[11px]">Image templates:</span>
@@ -260,10 +336,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       const panel   = row.querySelector('.row-panel');
       const chevron = row.querySelector('.chevron');
       const open    = panel.style.display !== 'none';
-      panel.style.display   = open ? 'none' : 'block';
+      panel.style.display    = open ? 'none' : 'block';
       chevron.style.transform = open ? '' : 'rotate(180deg)';
     });
-
     row.querySelector('.btn-dashboard')?.addEventListener('click', e => {
       e.stopPropagation();
       window.location.href = base + `organiser?show=${show.id}`;
@@ -278,15 +353,158 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     });
     row.querySelector('.btn-copy-url')?.addEventListener('click', e => {
       e.stopPropagation();
-      const url = `${window.location.origin}${base}show?id=${show.id}`;
-      navigator.clipboard.writeText(url);
+      navigator.clipboard.writeText(`${window.location.origin}${base}show?id=${show.id}`);
       const btn = e.currentTarget;
       btn.textContent = 'Copied! ✓';
       setTimeout(() => { btn.textContent = 'Copy URL'; }, 1800);
     });
+    row.querySelector('.btn-archive')?.addEventListener('click', e => {
+      e.stopPropagation();
+      openArchiveModal(show);
+    });
+    row.querySelector('.btn-delete')?.addEventListener('click', e => {
+      e.stopPropagation();
+      openDeleteModal(show);
+    });
 
     return row;
   }
+
+  // ── Archive modal ─────────────────────────────────────────────────────────────
+
+  async function openArchiveModal(show) {
+    pendingArchiveShow    = show;
+    pendingArchiveEntries = null;
+    const summaryEl = document.getElementById('archive-photo-summary');
+    if (summaryEl) summaryEl.innerHTML = '<p style="font-size:13px;color:#92400e;margin:0">Calculating photos…</p>';
+    document.getElementById('archive-modal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    const { data: entries } = await supabase
+      .from('show_entries')
+      .select('id, photo_url, result_place')
+      .eq('show_id', show.id)
+      .eq('status', 'confirmed');
+
+    pendingArchiveEntries = entries || [];
+    const toDelete = pendingArchiveEntries.filter(e => !e.result_place && e.photo_url).length;
+    const toKeep   = pendingArchiveEntries.filter(e =>  e.result_place && e.photo_url).length;
+
+    if (summaryEl) {
+      summaryEl.innerHTML = toDelete > 0
+        ? `<p style="font-size:13px;color:#92400e;margin:0 0 4px"><strong>${toDelete}</strong> non-placing photo${toDelete !== 1 ? 's' : ''} will be permanently deleted.</p>
+           <p style="font-size:13px;color:#92400e;margin:0"><strong>${toKeep}</strong> winner photo${toKeep !== 1 ? 's' : ''} will be kept.</p>`
+        : `<p style="font-size:13px;color:#92400e;margin:0">No entry photos to delete.</p>`;
+    }
+  }
+
+  function closeArchiveModal() {
+    document.getElementById('archive-modal').style.display = 'none';
+    document.body.style.overflow = '';
+    pendingArchiveShow    = null;
+    pendingArchiveEntries = null;
+  }
+
+  async function archiveShow(show, entries) {
+    const confirmBtn = document.getElementById('archive-confirm');
+    if (confirmBtn) { confirmBtn.textContent = 'Archiving…'; confirmBtn.disabled = true; }
+
+    const toDelete    = entries.filter(e => !e.result_place && e.photo_url);
+    const paths       = toDelete.map(e => e.photo_url.match(/\/show-assets\/(.+)/)?.[1]).filter(Boolean);
+    if (paths.length) await supabase.storage.from('show-assets').remove(paths);
+
+    const toDeleteIds = toDelete.map(e => e.id);
+    if (toDeleteIds.length) {
+      await supabase.from('show_entries').update({ photo_url: null }).in('id', toDeleteIds);
+    }
+
+    await supabase.from('shows').update({ archived_at: new Date().toISOString() }).eq('id', show.id);
+    closeArchiveModal();
+    window.location.reload();
+  }
+
+  // ── Delete modal ──────────────────────────────────────────────────────────────
+
+  function openDeleteModal(show) {
+    pendingDeleteShow = show;
+    const nameEl = document.getElementById('delete-show-name');
+    if (nameEl) nameEl.textContent = `"${show.title || 'Untitled Show'}"`;
+    const errEl = document.getElementById('delete-error');
+    if (errEl) errEl.style.display = 'none';
+    const confirmBtn = document.getElementById('delete-confirm');
+    if (confirmBtn) { confirmBtn.textContent = 'Permanently Delete'; confirmBtn.disabled = false; }
+    document.getElementById('delete-modal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeDeleteModal() {
+    document.getElementById('delete-modal').style.display = 'none';
+    document.body.style.overflow = '';
+    pendingDeleteShow = null;
+  }
+
+  async function deleteShow(show) {
+    const confirmBtn = document.getElementById('delete-confirm');
+    const errEl      = document.getElementById('delete-error');
+    if (confirmBtn) { confirmBtn.textContent = 'Deleting…'; confirmBtn.disabled = true; }
+    if (errEl) errEl.style.display = 'none';
+
+    try {
+      const { data: entries  } = await supabase.from('show_entries').select('id, photo_url').eq('show_id', show.id);
+      const { data: sponsors } = await supabase.from('show_sponsors').select('logo_url').eq('show_id', show.id);
+
+      const photoUrls = [
+        ...(entries  || []).map(e => e.photo_url),
+        ...(sponsors || []).map(s => s.logo_url),
+        show.logo_url, show.banner_url, show.org_logo_url,
+      ].filter(Boolean);
+
+      const paths = photoUrls.map(u => u.match(/\/show-assets\/(.+)/)?.[1]).filter(Boolean);
+      if (paths.length) await supabase.storage.from('show-assets').remove(paths);
+
+      // Scores and rankings first (reference entries/categories)
+      await Promise.all([
+        supabase.from('judge_scores').delete().eq('show_id', show.id),
+        supabase.from('judge_rankings').delete().eq('show_id', show.id),
+      ]);
+
+      // All remaining child records
+      await Promise.all([
+        supabase.from('show_entries').delete().eq('show_id', show.id),
+        supabase.from('show_categories').delete().eq('show_id', show.id),
+        supabase.from('show_sponsors').delete().eq('show_id', show.id),
+        supabase.from('show_prizes').delete().eq('show_id', show.id),
+        supabase.from('show_judges').delete().eq('show_id', show.id),
+      ]);
+
+      const { error } = await supabase.from('shows').delete().eq('id', show.id);
+      if (error) throw error;
+
+      closeDeleteModal();
+      window.location.reload();
+    } catch (err) {
+      if (errEl) { errEl.textContent = `Delete failed: ${err.message}`; errEl.style.display = 'block'; }
+      if (confirmBtn) { confirmBtn.textContent = 'Permanently Delete'; confirmBtn.disabled = false; }
+    }
+  }
+
+  // ── Modal wiring ──────────────────────────────────────────────────────────────
+
+  document.getElementById('archive-cancel')?.addEventListener('click', closeArchiveModal);
+  document.getElementById('archive-modal')?.addEventListener('click', e => { if (e.target === e.currentTarget) closeArchiveModal(); });
+  document.getElementById('archive-confirm')?.addEventListener('click', async () => {
+    if (pendingArchiveShow && pendingArchiveEntries) await archiveShow(pendingArchiveShow, pendingArchiveEntries);
+  });
+
+  document.getElementById('delete-cancel')?.addEventListener('click', closeDeleteModal);
+  document.getElementById('delete-modal')?.addEventListener('click', e => { if (e.target === e.currentTarget) closeDeleteModal(); });
+  document.getElementById('delete-confirm')?.addEventListener('click', async () => {
+    if (pendingDeleteShow) await deleteShow(pendingDeleteShow);
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeArchiveModal(); closeDeleteModal(); }
+  });
 
   function esc(s) {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
