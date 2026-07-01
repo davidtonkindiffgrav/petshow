@@ -51,6 +51,19 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     </div>
   </div>
 
+  <!-- All entries modal -->
+  <div id="entries-modal" style="display:none;position:fixed;inset:0;z-index:100;background:rgba(14,42,42,0.55);backdrop-filter:blur(3px)" role="dialog" aria-modal="true" aria-labelledby="entries-modal-title">
+    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border-radius:20px;width:min(780px,94vw);max-height:85vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(14,42,42,0.22)">
+      <div style="padding:20px 24px 16px;border-bottom:1px solid #E6EEEC;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+        <h2 id="entries-modal-title" style="font-size:17px;font-weight:800;color:#143A37;margin:0">All Entries</h2>
+        <button id="close-entries-modal" style="background:none;border:none;cursor:pointer;color:#9BB4AF;padding:4px;display:flex;align-items:center;justify-content:center" aria-label="Close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div id="entries-modal-body" style="overflow-y:auto;padding:20px 24px 24px"></div>
+    </div>
+  </div>
+
   <!-- Classes modal -->
   <div id="classes-modal" style="display:none;position:fixed;inset:0;z-index:100;background:rgba(14,42,42,0.55);backdrop-filter:blur(3px)" role="dialog" aria-modal="true" aria-labelledby="classes-modal-title">
     <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border-radius:20px;width:min(480px,92vw);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(14,42,42,0.22)">
@@ -96,7 +109,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       showQ.single(),
       supabase.from('show_categories').select('id, name').eq('show_id', showId),
       supabase.from('show_entries')
-        .select('id, animal_name, breed, photo_url, category_id, entry_number, exhibitor_name')
+        .select('id, animal_name, breed, photo_url, category_id, entry_number, exhibitor_name, result_place')
         .eq('show_id', showId).eq('status', 'confirmed').order('entry_number'),
       supabase.from('show_sponsors').select('name, website, logo_url').eq('show_id', showId),
       supabase.from('platform_settings').select('key, value').like('key', 'service_fee_%'),
@@ -144,6 +157,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
   function getShowState(s) {
     const now     = new Date();
+    if (s.archived_at)          return 'archived';
     if (s.results_published_at) return 'results';
     const open    = s.entry_open_date  ? new Date(s.entry_open_date)  : null;
     const close   = s.entry_close_date ? new Date(s.entry_close_date) : null;
@@ -166,6 +180,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       voting:       { label: 'VOTING OPEN',            bg: '#5B43C4' },
       show_day:     { label: '🎉 SHOW DAY!',            bg: '#7c3aed' },
       results:      { label: '🏆 RESULTS PUBLISHED',   bg: '#5B43C4' },
+      archived:     { label: '📦 ARCHIVED',             bg: '#92400e' },
     }[showState];
 
     const datePill = showState === 'results'
@@ -248,14 +263,16 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       </div>
       <p style="font-size:12px;font-weight:700;color:#5FB23E;margin:0 0 8px">${pct}%</p>
       ${show.description ? `<p style="font-size:11px;color:#6B7C79;margin:0 0 4px">${esc(show.description)}</p>` : ''}
-      ${show.website_url ? `<a href="${esc(show.website_url)}" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:#1E8E7E;font-weight:600;text-decoration:none">Learn more about our cause →</a>` : ''}`;
+      ${show.website_url ? `<a href="${esc(absUrl(show.website_url))}" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:#1E8E7E;font-weight:600;text-decoration:none">Learn more about our cause →</a>` : ''}`;
   }
 
   // ── Body dispatcher ───────────────────────────────────────────────────────────
 
   function renderBody() {
     const el = document.getElementById('show-body');
-    if (showState === 'results') {
+    if (showState === 'archived') {
+      el.innerHTML = archivedBody();
+    } else if (showState === 'results') {
       el.innerHTML = resultsBody();
     } else if (showState === 'judging' || showState === 'voting') {
       el.innerHTML = interimBody();
@@ -304,6 +321,23 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           ${keyDatesCard()}
           ${sponsorsCard()}
         </div>
+      </div>`;
+  }
+
+  function archivedBody() {
+    const archivedOn = show.archived_at
+      ? new Date(show.archived_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+      : '';
+    const notice = `
+      <div style="background:#FEF3C7;border:1px solid #FDE68A;border-radius:14px;padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#92400E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+        <p style="font-size:13px;color:#92400E;font-weight:600;margin:0">This show has concluded and been archived${archivedOn ? ' on ' + archivedOn : ''}. Winners are displayed below.</p>
+      </div>`;
+    return `
+      ${notice}
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;align-items:start">
+        <div>${winnersCard()}</div>
+        <div>${sponsorsCard()}</div>
       </div>`;
   }
 
@@ -405,7 +439,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       </div>
       <p style="font-size:12px;font-weight:700;color:#5FB23E;margin:0 0 10px;text-align:right">${pct}%</p>
       ${show.description ? `<p style="font-size:12px;color:#6B7C79;margin:0 0 8px">${esc(show.description)}</p>` : ''}
-      ${show.website_url ? `<a href="${esc(show.website_url)}" target="_blank" rel="noopener noreferrer" style="font-size:13px;color:#1E8E7E;font-weight:600;text-decoration:none">Learn more about our cause →</a>` : ''}
+      ${show.website_url ? `<a href="${esc(absUrl(show.website_url))}" target="_blank" rel="noopener noreferrer" style="font-size:13px;color:#1E8E7E;font-weight:600;text-decoration:none">Learn more about our cause →</a>` : ''}
     `);
   }
 
@@ -413,19 +447,32 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
   function keyDatesCard() {
     const now = Date.now();
+    const tzAbbr = (() => {
+      if (!show.timezone) return '';
+      try {
+        const parts = Intl.DateTimeFormat('en', { timeZone: show.timezone, timeZoneName: 'short' }).formatToParts(new Date());
+        return parts.find(p => p.type === 'timeZoneName')?.value || '';
+      } catch { return ''; }
+    })();
     const rows = [
-      { label: 'Entries Open',  date: show.entry_open_date },
-      { label: 'Entries Close', date: show.entry_close_date },
+      { label: 'Entries Open',  date: show.entry_open_date,  time: show.entry_open_time },
+      { label: 'Entries Close', date: show.entry_close_date, time: show.entry_close_time },
       { label: 'Show Day',      date: show.show_date },
-    ].filter(d => d.date).map((d, i, arr) => {
-      const past = new Date(d.date).getTime() < now;
+    ].filter(d => d.date).map((d, i) => {
+      const past   = new Date(d.date).getTime() < now;
       const border = i > 0 ? 'border-top:1px solid #F0F4F3;' : '';
-      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;${border}">
-        <span style="font-size:13px;color:${past ? '#9BB4AF' : '#143A37'};font-weight:500;display:flex;align-items:center;gap:7px">
+      const timeEl = d.time
+        ? `<span style="display:block;font-size:11.5px;color:#9BB4AF;margin-top:2px">${d.time}${tzAbbr ? ' ' + tzAbbr : ''}</span>`
+        : '';
+      return `<div style="display:flex;justify-content:space-between;align-items:${d.time ? 'flex-start' : 'center'};padding:10px 0;${border}">
+        <span style="font-size:13px;color:${past ? '#9BB4AF' : '#143A37'};font-weight:500;display:flex;align-items:center;gap:7px;padding-top:${d.time ? '1px' : '0'}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${past ? '#1E8E7E' : '#9BB4AF'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           ${d.label}
         </span>
-        <span style="font-size:13px;${past ? 'color:#9BB4AF;text-decoration:line-through' : 'color:#6B7C79;font-weight:600'}">${fmt(d.date)}</span>
+        <div style="text-align:right">
+          <span style="display:block;font-size:13px;${past ? 'color:#9BB4AF;text-decoration:line-through' : 'color:#6B7C79;font-weight:600'}">${fmt(d.date)}</span>
+          ${timeEl}
+        </div>
       </div>`;
     }).join('');
 
@@ -485,7 +532,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const header = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <h3 style="font-size:15px;font-weight:700;color:#143A37;margin:0">Meet Our Entrants</h3>
-        <a href="#" style="font-size:12px;color:#1E8E7E;font-weight:600;text-decoration:none">View all entries →</a>
+        <a href="#" id="btn-view-all-entries" style="font-size:12px;color:#1E8E7E;font-weight:600;text-decoration:none">View all entries →</a>
       </div>`;
 
     if (!shown.length) {
@@ -531,12 +578,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       const border = i < sponsors.length - 1 ? 'border-bottom:1px solid #F0F4F3;' : '';
       return `<div style="padding:10px 0;${border}">
         ${s.logo_url
-          ? `<a href="${esc(s.website||'#')}" target="_blank" rel="noopener">
+          ? `<a href="${esc(absUrl(s.website))}" target="_blank" rel="noopener">
                <div style="height:44px;display:flex;align-items:center">
                  <img src="${esc(s.logo_url)}" alt="${esc(s.name)}" style="max-height:38px;max-width:100%;object-fit:contain;object-position:left center;display:block">
                </div>
              </a>`
-          : `<a href="${esc(s.website||'#')}" target="_blank" rel="noopener" style="font-size:14px;font-weight:700;color:#143A37;text-decoration:none">${esc(s.name)}</a>`}
+          : `<a href="${esc(absUrl(s.website))}" target="_blank" rel="noopener" style="font-size:14px;font-weight:700;color:#143A37;text-decoration:none">${esc(s.name)}</a>`}
       </div>`;
     }).join('');
 
@@ -659,7 +706,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     return card(`
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <h3 style="font-size:15px;font-weight:700;color:#143A37;margin:0">Meet Our Entrants</h3>
-        <a href="#" style="font-size:12px;color:#1E8E7E;font-weight:600;text-decoration:none">View All Entries →</a>
+        <a href="#" id="btn-view-all-entries" style="font-size:12px;color:#1E8E7E;font-weight:600;text-decoration:none">View All Entries →</a>
       </div>
       <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:8px">${thumbs}</div>`);
   }
@@ -667,7 +714,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   // ── Sticky CTA ────────────────────────────────────────────────────────────────
 
   function renderStickyCTA() {
-    if (showState === 'results' || showState === 'judging' || showState === 'upcoming') return;
+    if (showState === 'results' || showState === 'judging' || showState === 'upcoming' || showState === 'archived') return;
     const fee     = displayFee;
     const ctaEl   = document.getElementById('sticky-cta');
     const textEl  = document.getElementById('sticky-text');
@@ -727,6 +774,58 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     document.body.style.overflow = '';
   }
 
+  // ── All entries modal ─────────────────────────────────────────────────────────
+
+  function openEntriesModal() {
+    const body = document.getElementById('entries-modal-body');
+
+    // Group entries by category, uncategorised last
+    const grouped = [];
+    categories.forEach(cat => {
+      const catEntries = entries.filter(e => e.category_id === cat.id);
+      if (catEntries.length) grouped.push({ name: cat.name, entries: catEntries });
+    });
+    const uncategorised = entries.filter(e => !categories.find(c => c.id === e.category_id));
+    if (uncategorised.length) grouped.push({ name: 'Uncategorised', entries: uncategorised });
+
+    if (!grouped.length) {
+      body.innerHTML = `<p style="font-size:14px;color:#6B7C79;text-align:center;padding:32px 0">No entries yet.</p>`;
+    } else {
+      body.innerHTML = grouped.map((group, gi) => {
+        const cards = group.entries.map(e => `
+          <div style="border-radius:10px;overflow:hidden;border:1px solid #E6EEEC;background:white">
+            <div style="aspect-ratio:4/3;overflow:hidden">
+              ${e.photo_url
+                ? `<img src="${esc(e.photo_url)}" alt="${esc(e.animal_name||'')} — ${esc(e.breed||'')}" style="width:100%;height:100%;object-fit:cover;object-position:center;display:block">`
+                : `<div style="width:100%;height:100%;background:#F0F7F5;display:flex;align-items:center;justify-content:center;font-size:26px">🐾</div>`}
+            </div>
+            <div style="padding:7px 8px">
+              <p style="font-size:12px;font-weight:700;color:#143A37;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(e.animal_name||'Unnamed')}</p>
+              ${e.breed ? `<p style="font-size:11px;color:#6B7C79;margin:2px 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(e.breed)}</p>` : ''}
+              ${e.entry_number ? `<p style="font-size:10px;color:#9BB4AF;margin:2px 0 0">#${esc(String(e.entry_number))}</p>` : ''}
+            </div>
+          </div>`).join('');
+
+        const mt = gi > 0 ? 'margin-top:24px;' : '';
+        return `
+          <div style="${mt}">
+            <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#1E8E7E;margin:0 0 12px">${esc(group.name)} <span style="color:#9BB4AF;font-weight:600">(${group.entries.length})</span></p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px">${cards}</div>
+          </div>`;
+      }).join('');
+    }
+
+    // Update title with total count
+    document.getElementById('entries-modal-title').textContent = `All Entries (${entries.length})`;
+    document.getElementById('entries-modal').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeEntriesModal() {
+    document.getElementById('entries-modal').style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
   // ── Button wiring ─────────────────────────────────────────────────────────────
 
   async function handleEnterNow() {
@@ -744,6 +843,17 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     document.getElementById('close-classes-modal').addEventListener('click', closeClassesModal);
     document.getElementById('classes-modal').addEventListener('click', e => {
       if (e.target === e.currentTarget) closeClassesModal();
+    });
+    document.getElementById('btn-view-all-entries')?.addEventListener('click', e => { e.preventDefault(); openEntriesModal(); });
+    document.getElementById('close-entries-modal').addEventListener('click', closeEntriesModal);
+    document.getElementById('entries-modal').addEventListener('click', e => {
+      if (e.target === e.currentTarget) closeEntriesModal();
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        closeClassesModal();
+        closeEntriesModal();
+      }
     });
   }
 
@@ -763,6 +873,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
   function esc(s) {
     return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function absUrl(url) {
+    if (!url) return '#';
+    return /^https?:\/\//i.test(url) ? url : 'https://' + url;
   }
 
   function getCountdown(target) {

@@ -53,17 +53,33 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
       </div>
 
-      <div class="grid grid-cols-2 gap-4 mb-5">
+      <div class="grid grid-cols-2 gap-4 mb-3">
         <div>
           <label for="s1-entry-open" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Entries Open</label>
-          <input type="date" id="s1-entry-open"
-            class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+          <div class="flex gap-2">
+            <input type="date" id="s1-entry-open"
+              class="flex-1 min-w-0 border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+            <input type="time" id="s1-entry-open-time" value="12:00"
+              class="shrink-0 border border-[#b8e4e0] rounded-[11px] px-3 py-3 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+          </div>
         </div>
         <div>
           <label for="s1-entry-close" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Entries Close <span class="text-red-400">*</span></label>
-          <input type="date" id="s1-entry-close"
-            class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+          <div class="flex gap-2">
+            <input type="date" id="s1-entry-close"
+              class="flex-1 min-w-0 border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+            <input type="time" id="s1-entry-close-time" value="12:00"
+              class="shrink-0 border border-[#b8e4e0] rounded-[11px] px-3 py-3 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+          </div>
         </div>
+      </div>
+
+      <div class="mb-5">
+        <label for="s1-timezone" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Timezone <span class="text-[#9b94a8] font-normal">(for entry open &amp; close times)</span></label>
+        <select id="s1-timezone"
+          class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] bg-white focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors">
+          <!-- populated by initTimezoneSelect() -->
+        </select>
       </div>
 
       <div class="mb-5">
@@ -417,11 +433,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
       <div class="mb-6">
         <label for="s8-entry-fee" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Entry Fee per Entry</label>
-        <p id="s8-fee-hint" class="text-[12px] text-[#9b94a8] mb-2">Set to A$0 for a free show.</p>
+        <p id="s8-fee-hint" class="text-[12px] text-[#9b94a8] mb-2">Minimum A$3.00. Entry fees are required for all shows.</p>
         <div class="flex items-center gap-5">
           <div class="relative max-w-[200px]">
             <span id="s8-symbol-fee" class="absolute left-4 top-1/2 -translate-y-1/2 text-[15px] text-[#9b94a8] font-semibold">A$</span>
-            <input type="number" id="s8-entry-fee" min="0" step="0.50" value="0"
+            <input type="number" id="s8-entry-fee" min="3" step="0.50" value=""
               class="w-full border border-[#b8e4e0] rounded-[11px] pl-12 pr-4 py-3 text-[15px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
           </div>
           <div>
@@ -677,9 +693,58 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     classes: [],
     logo_url: '', banner_url: '', org_logo_url: '', logo_source: 'show',
     wizard_step: 1,
+    timezone: '', entry_open_time: '', entry_close_time: '',
   };
 
-  const CURRENCY_SYMBOLS = { GBP: '£', USD: '$', EUR: '€', AUD: 'A$', CAD: 'C$', NZD: 'NZ$', ZAR: 'R', SGD: 'S$' };
+  const CURRENCY_SYMBOLS  = { GBP: '£', USD: '$', EUR: '€', AUD: 'A$', CAD: 'C$', NZD: 'NZ$', ZAR: 'R', SGD: 'S$' };
+  const MIN_ENTRY_FEE     = { GBP: 2, USD: 2, EUR: 2, AUD: 3, CAD: 2, NZD: 3, ZAR: 25, SGD: 3 };
+
+  const TIMEZONES = [
+    { group: 'Australia & New Zealand', zones: [
+      { id: 'Pacific/Auckland',    label: 'New Zealand — Auckland, Wellington' },
+      { id: 'Pacific/Chatham',     label: 'New Zealand — Chatham Islands' },
+      { id: 'Australia/Sydney',    label: 'Australia — Sydney, Melbourne, Canberra (AEDT/AEST)' },
+      { id: 'Australia/Brisbane',  label: 'Australia — Brisbane, QLD (no DST)' },
+      { id: 'Australia/Adelaide',  label: 'Australia — Adelaide, SA (ACDT/ACST)' },
+      { id: 'Australia/Darwin',    label: 'Australia — Darwin, NT (no DST)' },
+      { id: 'Australia/Perth',     label: 'Australia — Perth, WA (AWST)' },
+      { id: 'Australia/Hobart',    label: 'Australia — Hobart, TAS' },
+    ]},
+    { group: 'Pacific', zones: [
+      { id: 'Pacific/Fiji',        label: 'Fiji' },
+      { id: 'Pacific/Honolulu',    label: 'Hawaii (no DST)' },
+      { id: 'Pacific/Guam',        label: 'Guam / Chamorro' },
+    ]},
+    { group: 'Asia', zones: [
+      { id: 'Asia/Singapore',      label: 'Singapore / Malaysia / Western Indonesia' },
+      { id: 'Asia/Hong_Kong',      label: 'Hong Kong' },
+      { id: 'Asia/Tokyo',          label: 'Japan' },
+      { id: 'Asia/Seoul',          label: 'South Korea' },
+      { id: 'Asia/Kolkata',        label: 'India' },
+      { id: 'Asia/Dubai',          label: 'UAE / Gulf (GST)' },
+      { id: 'Asia/Bangkok',        label: 'Thailand / Vietnam / Indonesia (WIB)' },
+      { id: 'Asia/Shanghai',       label: 'China' },
+    ]},
+    { group: 'Europe', zones: [
+      { id: 'Europe/London',       label: 'UK / Ireland (GMT/BST)' },
+      { id: 'Europe/Paris',        label: 'Central Europe — Paris, Berlin, Rome, Madrid' },
+      { id: 'Europe/Helsinki',     label: 'Eastern Europe — Helsinki, Kyiv, Riga' },
+      { id: 'Europe/Moscow',       label: 'Moscow Time' },
+    ]},
+    { group: 'Americas', zones: [
+      { id: 'America/New_York',    label: 'Eastern US / Canada (ET)' },
+      { id: 'America/Chicago',     label: 'Central US / Canada (CT)' },
+      { id: 'America/Denver',      label: 'Mountain US / Canada (MT)' },
+      { id: 'America/Los_Angeles', label: 'Pacific US / Canada (PT)' },
+      { id: 'America/Anchorage',   label: 'Alaska' },
+      { id: 'America/Sao_Paulo',   label: 'Brazil — São Paulo (BRT)' },
+    ]},
+    { group: 'Africa', zones: [
+      { id: 'Africa/Johannesburg', label: 'South Africa (SAST)' },
+      { id: 'Africa/Lagos',        label: 'West Africa Time (WAT)' },
+      { id: 'Africa/Nairobi',      label: 'East Africa Time (EAT)' },
+    ]},
+  ];
 
   let currentStep = 1;
   let session, profile, base;
@@ -714,6 +779,18 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     // Pre-fill
     show.contact_email = session.user.email || '';
     document.getElementById('s1-contact-email').value = show.contact_email;
+
+    // Timezone: prefer profile.default_timezone (populated when account settings page ships),
+    // otherwise auto-detect from browser. initTimezoneSelect() reads show.timezone.
+    show.timezone = profile?.default_timezone
+      || Intl.DateTimeFormat().resolvedOptions().timeZone
+      || 'Australia/Sydney';
+
+    // Currency: prefer profile.default_currency (populated when account settings page ships).
+    if (profile?.default_currency) {
+      show.currency = profile.default_currency;
+      document.getElementById('s8-currency').value = profile.default_currency;
+    }
 
     if (profile?.organisation_id) {
       const { data: org } = await supabase.from('organisations').select('name').eq('id', profile.organisation_id).single();
@@ -751,6 +828,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     setupEventListeners();
     initCardGroups();
     initBreedCombobox();
+    initTimezoneSelect();
 
     const urlId = new URLSearchParams(window.location.search).get('id');
     if (urlId) {
@@ -930,7 +1008,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     }
     if (n === 8) {
       const fee = parseFloat(document.getElementById('s8-entry-fee').value);
-      if (isNaN(fee) || fee < 0) return showError('Please enter a valid entry fee (0 for free).'), false;
+      const currency = document.getElementById('s8-currency')?.value || 'AUD';
+      const minFee = MIN_ENTRY_FEE[currency] || 1;
+      if (isNaN(fee) || fee < minFee) return showError(`Please enter a valid entry fee (minimum ${CURRENCY_SYMBOLS[currency] || ''}${minFee.toFixed(2)}).`), false;
       return true;
     }
     return true;
@@ -955,8 +1035,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       show.website_url    = document.getElementById('s1-website-url').value.trim() || null;
       show.org_type       = getSelectedCard('org-type-cards');
       show.charity_number = document.getElementById('s1-charity-number').value.trim();
-      show.contact_email  = document.getElementById('s1-contact-email').value.trim();
-      show.contact_phone  = document.getElementById('s1-contact-phone').value.trim();
+      show.contact_email    = document.getElementById('s1-contact-email').value.trim();
+      show.contact_phone    = document.getElementById('s1-contact-phone').value.trim();
+      show.timezone         = document.getElementById('s1-timezone').value || show.timezone;
+      show.entry_open_time  = document.getElementById('s1-entry-open-time').value || '';
+      show.entry_close_time = document.getElementById('s1-entry-close-time').value || '';
     }
     if (n === 2) {
       show.show_type   = getSelectedCard('show-type-cards');
@@ -1028,6 +1111,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       logo_url: show.logo_url || null, banner_url: show.banner_url || null, org_logo_url: show.org_logo_url || null,
       logo_source: show.logo_source || 'show',
       currency: show.currency, entry_fee: show.entry_fee, status: 'draft',
+      timezone: show.timezone || null,
+      entry_open_time: show.entry_open_time || null,
+      entry_close_time: show.entry_close_time || null,
       wizard_step: completedStep + 1,
     };
 
@@ -1460,7 +1546,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         <div class="px-5">
           ${reviewRow('Show Name', show.title, 1)}
           ${reviewRow('Show Date', show.show_date || '—', 1)}
-          ${reviewRow('Entries Close', show.entry_close_date || '—', 1)}
+          ${reviewRow('Entries Close', show.entry_close_date ? `${show.entry_close_date}${show.entry_close_time ? ' at ' + show.entry_close_time : ''}` : '—', 1)}
+          ${reviewRow('Timezone', show.timezone || '—', 1)}
           ${reviewRow('Organisation', ORG_TYPE_LABELS[show.org_type] || '—', 1)}
           ${reviewRow('Contact', show.contact_email, 1)}
         </div>
@@ -1492,7 +1579,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         </div>
         <div class="px-5">
           ${reviewRow('Currency', show.currency || 'AUD', 8)}
-          ${reviewRow('Entry Fee', show.entry_fee === 0 ? 'Free' : `${CURRENCY_SYMBOLS[show.currency] || show.currency}${show.entry_fee}`, 8)}
+          ${reviewRow('Entry Fee', show.entry_fee > 0 ? `${CURRENCY_SYMBOLS[show.currency] || show.currency}${show.entry_fee}` : 'Not set', 8)}
           ${reviewRow('Public Progress', show.show_fundraising_publicly ? 'Visible' : 'Hidden', 8)}
         </div>
       </div>`;
@@ -1558,6 +1645,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       banner_url: data.banner_url || '',
       org_logo_url: data.org_logo_url || '',
       logo_source: data.logo_source || 'show',
+      timezone: data.timezone || show.timezone,
+      entry_open_time: data.entry_open_time || '',
+      entry_close_time: data.entry_close_time || '',
     });
 
     // Restore upload previews
@@ -1572,11 +1662,15 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.getElementById('s1-host-org').value      = show.host_org;
     document.getElementById('s1-description').value   = show.description || '';
     document.getElementById('s1-website-url').value   = show.website_url || '';
-    document.getElementById('s1-entry-open').value    = show.entry_open_date;
-    document.getElementById('s1-entry-close').value   = show.entry_close_date;
-    document.getElementById('s1-show-date').value     = show.show_date;
-    document.getElementById('s1-contact-email').value = show.contact_email;
-    document.getElementById('s1-contact-phone').value = show.contact_phone;
+    document.getElementById('s1-entry-open').value       = show.entry_open_date;
+    document.getElementById('s1-entry-open-time').value  = show.entry_open_time  || '12:00';
+    document.getElementById('s1-entry-close').value      = show.entry_close_date;
+    document.getElementById('s1-entry-close-time').value = show.entry_close_time || '12:00';
+    document.getElementById('s1-show-date').value        = show.show_date;
+    document.getElementById('s1-contact-email').value    = show.contact_email;
+    document.getElementById('s1-contact-phone').value    = show.contact_phone;
+    const tzSel = document.getElementById('s1-timezone');
+    if (tzSel && show.timezone) tzSel.value = show.timezone;
     if (show.org_type) selectCard(document.getElementById('org-type-cards'), show.org_type);
     if (show.org_type === 'registered_charity' || show.org_type === 'non_profit') {
       document.getElementById('s1-charity-field').style.display = 'block';
@@ -1717,6 +1811,21 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   function updateBreedFields() {
     document.getElementById('s3-breed-field').style.display = show.breed_scope === 'breed_specific' ? 'block' : 'none';
     document.getElementById('s3-group-field').style.display = show.breed_scope === 'group_specific' ? 'block' : 'none';
+  }
+
+  // ─── Timezone select ─────────────────────────────────────────────────────────
+  function initTimezoneSelect() {
+    const sel = document.getElementById('s1-timezone');
+    if (!sel) return;
+    sel.innerHTML = TIMEZONES.map(g =>
+      `<optgroup label="${g.group}">${g.zones.map(z =>
+        `<option value="${z.id}">${z.label}</option>`
+      ).join('')}</optgroup>`
+    ).join('');
+    // Prefer show.timezone (which is already set from profile default or browser detection)
+    sel.value = show.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    // If the browser tz isn't in our curated list, the assignment silently fails — fall back
+    if (!sel.value) sel.value = 'Australia/Sydney';
   }
 
   // ─── Category tooltip ────────────────────────────────────────────────────────
@@ -1890,7 +1999,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   function applyCurrencySymbol(code) {
     const sym = CURRENCY_SYMBOLS[code] || code;
     document.getElementById('s8-symbol-fee').textContent = sym;
-    document.getElementById('s8-fee-hint').textContent   = `Set to ${sym}0 for a free show.`;
+    const minFee2 = MIN_ENTRY_FEE[code] || 1;
+    document.getElementById('s8-fee-hint').textContent   = `Minimum ${sym}${minFee2.toFixed(2)}. Entry fees are required for all shows.`;
+    const feeInput = document.getElementById('s8-entry-fee') as HTMLInputElement;
+    if (feeInput) feeInput.min = String(minFee2);
     updateFeeBreakdown(code);
   }
 

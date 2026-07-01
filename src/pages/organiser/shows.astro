@@ -78,18 +78,53 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.getElementById('btn-new-show')?.addEventListener('click', () => { window.location.href = base + 'organiser/new-show'; });
     document.getElementById('btn-create-first')?.addEventListener('click', () => { window.location.href = base + 'organiser/new-show'; });
 
-    const { data: shows, error } = await supabase
-      .from('shows')
-      .select('*')
-      .eq('created_by', session.user.id)
-      .order('created_at', { ascending: false });
+    const [activeRes, archivedRes] = await Promise.all([
+      supabase.from('shows').select('*').eq('created_by', session.user.id).is('archived_at', null).order('created_at', { ascending: false }),
+      supabase.from('shows').select('id').eq('created_by', session.user.id).not('archived_at', 'is', null),
+    ]);
 
     const loadingEl = document.getElementById('state-loading');
     const emptyEl   = document.getElementById('state-empty');
     const listEl    = document.getElementById('state-list');
     if (loadingEl) loadingEl.style.display = 'none';
 
-    if (error || !shows || shows.length === 0) {
+    const shows         = activeRes.data || [];
+    const archivedCount = (archivedRes.data || []).length;
+
+    // Inject "Show archived" link if there are archived shows
+    if (archivedCount > 0) {
+      const actionsSlot = document.querySelector('[slot="actions"]')?.parentElement;
+      const archLink = document.createElement('a');
+      archLink.href = `${base}organiser/shows?archived=1`;
+      archLink.className = 'text-[13px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-3 py-2 rounded-btn hover:bg-[#f0fafa] transition-colors';
+      archLink.style.textDecoration = 'none';
+      archLink.textContent = `Archived (${archivedCount})`;
+      const newBtn = document.getElementById('btn-new-show');
+      if (newBtn) newBtn.parentElement.insertBefore(archLink, newBtn);
+    }
+
+    // If ?archived=1, load archived shows instead
+    const viewingArchived = new URLSearchParams(window.location.search).get('archived') === '1';
+    if (viewingArchived) {
+      const { data: archived } = await supabase.from('shows').select('*').eq('created_by', session.user.id).not('archived_at', 'is', null).order('archived_at', { ascending: false });
+      const list = archived || [];
+      if (!list.length) {
+        if (emptyEl) { emptyEl.style.display = 'flex'; emptyEl.querySelector('h2').textContent = 'No archived shows'; emptyEl.querySelector('p')?.remove(); }
+      } else {
+        const catCounts = {};
+        await Promise.all(list.map(async s => {
+          const { count } = await supabase.from('show_categories').select('*', { count: 'exact', head: true }).eq('show_id', s.id);
+          catCounts[s.id] = count || 0;
+        }));
+        if (listEl) listEl.style.display = 'block';
+        const container = document.getElementById('shows-list');
+        const heading = document.createElement('p');
+        heading.className = 'text-[12px] font-bold text-[#9b94a8] uppercase tracking-wider mb-3';
+        heading.textContent = 'Archived Shows';
+        container.appendChild(heading);
+        list.forEach(s => container.appendChild(buildRow(s, catCounts[s.id] || 0)));
+      }
+    } else if (!shows.length) {
       if (emptyEl) emptyEl.style.display = 'flex';
     } else {
       const catCounts = {};

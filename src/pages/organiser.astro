@@ -649,11 +649,11 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     const mBtn = (metric, label) => {
       const active   = chartMetric === metric;
       const disabled = metric === 'revenue' && !hasRevenue;
-      return `<button id="metric-${metric}" ${disabled ? 'disabled' : ''} style="padding:3px 8px;font-size:10.5px;font-weight:600;border:none;cursor:${disabled ? 'not-allowed' : 'pointer'};font-family:inherit;background:${active ? '#1ba89a' : 'transparent'};color:${active ? '#fff' : disabled ? '#d0ccd8' : '#9b94a8'};border-radius:5px;line-height:1.4;opacity:${disabled ? '0.5' : '1'};">${label}</button>`;
+      return `<button id="metric-${metric}" ${disabled ? 'disabled' : ''} style="flex:1;padding:3px 4px;font-size:10.5px;font-weight:600;border:none;cursor:${disabled ? 'not-allowed' : 'pointer'};font-family:inherit;background:${active ? '#1ba89a' : 'transparent'};color:${active ? '#fff' : disabled ? '#d0ccd8' : '#9b94a8'};border-radius:5px;line-height:1.4;text-align:center;opacity:${disabled ? '0.5' : '1'};">${label}</button>`;
     };
     const cBtn = (mode, label) => {
       const active = chartMode === mode;
-      return `<button id="chart-${mode}" style="padding:3px 8px;font-size:10.5px;font-weight:600;border:none;cursor:pointer;font-family:inherit;background:${active ? '#002d6b' : 'transparent'};color:${active ? '#fff' : '#9b94a8'};border-radius:5px;line-height:1.4;">${label}</button>`;
+      return `<button id="chart-${mode}" style="flex:1;padding:3px 4px;font-size:10.5px;font-weight:600;border:none;cursor:pointer;font-family:inherit;background:${active ? '#002d6b' : 'transparent'};color:${active ? '#fff' : '#9b94a8'};border-radius:5px;line-height:1.4;text-align:center;">${label}</button>`;
     };
 
     el.innerHTML = `
@@ -733,7 +733,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       const { data } = await supabase.from('shows').select('*').eq('id', override).eq('created_by', uid).single();
       show = data;
     } else {
-      const { data } = await supabase.from('shows').select('*').eq('created_by', uid).eq('status', 'published').maybeSingle();
+      const { data } = await supabase.from('shows').select('*').eq('created_by', uid).eq('status', 'published').is('archived_at', null).maybeSingle();
       show = data;
     }
 

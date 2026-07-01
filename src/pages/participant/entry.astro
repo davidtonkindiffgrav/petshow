@@ -145,7 +145,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     ? `<div style="width:84px;height:84px;border-radius:18px;overflow:hidden;flex:none;"><img src="${esc(entry.photo_url)}" style="width:100%;height:100%;object-fit:cover;" alt="${esc(entry.animal_name)}" /></div>`
     : `<div style="width:84px;height:84px;border-radius:18px;background:linear-gradient(135deg,#1ba89a,#0f6f8f);display:flex;align-items:center;justify-content:center;flex:none;color:#fff;font-size:32px;font-weight:800;">${esc((entry.animal_name||'?')[0].toUpperCase())}</div>`;
 
-  const paidAmount = entry.entry_fee_paid ? `${sym}${Number(entry.entry_fee_paid).toFixed(2)}` : 'Free';
+  const paidAmount = entry.entry_fee_paid ? `${sym}${Number(entry.entry_fee_paid).toFixed(2)}` : '—';
 
   root.innerHTML = `
   <a href="${base}participant" style="display:inline-flex;align-items:center;gap:7px;background:none;border:none;color:#48586a;font-size:14px;font-weight:600;cursor:pointer;padding:0;margin-bottom:18px;text-decoration:none;">

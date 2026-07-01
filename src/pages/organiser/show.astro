@@ -27,6 +27,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           ← All Shows
         </button>
         <div id="show-action-links" class="flex items-center gap-2"></div>
+        <button id="btn-archive" style="display:none"
+          class="text-[13px] font-semibold px-3 py-2 rounded-btn border transition-colors">
+          Archive
+        </button>
         <button id="btn-publish"
           class="bg-brand text-white text-[13px] font-bold px-4 py-2 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">
           Publish Now
@@ -70,6 +74,24 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     </div>
   </div>
 
+  <!-- ── Archive confirmation modal ──────────────────────────────────────────── -->
+  <div id="archive-modal" style="display:none" class="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="archive-modal-title">
+    <div class="bg-white rounded-[20px] w-full max-w-[440px] shadow-2xl">
+      <div class="p-6">
+        <div class="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+        </div>
+        <h2 id="archive-modal-title" class="text-[18px] font-extrabold text-[#1c1626] text-center mb-2">Archive This Show?</h2>
+        <p class="text-[13px] text-[#6f6880] text-center mb-5 leading-relaxed">The show will be hidden from your dashboard and replaced with a lightweight results page showing winners and sponsors only.</p>
+        <div id="archive-photo-summary" class="rounded-[12px] p-4 mb-5 text-[13px] leading-relaxed"></div>
+        <div class="flex gap-3">
+          <button id="archive-cancel" class="flex-1 border border-[#b8e4e0] text-[#6f6880] text-[13px] font-semibold py-2.5 rounded-btn hover:bg-[#f0fafa] transition-colors">Cancel</button>
+          <button id="archive-confirm" class="flex-1 bg-red-500 text-white text-[13px] font-bold py-2.5 rounded-btn hover:bg-red-600 transition-colors">Archive Show</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Backdrop ──────────────────────────────────────────────────────────────── -->
   <div id="drawer-backdrop"
     class="fixed inset-0 bg-black/30 z-40 transition-opacity duration-300 opacity-0 pointer-events-none"></div>
@@ -103,17 +125,30 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           <input type="text" id="mgmt-title" placeholder="e.g. Spring Paws Charity Show 2025"
             class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
         </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Entries Open</label>
+        <div>
+          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Entries Open</label>
+          <div class="flex gap-2">
             <input type="date" id="mgmt-entry-open"
-              class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+              class="flex-1 min-w-0 border border-[#b8e4e0] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+            <input type="time" id="mgmt-entry-open-time"
+              class="shrink-0 border border-[#b8e4e0] rounded-[11px] px-3 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
           </div>
-          <div>
-            <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Entries Close <span class="text-red-400">*</span></label>
+        </div>
+        <div>
+          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Entries Close <span class="text-red-400">*</span></label>
+          <div class="flex gap-2">
             <input type="date" id="mgmt-entry-close"
-              class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+              class="flex-1 min-w-0 border border-[#b8e4e0] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+            <input type="time" id="mgmt-entry-close-time"
+              class="shrink-0 border border-[#b8e4e0] rounded-[11px] px-3 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
           </div>
+        </div>
+        <div>
+          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Timezone <span class="text-[#9b94a8] font-normal">(for entry open &amp; close times)</span></label>
+          <select id="mgmt-timezone"
+            class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] bg-white focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors">
+            <!-- populated by initMgmtTimezoneSelect() -->
+          </select>
         </div>
         <div>
           <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Show Date <span class="text-red-400">*</span></label>
@@ -461,11 +496,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         </div>
         <div class="border-t border-[#efebf5] pt-4 mb-4">
           <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Entry Fee per Entry</label>
-          <p id="mgmt-fee-hint" class="text-[12px] text-[#9b94a8] mb-2">Set to A$0 for a free show.</p>
+          <p id="mgmt-fee-hint" class="text-[12px] text-[#9b94a8] mb-2">Minimum A$3.00. Entry fees are required for all shows.</p>
           <div class="flex items-center gap-4">
             <div class="relative max-w-[180px]">
               <span id="mgmt-sym-fee" class="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-[#9b94a8] font-semibold">A$</span>
-              <input type="number" id="mgmt-entry-fee" min="0" step="0.50" value="0"
+              <input type="number" id="mgmt-entry-fee" min="3" step="0.50" value=""
                 class="w-full border border-[#b8e4e0] rounded-[11px] pl-11 pr-4 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
             </div>
             <div>
@@ -608,6 +643,54 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   const BREED_SCOPE_LABELS = { all: 'All Breeds', breed_specific: 'Breed Specific', group_specific: 'Group Specific' };
   const ORG_TYPE_LABELS   = { non_profit: 'Non-Profit', registered_charity: 'Registered Charity', commercial: 'Commercial' };
   const CURRENCY_SYMBOLS  = { GBP: '£', USD: '$', EUR: '€', AUD: 'A$', CAD: 'C$', NZD: 'NZ$', ZAR: 'R', SGD: 'S$' };
+  const MIN_ENTRY_FEE     = { GBP: 2, USD: 2, EUR: 2, AUD: 3, CAD: 2, NZD: 3, ZAR: 25, SGD: 3 };
+
+  const TIMEZONES = [
+    { group: 'Australia & New Zealand', zones: [
+      { id: 'Pacific/Auckland',    label: 'New Zealand — Auckland, Wellington' },
+      { id: 'Pacific/Chatham',     label: 'New Zealand — Chatham Islands' },
+      { id: 'Australia/Sydney',    label: 'Australia — Sydney, Melbourne, Canberra (AEDT/AEST)' },
+      { id: 'Australia/Brisbane',  label: 'Australia — Brisbane, QLD (no DST)' },
+      { id: 'Australia/Adelaide',  label: 'Australia — Adelaide, SA (ACDT/ACST)' },
+      { id: 'Australia/Darwin',    label: 'Australia — Darwin, NT (no DST)' },
+      { id: 'Australia/Perth',     label: 'Australia — Perth, WA (AWST)' },
+      { id: 'Australia/Hobart',    label: 'Australia — Hobart, TAS' },
+    ]},
+    { group: 'Pacific', zones: [
+      { id: 'Pacific/Fiji',        label: 'Fiji' },
+      { id: 'Pacific/Honolulu',    label: 'Hawaii (no DST)' },
+      { id: 'Pacific/Guam',        label: 'Guam / Chamorro' },
+    ]},
+    { group: 'Asia', zones: [
+      { id: 'Asia/Singapore',      label: 'Singapore / Malaysia / Western Indonesia' },
+      { id: 'Asia/Hong_Kong',      label: 'Hong Kong' },
+      { id: 'Asia/Tokyo',          label: 'Japan' },
+      { id: 'Asia/Seoul',          label: 'South Korea' },
+      { id: 'Asia/Kolkata',        label: 'India' },
+      { id: 'Asia/Dubai',          label: 'UAE / Gulf (GST)' },
+      { id: 'Asia/Bangkok',        label: 'Thailand / Vietnam / Indonesia (WIB)' },
+      { id: 'Asia/Shanghai',       label: 'China' },
+    ]},
+    { group: 'Europe', zones: [
+      { id: 'Europe/London',       label: 'UK / Ireland (GMT/BST)' },
+      { id: 'Europe/Paris',        label: 'Central Europe — Paris, Berlin, Rome, Madrid' },
+      { id: 'Europe/Helsinki',     label: 'Eastern Europe — Helsinki, Kyiv, Riga' },
+      { id: 'Europe/Moscow',       label: 'Moscow Time' },
+    ]},
+    { group: 'Americas', zones: [
+      { id: 'America/New_York',    label: 'Eastern US / Canada (ET)' },
+      { id: 'America/Chicago',     label: 'Central US / Canada (CT)' },
+      { id: 'America/Denver',      label: 'Mountain US / Canada (MT)' },
+      { id: 'America/Los_Angeles', label: 'Pacific US / Canada (PT)' },
+      { id: 'America/Anchorage',   label: 'Alaska' },
+      { id: 'America/Sao_Paulo',   label: 'Brazil — São Paulo (BRT)' },
+    ]},
+    { group: 'Africa', zones: [
+      { id: 'Africa/Johannesburg', label: 'South Africa (SAST)' },
+      { id: 'Africa/Lagos',        label: 'West Africa Time (WAT)' },
+      { id: 'Africa/Nairobi',      label: 'East Africa Time (EAT)' },
+    ]},
+  ];
   const SECTION_TITLES    = {
     basics: 'Show Basics', showtype: 'Show Type', breed: 'Breed & Eligibility',
     classes: 'Classes', sponsorship: 'Sponsorship', judging: 'Judging',
@@ -739,6 +822,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     renderPageHeader();
     renderAllHeaders();
+    initMgmtTimezoneSelect();
     populateAllForms();
     wireAllHandlers();
   })();
@@ -798,7 +882,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     badge.style.color      = st.color;
 
     const sym     = CURRENCY_SYMBOLS[show.currency] || 'A$';
-    const feeText = show.entry_fee > 0 ? ` · ${sym}${show.entry_fee} entry fee` : ' · Free entry';
+    const feeText = show.entry_fee > 0 ? ` · ${sym}${show.entry_fee} entry fee` : ' · Fee not set';
     const dateText = show.show_date
       ? new Date(show.show_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
       : 'Date not set';
@@ -839,14 +923,110 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         setTimeout(() => { btn.textContent = 'Copy URL'; }, 1800);
       };
     }
+
+    // Archive button — always render, enabled/disabled based on conditions
+    const archiveBtn = document.getElementById('btn-archive');
+    if (archiveBtn) {
+      if (!show.archived_at) {
+        archiveBtn.style.display = '';
+        const reason = archiveBlockedReason();
+        if (reason) {
+          archiveBtn.disabled = true;
+          archiveBtn.title    = reason;
+          archiveBtn.className = 'text-[13px] font-semibold px-3 py-2 rounded-btn border border-[#e8e4ef] text-[#c4bed0] cursor-not-allowed transition-colors';
+        } else {
+          archiveBtn.disabled = false;
+          archiveBtn.title    = '';
+          archiveBtn.className = 'text-[13px] font-semibold px-3 py-2 rounded-btn border border-red-200 text-red-400 hover:bg-red-50 transition-colors';
+          archiveBtn.onclick = openArchiveModal;
+        }
+      } else {
+        archiveBtn.style.display = 'none';
+      }
+    }
   }
 
   function showStatus() {
+    if (show.archived_at) return { label: 'Archived', color: '#92400e', bg: '#fef3c7' };
     if (show.status === 'draft') return { label: 'Draft', color: '#6f6880', bg: '#f5f3fa' };
     const now = Date.now();
     if (show.entry_open_date && new Date(show.entry_open_date).getTime() > now) return { label: 'Scheduled', color: '#2563eb', bg: '#eff6ff' };
     if (show.entry_close_date && new Date(show.entry_close_date).getTime() >= now) return { label: 'Open for Entries', color: '#16a34a', bg: '#f0fdf4' };
     return { label: 'Closed', color: '#6b7280', bg: '#f9fafb' };
+  }
+
+  // ── Archive ───────────────────────────────────────────────────────────────────
+
+  function archiveBlockedReason() {
+    if (show.status !== 'published')       return 'The show must be published before archiving.';
+    if (!show.results_published_at)        return 'Results must be published before archiving.';
+    if (!show.show_date || new Date(show.show_date) > new Date()) return 'The show date must have passed before archiving.';
+    return null;
+  }
+
+  async function openArchiveModal() {
+    const summaryEl = document.getElementById('archive-photo-summary');
+    summaryEl.innerHTML = '<span class="text-[#9b94a8]">Counting photos…</span>';
+    document.getElementById('archive-modal').style.display = 'flex';
+
+    const { data: allEntries } = await supabase
+      .from('show_entries')
+      .select('id, photo_url, result_place')
+      .eq('show_id', showId)
+      .eq('status', 'confirmed');
+
+    const entries = allEntries || [];
+    const toDelete  = entries.filter(e => !e.result_place && e.photo_url);
+    const toKeep    = entries.filter(e =>  e.result_place && e.photo_url);
+
+    summaryEl.innerHTML = `
+      <div class="bg-amber-50 border border-amber-200 rounded-[10px] p-4 space-y-2">
+        <p class="font-bold text-[#92400e] flex items-center gap-2">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          This action cannot be undone
+        </p>
+        <p class="text-[#92400e]"><strong>${toDelete.length}</strong> non-placing photo${toDelete.length !== 1 ? 's' : ''} will be permanently deleted.</p>
+        <p class="text-[#92400e]"><strong>${toKeep.length}</strong> winner / runner-up photo${toKeep.length !== 1 ? 's' : ''} will be kept.</p>
+      </div>`;
+
+    document.getElementById('archive-confirm').onclick = () => archiveShow(entries);
+  }
+
+  async function archiveShow(entries) {
+    const confirmBtn = document.getElementById('archive-confirm');
+    const cancelBtn  = document.getElementById('archive-cancel');
+    confirmBtn.textContent = 'Archiving…';
+    confirmBtn.disabled = true;
+    cancelBtn.disabled  = true;
+
+    try {
+      // Delete non-placing photos from storage
+      const toDelete = entries.filter(e => !e.result_place && e.photo_url);
+      if (toDelete.length) {
+        const paths = toDelete
+          .map(e => { const m = e.photo_url.match(/\/show-assets\/(.+)/); return m ? m[1] : null; })
+          .filter(Boolean);
+        if (paths.length) await supabase.storage.from('show-assets').remove(paths);
+        // Null out photo_url on non-placing entries
+        const ids = toDelete.map(e => e.id);
+        await supabase.from('show_entries').update({ photo_url: null }).in('id', ids);
+      }
+
+      // Mark show as archived
+      const { error } = await supabase
+        .from('shows')
+        .update({ archived_at: new Date().toISOString() })
+        .eq('id', showId);
+      if (error) throw error;
+
+      window.location.href = mgmtBase + 'organiser/shows';
+    } catch (err) {
+      confirmBtn.textContent = 'Archive Show';
+      confirmBtn.disabled = false;
+      cancelBtn.disabled  = false;
+      showPageError('Archive failed: ' + err.message);
+      document.getElementById('archive-modal').style.display = 'none';
+    }
   }
 
   async function handlePublish() {
@@ -914,11 +1094,26 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     function fmtDate(d) {
       return d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
     }
+    function tzAbbr(ianaZone) {
+      if (!ianaZone) return '';
+      try {
+        const parts = Intl.DateTimeFormat('en', { timeZone: ianaZone, timeZoneName: 'short' }).formatToParts(new Date());
+        return parts.find(p => p.type === 'timeZoneName')?.value || '';
+      } catch { return ''; }
+    }
+    function fmtDateTime(d, t) {
+      if (!d) return '—';
+      const date = new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      if (!t) return date;
+      const abbr = tzAbbr(show.timezone);
+      return `${date} at ${t}${abbr ? ' (' + abbr + ')' : ''}`;
+    }
 
     setHeader('basics', '#22c55e', 'Configured', 'Show Basics', [
       ['Name',      show.title || '—'],
       ['Show date', fmtDate(show.show_date)],
-      ['Closes',    fmtDate(show.entry_close_date)],
+      ...(show.entry_open_date ? [['Opens', fmtDateTime(show.entry_open_date, show.entry_open_time)]] : []),
+      ['Closes',    fmtDateTime(show.entry_close_date, show.entry_close_time)],
       ['Org type',  ORG_TYPE_LABELS[show.org_type] || '—'],
     ], 'Edit');
 
@@ -1023,7 +1218,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const feeTotal = svcFee != null ? (show.entry_fee || 0) + svcFee : null;
     const feeText = show.entry_fee > 0
       ? (feeTotal != null ? `${sym}${feeTotal.toFixed(2)} (${sym}${Number(show.entry_fee).toFixed(2)} + ${sym}${svcFee.toFixed(2)} platform fee)` : 'Error')
-      : 'Free';
+      : 'Not set';
     if (show.is_fundraising === true) {
       setHeader('fundraising', '#22c55e', 'Configured', 'Fundraising & Fees', [
         ['Status',    'Fundraising active'],
@@ -1103,49 +1298,77 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-size:10.5px;font-weight:700;color:#c4bed0;text-transform:uppercase;letter-spacing:0.05em;width:84px;flex-shrink:0;">Website</span>
           ${show.website_url
-            ? `<a href="${show.website_url}" target="_blank" rel="noopener noreferrer" style="font-size:12.5px;color:#1ba89a;font-weight:500;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px;">${show.website_url}</a>`
+            ? `<a href="${/^https?:\/\//i.test(show.website_url) ? show.website_url : 'https://' + show.website_url}" target="_blank" rel="noopener noreferrer" style="font-size:12.5px;color:#1ba89a;font-weight:500;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px;">${show.website_url}</a>`
             : `<span style="font-size:12.5px;color:#4a4357;font-weight:500;">Not set</span>`}
         </div>
       </div>`;
   }
 
+  // ── Timezone select ──────────────────────────────────────────────────────────
+  function initMgmtTimezoneSelect() {
+    const sel = document.getElementById('mgmt-timezone');
+    if (!sel) return;
+    sel.innerHTML = TIMEZONES.map(g =>
+      `<optgroup label="${g.group}">${g.zones.map(z =>
+        `<option value="${z.id}">${z.label}</option>`
+      ).join('')}</optgroup>`
+    ).join('');
+    const preferred = show.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    sel.value = preferred;
+    if (!sel.value) sel.value = 'Australia/Sydney';
+  }
+
   // ── Populate forms ───────────────────────────────────────────────────────────
+  function toDateVal(v) { return v ? String(v).slice(0, 10) : ''; }
+
+  function setField(id, val) {
+    const el = document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
+    if (el) el.value = String(val ?? '');
+  }
+
   function populateAllForms() {
-    document.getElementById('mgmt-title').value          = show.title || '';
-    document.getElementById('mgmt-entry-open').value     = show.entry_open_date || '';
-    document.getElementById('mgmt-entry-close').value    = show.entry_close_date || '';
-    document.getElementById('mgmt-show-date').value      = show.show_date || '';
-    document.getElementById('mgmt-host-org').value       = show.host_org || '';
-    (document.getElementById('mgmt-description') as HTMLTextAreaElement).value = show.description || '';
-    document.getElementById('mgmt-contact-email').value  = show.contact_email || '';
-    document.getElementById('mgmt-contact-phone').value  = show.contact_phone || '';
-    document.getElementById('mgmt-charity-number').value = show.charity_number || '';
-    (document.getElementById('branding-website-url') as HTMLInputElement).value = show.website_url || '';
+    setField('mgmt-title',            show.title || '');
+    setField('mgmt-entry-open',       toDateVal(show.entry_open_date));
+    setField('mgmt-entry-open-time',  show.entry_open_time  || '12:00');
+    setField('mgmt-entry-close',      toDateVal(show.entry_close_date));
+    setField('mgmt-entry-close-time', show.entry_close_time || '12:00');
+    setField('mgmt-show-date',        toDateVal(show.show_date));
+    const tzSel = document.getElementById('mgmt-timezone');
+    if (tzSel && show.timezone) (tzSel as HTMLSelectElement).value = show.timezone;
+    setField('mgmt-host-org',         show.host_org || '');
+    setField('mgmt-description',      show.description || '');
+    setField('mgmt-contact-email',    show.contact_email || '');
+    setField('mgmt-contact-phone',    show.contact_phone || '');
+    setField('mgmt-charity-number',   show.charity_number || '');
+    setField('branding-website-url',  show.website_url || '');
     if (show.org_type) {
       selectCard(document.getElementById('mgmt-org-type-cards'), show.org_type);
-      document.getElementById('mgmt-charity-field').style.display = (show.org_type === 'registered_charity' || show.org_type === 'non_profit') ? 'block' : 'none';
+      const charityField = document.getElementById('mgmt-charity-field');
+      if (charityField) charityField.style.display = (show.org_type === 'registered_charity' || show.org_type === 'non_profit') ? 'block' : 'none';
     }
 
     if (show.show_type) selectCard(document.getElementById('mgmt-show-type-cards'), show.show_type);
     selectCard(document.getElementById('mgmt-animal-type-cards'), show.animal_type || 'dog');
 
     if (show.breed_scope) selectCard(document.getElementById('mgmt-breed-scope-cards'), show.breed_scope);
-    document.getElementById('mgmt-breed').value = show.breed_filter || '';
-    document.getElementById('mgmt-group').value = show.group_filter || '';
+    setField('mgmt-breed', show.breed_filter || '');
+    setField('mgmt-group', show.group_filter || '');
     updateBreedFields();
 
     if (show.has_sponsor === true) {
       setYN('mgmt-sponsor-yn', 'yes');
-      document.getElementById('mgmt-sponsor-form').style.display = 'block';
-      document.getElementById('mgmt-sponsor-name').value    = sponsors[0]?.name || '';
-      document.getElementById('mgmt-sponsor-website').value = sponsors[0]?.website || '';
+      const sponsorForm = document.getElementById('mgmt-sponsor-form');
+      if (sponsorForm) sponsorForm.style.display = 'block';
+      setField('mgmt-sponsor-name',    sponsors[0]?.name || '');
+      setField('mgmt-sponsor-website', sponsors[0]?.website || '');
     } else if (show.has_sponsor === false) {
       setYN('mgmt-sponsor-yn', 'no');
     }
 
     if (show.is_judged === true) {
       setYN('mgmt-judging-yn', 'yes');
-      document.getElementById('mgmt-judge-form').style.display = 'block';
+      const judgeForm = document.getElementById('mgmt-judge-form');
+      if (judgeForm) judgeForm.style.display = 'block';
       rebuildJudgePanels();
       renderMgmtJudgeDisplay();
     } else if (show.is_judged === false) {
@@ -1157,28 +1380,31 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (anyAwards || noAwards) {
       setYN('mgmt-awards-yn', anyAwards ? 'yes' : 'no');
       if (anyAwards) {
-        document.getElementById('mgmt-awards-form').style.display = 'block';
+        const awardsForm = document.getElementById('mgmt-awards-form');
+        if (awardsForm) awardsForm.style.display = 'block';
         setToggle('mgmt-certs-toggle', show.has_digital_certs === true);
         setToggle('mgmt-physical-toggle', show.has_physical_prizes === true);
         if (show.has_physical_prizes === true) {
-          document.getElementById('mgmt-physical-form').style.display = 'block';
+          const physicalForm = document.getElementById('mgmt-physical-form');
+          if (physicalForm) physicalForm.style.display = 'block';
           if (show.prize_source) selectCard(document.getElementById('mgmt-prize-source-cards'), show.prize_source);
           prizes.forEach(p => addPrizeRow(p.description));
         }
       }
     }
 
-    document.getElementById('mgmt-currency').value = show.currency || 'AUD';
+    setField('mgmt-currency', show.currency || 'AUD');
     applyCurrencySymbol(show.currency || 'AUD');
     if (show.is_fundraising === true) {
       setYN('mgmt-fundraising-yn', 'yes');
-      document.getElementById('mgmt-fundraising-form').style.display = 'block';
-      if (show.fundraising_goal) document.getElementById('mgmt-fund-goal').value = show.fundraising_goal;
+      const fundForm = document.getElementById('mgmt-fundraising-form');
+      if (fundForm) fundForm.style.display = 'block';
+      if (show.fundraising_goal) setField('mgmt-fund-goal', show.fundraising_goal);
       setToggle('mgmt-public-toggle', show.show_fundraising_publicly === true);
     } else if (show.is_fundraising === false) {
       setYN('mgmt-fundraising-yn', 'no');
     }
-    document.getElementById('mgmt-entry-fee').value = show.entry_fee || 0;
+    setField('mgmt-entry-fee', show.entry_fee || 0);
   }
 
   // ── Wire up all handlers ─────────────────────────────────────────────────────
@@ -1189,10 +1415,18 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       if (btn) openDrawer(btn.dataset.panel);
     });
 
+    // Archive modal
+    document.getElementById('archive-cancel').addEventListener('click', () => {
+      document.getElementById('archive-modal').style.display = 'none';
+    });
+    document.getElementById('archive-modal').addEventListener('click', e => {
+      if (e.target === e.currentTarget) document.getElementById('archive-modal').style.display = 'none';
+    });
+
     // Close drawer — X button, backdrop, Escape key, cancel buttons
     document.getElementById('drawer-close').addEventListener('click', closeDrawer);
     document.getElementById('drawer-backdrop').addEventListener('click', closeDrawer);
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeDrawer(); document.getElementById('archive-modal').style.display = 'none'; } });
     document.getElementById('edit-drawer').addEventListener('click', e => {
       if (e.target.closest('.cancel-btn')) closeDrawer();
     });
@@ -1412,9 +1646,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       charity_number: needsNum ? charityNum || null : null,
       contact_email: email,
       contact_phone: document.getElementById('mgmt-contact-phone').value.trim() || null,
-      entry_open_date:  document.getElementById('mgmt-entry-open').value  || null,
-      entry_close_date: document.getElementById('mgmt-entry-close').value || null,
-      show_date:        document.getElementById('mgmt-show-date').value   || null,
+      entry_open_date:   document.getElementById('mgmt-entry-open').value        || null,
+      entry_open_time:   document.getElementById('mgmt-entry-open-time').value   || null,
+      entry_close_date:  document.getElementById('mgmt-entry-close').value       || null,
+      entry_close_time:  document.getElementById('mgmt-entry-close-time').value  || null,
+      show_date:         document.getElementById('mgmt-show-date').value          || null,
+      timezone:          document.getElementById('mgmt-timezone').value           || null,
     });
     document.getElementById('show-title-display').textContent = title || 'Untitled Show';
   }
@@ -1991,7 +2228,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const hintEl = document.getElementById('mgmt-fee-hint');
     if (goalEl) goalEl.textContent = sym;
     if (feeEl)  feeEl.textContent  = sym;
-    if (hintEl) hintEl.textContent = `Set to ${sym}0 for a free show.`;
+    const minFee = MIN_ENTRY_FEE[code] || 1;
+    if (hintEl) hintEl.textContent = `Minimum ${sym}${minFee.toFixed(2)}. Entry fees are required for all shows.`;
+    const feeInput = document.getElementById('mgmt-entry-fee') as HTMLInputElement;
+    if (feeInput) feeInput.min = String(minFee);
     updateFeeBreakdown(code);
   }
 
