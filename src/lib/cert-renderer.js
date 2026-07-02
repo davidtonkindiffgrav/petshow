@@ -11,6 +11,7 @@ export const CERT_DEFAULTS = {
   show_logo:     true,
   show_sponsors: false,
   bg_color:      '#ffffff',
+  photo_size:    0.45,   // fraction 0.20–0.70; controls column width (portrait) or photo width (centered)
   fields:        ['animal_name', 'breed', 'exhibitor_name', 'category', 'place', 'show_date'],
 };
 
@@ -184,56 +185,73 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
   // ── Content zone ──────────────────────────────────────────────────────────
   const footerH  = d.show_sponsors && sponsorImgs.some(Boolean) ? 56 : 36;
   const contentH = H - y - footerH - PAD;
+  const contentW = W - 2 * PAD;
+  const photoSize = Math.min(Math.max(d.photo_size ?? 0.45, 0.20), 0.70);
 
-  // Adaptive photo column width based on detected aspect ratio
-  let photoW = 0;
+  // Layout depends on photo aspect ratio:
+  //   Portrait (< 0.80)  → photo left column, text right (side-by-side)
+  //   Landscape or square → photo centred at top, text centred below
+  let photoW = 0, photoH = 0, photoX = PAD, photoY = y;
+  let textDrawX = PAD, textStartY = y + 4, textCentered = false;
+
   if (photoImg) {
     const aspect = photoImg.naturalWidth / photoImg.naturalHeight;
-    if (aspect >= 1.35) {
-      // Landscape: widen column so the photo isn't over-cropped
-      photoW = Math.min(Math.round(contentH * aspect * 0.70), 290);
-    } else if (aspect <= 0.72) {
-      // Portrait: narrow column, photo fills its height naturally
-      photoW = Math.min(Math.round(contentH * 0.52), 140);
+
+    if (aspect < 0.80) {
+      // Portrait: side-by-side. photo_size scales column 90–210 px.
+      photoW = Math.round(90 + ((photoSize - 0.20) / 0.50) * 120);
+      photoH = contentH;
+      photoX = PAD;
+      photoY = y;
+      textDrawX  = PAD + photoW + 24;
+      textStartY = y + 4;
+      textCentered = false;
     } else {
-      // Square-ish
-      photoW = Math.min(Math.round(contentH * 0.70), 190);
+      // Landscape / square: centred photo, text centred below.
+      let pW = Math.round(contentW * photoSize);
+      let pH = Math.round(pW / aspect);
+      // Cap height at 58% of contentH so text always has breathing room.
+      if (pH > contentH * 0.58) { pH = Math.round(contentH * 0.58); pW = Math.round(pH * aspect); }
+      photoW = pW; photoH = pH;
+      photoX = PAD + Math.round((contentW - pW) / 2);
+      photoY = y;
+      textDrawX  = W / 2;
+      textStartY = y + pH + 14;
+      textCentered = true;
     }
   }
 
-  const textX = PAD + (photoW > 0 ? photoW + 24 : 0);
-
   // Photo
-  if (photoImg && photoW > 0) {
-    fitImage(ctx, photoImg, PAD, y, photoW, contentH, 10);
+  if (photoImg && photoW > 0 && photoH > 0) {
+    fitImage(ctx, photoImg, photoX, photoY, photoW, photoH, 10);
     ctx.strokeStyle = '#E6EEEC';
     ctx.lineWidth   = 1;
-    rrect(ctx, PAD, y, photoW, contentH, 10);
+    rrect(ctx, photoX, photoY, photoW, photoH, 10);
     ctx.stroke();
   }
 
   // Text fields
-  let ty = y + 4;
-  ctx.textAlign = 'left';
+  let ty = textStartY;
+  ctx.textAlign = textCentered ? 'center' : 'left';
 
   if (d.fields.includes('animal_name')) {
     const name = entry?.animal_name || 'Animal Name';
     ctx.font      = `800 24px ${FONT}`;
     ctx.fillStyle = TEXT_DARK;
-    ctx.fillText(name, textX, ty + 22);
+    ctx.fillText(name, textDrawX, ty + 22);
     ty += 34;
   }
   if (d.fields.includes('breed') && entry?.breed) {
     ctx.font      = `500 13px ${FONT}`;
     ctx.fillStyle = TEXT_MID;
-    ctx.fillText(entry.breed, textX, ty + 14);
+    ctx.fillText(entry.breed, textDrawX, ty + 14);
     ty += 24;
   }
   if (d.fields.includes('exhibitor_name') && entry?.exhibitor_name) {
     ty += 6;
     ctx.font      = `500 12px ${FONT}`;
     ctx.fillStyle = TEXT_LIGHT;
-    ctx.fillText(`Owner: ${entry.exhibitor_name}`, textX, ty + 12);
+    ctx.fillText(`Owner: ${entry.exhibitor_name}`, textDrawX, ty + 12);
     ty += 20;
   }
 

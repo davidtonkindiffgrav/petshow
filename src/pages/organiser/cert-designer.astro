@@ -91,6 +91,19 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
             <input type="checkbox" id="tog-photo" class="cert-toggle w-4 h-4 accent-brand" data-key="show_photo" />
           </label>
 
+          <!-- Photo size slider (shown when photo is on) -->
+          <div id="photo-size-row" class="pt-1 pb-0.5 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[12px] text-[#6f6880]">Photo Size</span>
+              <span id="photo-size-val" class="text-[12px] font-bold text-brand">45%</span>
+            </div>
+            <input type="range" id="photo-size-slider" min="20" max="70" step="1" value="45"
+              class="w-full accent-brand h-1.5 cursor-pointer" />
+            <div class="flex justify-between text-[10px] text-[#c4bed0]">
+              <span>Smaller</span><span>Larger</span>
+            </div>
+          </div>
+
           <label id="lbl-logo" class="flex items-center justify-between cursor-pointer">
             <span class="text-[13px] font-semibold text-[#1c1626]">Show Logo</span>
             <input type="checkbox" id="tog-logo" class="cert-toggle w-4 h-4 accent-brand" data-key="show_logo" />
@@ -136,8 +149,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         <!-- Preview Photo -->
         <div class="bg-white rounded-card border border-[#b8e4e0] p-4">
           <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider mb-1">Preview Photo</p>
-          <p class="text-[11px] text-[#9b94a8] mb-3 leading-relaxed">Test how different photo ratios affect the layout. Actual winner photos are used when certificates are sent.</p>
-          <div class="grid grid-cols-3 gap-1.5 mb-2" id="ratio-opts">
+          <p class="text-[11px] text-[#9b94a8] mb-3 leading-relaxed">Test sample photos to see how different ratios affect the layout. Real winner photos are used when certificates are sent.</p>
+          <div class="grid grid-cols-3 gap-1.5 mb-2.5" id="ratio-opts">
             <button data-ratio="landscape" class="ratio-opt text-center text-[11px] font-semibold py-2 rounded-[8px] border leading-tight transition-colors">
               Landscape<br><span class="text-[10px] font-normal opacity-60">3:2</span>
             </button>
@@ -148,9 +161,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
               Portrait<br><span class="text-[10px] font-normal opacity-60">2:3</span>
             </button>
           </div>
-          <button id="btn-real-photo" style="display:none"
-            class="w-full text-[11px] font-semibold text-brand border border-brand/30 py-1.5 rounded-[8px] hover:bg-brand/5 transition-colors">
-            ← Use real winner photo
+          <!-- Always visible — text changes based on current mode -->
+          <button id="btn-toggle-photo"
+            class="w-full text-[11px] font-semibold border py-1.5 rounded-[8px] transition-colors">
+            Use real winner photo
           </button>
         </div>
 
@@ -190,43 +204,58 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   let renderQueued  = false;
 
   // Preview photo state
-  let placeholders   = {};  // { landscape, square, portrait } → data URLs
+  let placeholders   = {};  // { landscape, square, portrait } → URL strings
   let realPhotoUrl   = null;
-  let currentRatio   = 'landscape'; // which placeholder is active (null = real photo)
-  let previewPhotoUrl = null;       // resolved after placeholders are built
-
-  function makePlaceholder(w, h, label) {
-    const c = document.createElement('canvas');
-    c.width = w; c.height = h;
-    const ctx = c.getContext('2d');
-    const g = ctx.createLinearGradient(0, 0, w, h);
-    g.addColorStop(0, '#d5f0ee'); g.addColorStop(1, '#a8d8d4');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
-    ctx.strokeStyle = '#7ac4bf'; ctx.lineWidth = 3;
-    ctx.strokeRect(4, 4, w - 8, h - 8);
-    const fs = Math.round(Math.min(w, h) * 0.11);
-    ctx.fillStyle = '#3a6b68';
-    ctx.font = `600 ${fs}px system-ui, sans-serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(label, w / 2, h / 2 - fs * 0.65);
-    ctx.font = `400 ${Math.round(fs * 0.72)}px system-ui, sans-serif`;
-    ctx.fillStyle = '#5a9490';
-    ctx.fillText(`${w}×${h}`, w / 2, h / 2 + fs * 0.72);
-    return c.toDataURL('image/png');
-  }
+  let currentRatio   = 'landscape'; // which placeholder is active; null = real photo
+  let previewPhotoUrl = null;
 
   function syncRatioUI() {
+    // Ratio buttons
     document.querySelectorAll('.ratio-opt').forEach(btn => {
       const active = btn.dataset.ratio === currentRatio;
       btn.className = `ratio-opt text-center text-[11px] font-semibold py-2 rounded-[8px] border leading-tight transition-colors ${
         active ? 'border-brand bg-brand/10 text-brand' : 'border-[#efebf5] text-[#6f6880] hover:border-brand/40'
       }`;
     });
-    const realBtn = document.getElementById('btn-real-photo');
-    if (realBtn) realBtn.style.display = (currentRatio !== null && realPhotoUrl) ? 'block' : 'none';
+
+    // Toggle button — always visible, three states
+    const toggleBtn = document.getElementById('btn-toggle-photo');
+    if (toggleBtn) {
+      if (!realPhotoUrl) {
+        // No real photo available yet
+        toggleBtn.textContent = 'No winner photo yet';
+        toggleBtn.disabled = true;
+        toggleBtn.className = 'w-full text-[11px] font-semibold border border-[#efebf5] py-1.5 rounded-[8px] text-[#c4bed0] cursor-not-allowed select-none';
+      } else if (currentRatio === null) {
+        // Currently showing real photo → offer switch to temp
+        toggleBtn.textContent = 'Use temp image instead';
+        toggleBtn.disabled = false;
+        toggleBtn.className = 'w-full text-[11px] font-semibold border border-[#b8e4e0] py-1.5 rounded-[8px] text-[#6f6880] hover:bg-[#f0fafa] transition-colors';
+      } else {
+        // Currently showing temp → offer switch to real
+        toggleBtn.textContent = 'Use real winner photo';
+        toggleBtn.disabled = false;
+        toggleBtn.className = 'w-full text-[11px] font-semibold border border-brand/30 py-1.5 rounded-[8px] text-brand hover:bg-brand/5 transition-colors';
+      }
+    }
+
+    // Preview label
     const labelMap = { landscape: 'Landscape sample (3:2)', square: 'Square sample (1:1)', portrait: 'Portrait sample (2:3)' };
     const labelEl = document.getElementById('preview-photo-label');
     if (labelEl) labelEl.textContent = currentRatio ? labelMap[currentRatio] : 'Real winner photo';
+  }
+
+  function syncSizeUI() {
+    const slider = document.getElementById('photo-size-slider');
+    const val    = document.getElementById('photo-size-val');
+    const row    = document.getElementById('photo-size-row');
+    if (!slider) return;
+    const pct = Math.round((design.photo_size ?? 0.45) * 100);
+    slider.value    = pct;
+    val.textContent = pct + '%';
+    // Grey out when photo is off
+    row.style.opacity  = design.show_photo ? '1' : '0.4';
+    slider.disabled    = !design.show_photo;
   }
 
   function showToast(msg, isError = false) {
@@ -291,6 +320,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.getElementById('tog-logo').disabled          = !hasLogo;
     document.getElementById('lbl-sponsors').style.opacity = hasSponsors ? '1' : '0.4';
     document.getElementById('tog-sponsors').disabled      = !hasSponsors;
+
+    syncSizeUI();
   }
 
   function updateLockUI(isLocked) {
@@ -368,11 +399,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     // preview-note is now always hidden since we always have a placeholder
     document.getElementById('preview-note').style.display = 'none';
 
-    // Build placeholder images and initialise preview photo state
+    // Point to the real sample images in public/images/
+    const origin = window.location.origin;
     placeholders = {
-      landscape: makePlaceholder(600, 400, 'Landscape'),
-      square:    makePlaceholder(400, 400, 'Square'),
-      portrait:  makePlaceholder(400, 600, 'Portrait'),
+      landscape: origin + '/images/landscapeSample.jpg',
+      square:    origin + '/images/squareSample.jpg',
+      portrait:  origin + '/images/portraitSample.jpg',
     };
     realPhotoUrl    = sampleEntry?.photo_url || null;
     currentRatio    = 'landscape';
@@ -404,9 +436,26 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       redraw();
     });
 
-    document.getElementById('btn-real-photo')?.addEventListener('click', () => {
-      currentRatio    = null;
-      previewPhotoUrl = realPhotoUrl;
+    // Photo size slider
+    document.getElementById('photo-size-slider')?.addEventListener('input', e => {
+      design.photo_size = parseInt(e.target.value) / 100;
+      document.getElementById('photo-size-val').textContent = e.target.value + '%';
+      redraw();
+    });
+
+    // Photo toggle button (always visible, text changes)
+    document.getElementById('btn-toggle-photo')?.addEventListener('click', () => {
+      if (!realPhotoUrl) return;
+      if (currentRatio === null) {
+        // Switch back to the last used temp ratio (default landscape)
+        currentRatio    = 'landscape';
+        previewPhotoUrl = placeholders.landscape;
+        // Sync ratio buttons so landscape is highlighted
+        syncRatioUI();
+      } else {
+        currentRatio    = null;
+        previewPhotoUrl = realPhotoUrl;
+      }
       syncRatioUI();
       redraw();
     });
@@ -431,6 +480,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.querySelectorAll('.cert-toggle').forEach(inp => {
       inp.addEventListener('change', () => {
         design[inp.dataset.key] = inp.checked;
+        syncSizeUI();
         redraw();
       });
     });
