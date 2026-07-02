@@ -37,7 +37,8 @@ async function buildPdf(
   design: any,
 ): Promise<Uint8Array> {
   const doc  = await PDFDocument.create();
-  const page = doc.addPage([841.89, 595.28]); // A4 landscape in pts
+  const pageDims = design.page_size === 'letter' ? [792, 612] : [841.89, 595.28];
+  const page = doc.addPage(pageDims);
   const { width: W, height: H } = page.getSize();
 
   const helveticaBold   = await doc.embedFont(StandardFonts.HelveticaBold);

@@ -82,27 +82,55 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           </div>
         </div>
 
-        <!-- Toggles -->
+        <!-- Photo -->
         <div class="bg-white rounded-card border border-[#b8e4e0] p-4 space-y-3">
-          <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider mb-1">Content</p>
+          <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider">Photo</p>
 
           <label class="flex items-center justify-between cursor-pointer">
             <span class="text-[13px] font-semibold text-[#1c1626]">Winning Photo</span>
             <input type="checkbox" id="tog-photo" class="cert-toggle w-4 h-4 accent-brand" data-key="show_photo" />
           </label>
 
-          <!-- Photo size slider (shown when photo is on) -->
-          <div id="photo-size-row" class="pt-1 pb-0.5 space-y-1.5">
-            <div class="flex items-center justify-between">
-              <span class="text-[12px] text-[#6f6880]">Photo Size</span>
-              <span id="photo-size-val" class="text-[12px] font-bold text-brand">45%</span>
+          <!-- Sub-controls greyed when photo is off -->
+          <div id="photo-sub-controls" class="space-y-3 transition-opacity">
+
+            <!-- Size slider -->
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between">
+                <span class="text-[12px] text-[#6f6880]">Photo Size</span>
+                <span id="photo-size-val" class="text-[12px] font-bold text-brand">45%</span>
+              </div>
+              <input type="range" id="photo-size-slider" min="20" max="70" step="1" value="45"
+                class="w-full accent-brand h-1.5 cursor-pointer" />
+              <div class="flex justify-between text-[10px] text-[#c4bed0]">
+                <span>Smaller</span><span>Larger</span>
+              </div>
             </div>
-            <input type="range" id="photo-size-slider" min="20" max="70" step="1" value="45"
-              class="w-full accent-brand h-1.5 cursor-pointer" />
-            <div class="flex justify-between text-[10px] text-[#c4bed0]">
-              <span>Smaller</span><span>Larger</span>
+
+            <div class="pt-1 border-t border-[#f5f3fa]">
+              <p class="text-[11px] text-[#9b94a8] mb-2">Preview photo ratio</p>
+              <div class="grid grid-cols-3 gap-1.5 mb-2" id="ratio-opts">
+                <button data-ratio="landscape" class="ratio-opt text-center text-[11px] font-semibold py-2 rounded-[8px] border leading-tight transition-colors">
+                  Landscape<br><span class="text-[10px] font-normal opacity-60">3:2</span>
+                </button>
+                <button data-ratio="square" class="ratio-opt text-center text-[11px] font-semibold py-2 rounded-[8px] border leading-tight transition-colors">
+                  Square<br><span class="text-[10px] font-normal opacity-60">1:1</span>
+                </button>
+                <button data-ratio="portrait" class="ratio-opt text-center text-[11px] font-semibold py-2 rounded-[8px] border leading-tight transition-colors">
+                  Portrait<br><span class="text-[10px] font-normal opacity-60">2:3</span>
+                </button>
+              </div>
+              <button id="btn-toggle-photo" class="w-full text-[11px] font-semibold border py-1.5 rounded-[8px] transition-colors">
+                Use real winner photo
+              </button>
             </div>
+
           </div>
+        </div>
+
+        <!-- Logo & Sponsors -->
+        <div class="bg-white rounded-card border border-[#b8e4e0] p-4 space-y-3">
+          <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider">Logo & Sponsors</p>
 
           <label id="lbl-logo" class="flex items-center justify-between cursor-pointer">
             <span class="text-[13px] font-semibold text-[#1c1626]">Show Logo</span>
@@ -146,26 +174,18 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           </div>
         </div>
 
-        <!-- Preview Photo -->
+        <!-- Page Size -->
         <div class="bg-white rounded-card border border-[#b8e4e0] p-4">
-          <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider mb-1">Preview Photo</p>
-          <p class="text-[11px] text-[#9b94a8] mb-3 leading-relaxed">Test sample photos to see how different ratios affect the layout. Real winner photos are used when certificates are sent.</p>
-          <div class="grid grid-cols-3 gap-1.5 mb-2.5" id="ratio-opts">
-            <button data-ratio="landscape" class="ratio-opt text-center text-[11px] font-semibold py-2 rounded-[8px] border leading-tight transition-colors">
-              Landscape<br><span class="text-[10px] font-normal opacity-60">3:2</span>
+          <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider mb-3">Page Size</p>
+          <div class="flex gap-2" id="page-size-opts">
+            <button data-size="a4" class="page-size-opt flex-1 text-[12px] font-semibold py-2 rounded-[8px] border transition-colors">
+              A4
             </button>
-            <button data-ratio="square" class="ratio-opt text-center text-[11px] font-semibold py-2 rounded-[8px] border leading-tight transition-colors">
-              Square<br><span class="text-[10px] font-normal opacity-60">1:1</span>
-            </button>
-            <button data-ratio="portrait" class="ratio-opt text-center text-[11px] font-semibold py-2 rounded-[8px] border leading-tight transition-colors">
-              Portrait<br><span class="text-[10px] font-normal opacity-60">2:3</span>
+            <button data-size="letter" class="page-size-opt flex-1 text-[12px] font-semibold py-2 rounded-[8px] border transition-colors">
+              Letter
             </button>
           </div>
-          <!-- Always visible — text changes based on current mode -->
-          <button id="btn-toggle-photo"
-            class="w-full text-[11px] font-semibold border py-1.5 rounded-[8px] transition-colors">
-            Use real winner photo
-          </button>
+          <p class="text-[10px] text-[#9b94a8] mt-2">Both are landscape orientation</p>
         </div>
 
       </div>
@@ -177,7 +197,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
             <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider">Live Preview</p>
             <p id="preview-photo-label" class="text-[11px] text-[#9b94a8]">Landscape sample photo</p>
           </div>
-          <div class="overflow-hidden rounded-[10px] border border-[#efebf5] bg-[#f9fffe]"
+          <div id="cert-canvas-wrapper" class="overflow-hidden rounded-[10px] border border-[#efebf5] bg-[#f9fffe]"
                style="aspect-ratio:842/595">
             <canvas id="cert-canvas" style="width:100%;height:100%;display:block"></canvas>
           </div>
@@ -245,17 +265,20 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (labelEl) labelEl.textContent = currentRatio ? labelMap[currentRatio] : 'Real winner photo';
   }
 
-  function syncSizeUI() {
+  function syncPhotoControls() {
+    const on     = !!design.show_photo;
+    const sub    = document.getElementById('photo-sub-controls');
     const slider = document.getElementById('photo-size-slider');
     const val    = document.getElementById('photo-size-val');
-    const row    = document.getElementById('photo-size-row');
     if (!slider) return;
+
+    // Grey the whole sub-section when photo is off
+    sub.style.opacity       = on ? '1' : '0.4';
+    sub.style.pointerEvents = on ? '' : 'none';
+
     const pct = Math.round((design.photo_size ?? 0.45) * 100);
     slider.value    = pct;
     val.textContent = pct + '%';
-    // Grey out when photo is off
-    row.style.opacity  = design.show_photo ? '1' : '0.4';
-    slider.disabled    = !design.show_photo;
   }
 
   function showToast(msg, isError = false) {
@@ -313,7 +336,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.querySelectorAll('.field-tog').forEach(inp => {
       inp.checked = design.fields.includes(inp.dataset.field);
     });
-    // Greyed-out toggles
+    // Logo / sponsor toggles
     const hasLogo     = !!(show?.logo_url || show?.org_logo_url);
     const hasSponsors = sponsors?.length > 0;
     document.getElementById('lbl-logo').style.opacity     = hasLogo     ? '1' : '0.4';
@@ -321,7 +344,21 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.getElementById('lbl-sponsors').style.opacity = hasSponsors ? '1' : '0.4';
     document.getElementById('tog-sponsors').disabled      = !hasSponsors;
 
-    syncSizeUI();
+    // Page size buttons
+    const ps = design.page_size || 'a4';
+    document.querySelectorAll('.page-size-opt').forEach(btn => {
+      const active = btn.dataset.size === ps;
+      btn.className = `page-size-opt flex-1 text-[12px] font-semibold py-2 rounded-[8px] border transition-colors ${
+        active ? 'border-brand bg-brand/10 text-brand' : 'border-[#efebf5] text-[#6f6880] hover:border-brand/40'
+      }`;
+    });
+
+    // Update canvas wrapper aspect ratio to match page size
+    const ratios = { a4: '842/595', letter: '792/612' };
+    const wrapper = document.getElementById('cert-canvas-wrapper');
+    if (wrapper) wrapper.style.aspectRatio = ratios[ps] || '842/595';
+
+    syncPhotoControls();
   }
 
   function updateLockUI(isLocked) {
@@ -480,7 +517,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.querySelectorAll('.cert-toggle').forEach(inp => {
       inp.addEventListener('change', () => {
         design[inp.dataset.key] = inp.checked;
-        syncSizeUI();
+        syncPhotoControls();
         redraw();
       });
     });
@@ -495,6 +532,15 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         }
         redraw();
       });
+    });
+
+    // Page size
+    document.getElementById('page-size-opts').addEventListener('click', e => {
+      const btn = e.target.closest('.page-size-opt');
+      if (!btn) return;
+      design.page_size = btn.dataset.size;
+      syncUI();
+      redraw();
     });
 
     document.getElementById('btn-save').addEventListener('click', () => saveDesign(false));

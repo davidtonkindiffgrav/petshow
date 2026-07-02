@@ -1,9 +1,10 @@
 // Renders an award certificate onto a <canvas> element.
 // Canvas is set to A4-landscape logical size (842×595 CSS px) at 2× pixel ratio.
 
-const W = 842;
-const H = 595;
 const SCALE = 2;
+
+// Page dimensions in logical px (landscape)
+const PAGE_SIZES = { a4: [842, 595], letter: [792, 612] };
 
 export const CERT_DEFAULTS = {
   border_style:  'classic',
@@ -11,7 +12,8 @@ export const CERT_DEFAULTS = {
   show_logo:     true,
   show_sponsors: false,
   bg_color:      '#ffffff',
-  photo_size:    0.45,   // fraction 0.20–0.70; controls column width (portrait) or photo width (centered)
+  photo_size:    0.45,   // fraction 0.20–0.70
+  page_size:     'a4',   // 'a4' | 'letter'
   fields:        ['animal_name', 'breed', 'exhibitor_name', 'category', 'place', 'show_date'],
 };
 
@@ -48,7 +50,7 @@ async function loadImg(url) {
   });
 }
 
-function drawBorder(ctx, style) {
+function drawBorder(ctx, style, W, H) {
   const m = 14;
   ctx.strokeStyle = ACCENT;
   if (style === 'none') return;
@@ -85,6 +87,7 @@ function fitImage(ctx, img, dx, dy, dw, dh, radius = 0) {
 
 export async function renderCertificate(canvas, { show, entry, category, sponsors = [], design = {} }) {
   const d = { ...CERT_DEFAULTS, ...design };
+  const [W, H] = PAGE_SIZES[d.page_size] || PAGE_SIZES.a4;
 
   canvas.width  = W * SCALE;
   canvas.height = H * SCALE;
@@ -102,7 +105,7 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
   ctx.fillRect(0, 0, W, H);
 
   // ── Border ────────────────────────────────────────────────────────────────
-  drawBorder(ctx, d.border_style);
+  drawBorder(ctx, d.border_style, W, H);
 
   // ── Load images in parallel ───────────────────────────────────────────────
   const logoUrl    = d.show_logo ? (show?.logo_url || show?.org_logo_url) : null;
@@ -198,14 +201,25 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
     const aspect = photoImg.naturalWidth / photoImg.naturalHeight;
 
     if (aspect < 0.80) {
-      // Portrait: side-by-side. photo_size scales column 90–210 px.
+      // Portrait: photo left column, text centred both axes in the remaining column.
       photoW = Math.round(90 + ((photoSize - 0.20) / 0.50) * 120);
       photoH = contentH;
       photoX = PAD;
       photoY = y;
-      textDrawX  = PAD + photoW + 24;
-      textStartY = y + 4;
-      textCentered = false;
+
+      // Pre-calculate text block height for vertical centering
+      let totalTextH = 0;
+      if (d.fields.includes('animal_name')) totalTextH += 34;
+      if (d.fields.includes('breed') && entry?.breed) totalTextH += 24;
+      if (d.fields.includes('exhibitor_name') && entry?.exhibitor_name) totalTextH += 26;
+
+      const colLeft    = PAD + photoW + 24;
+      const colCenterX = colLeft + (W - PAD - colLeft) / 2;
+      const vertOffset = Math.max(0, Math.round((contentH - totalTextH) / 2));
+
+      textDrawX    = colCenterX;
+      textStartY   = y + vertOffset;
+      textCentered = true;
     } else {
       // Landscape / square: centred photo, text centred below.
       let pW = Math.round(contentW * photoSize);
