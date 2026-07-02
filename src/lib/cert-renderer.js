@@ -19,7 +19,8 @@ export const CERT_DEFAULTS = {
 };
 
 const PLACE_LABEL = { 1: '1st Place', 2: '2nd Place', 3: '3rd Place' };
-const RIBBON_URLS = { 1: '/images/1st.png', 2: '/images/2nd.png', 3: '/images/3rd.png' };
+const RIBBON_URLS    = { 1: '/images/1st.png',    2: '/images/2nd.png',    3: '/images/3rd.png' };
+const RIBBON_URLS_NZ = { 1: '/images/1st_nz.png', 2: '/images/2nd_nz.png', 3: '/images/3rd.png' };
 const ACCENT      = '#1ba89a';
 const TEXT_DARK   = '#143A37';
 const TEXT_MID    = '#4A6663';
@@ -192,7 +193,8 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
   const place       = entry?.result_place ?? 1;
   const logoUrl     = d.show_logo ? (show?.logo_url || show?.org_logo_url) : null;
   const photoUrl    = d.image_mode === 'photo' ? entry?.photo_url : null;
-  const ribbonUrl   = RIBBON_URLS[place] ?? RIBBON_URLS[1];
+  const ribbonMap   = show?.currency === 'NZD' ? RIBBON_URLS_NZ : RIBBON_URLS;
+  const ribbonUrl   = ribbonMap[place] ?? ribbonMap[1];
   const sponsorUrls = d.show_sponsors ? sponsors.slice(0, 4).map(s => s.logo_url) : [];
 
   const [logoImg, photoImg, ribbonImg, ...sponsorImgs] = await Promise.all([

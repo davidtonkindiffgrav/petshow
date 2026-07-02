@@ -350,42 +350,46 @@ serve(async (req: Request) => {
 
     // 9. Send email via Resend
     const resendKey = Deno.env.get('RESEND_API_KEY');
+    if (!resendKey) throw new Error('RESEND_API_KEY secret is not set — deploy it with: supabase secrets set RESEND_API_KEY=re_...');
+
     const fromAddr  = Deno.env.get('RESEND_FROM') || 'Fur to Feathers <noreply@furtofeathers.com>';
     const siteUrl   = Deno.env.get('SITE_URL') || 'https://furtofeathers.com';
 
-    if (resendKey) {
-      const placeStr = PLACE_LABEL[entry.result_place] ?? `#${entry.result_place}`;
-      const catName  = category?.name ?? 'Best in Show';
-      const icon     = PLACE_ICON[entry.result_place] ?? '🏆';
-      const firstName = entry.exhibitor_name?.split(' ')[0] || 'there';
+    const placeStr  = PLACE_LABEL[entry.result_place] ?? `#${entry.result_place}`;
+    const catName   = category?.name ?? 'Best in Show';
+    const icon      = PLACE_ICON[entry.result_place] ?? '🏆';
+    const firstName = entry.exhibitor_name?.split(' ')[0] || 'there';
 
-      const jpgLink  = cert_jpg_url
-        ? `<a href="${cert_jpg_url}" style="display:inline-block;padding:10px 20px;background:#1ba89a;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;margin-right:8px">Download JPG</a>`
-        : '';
-      const pdfLink  = `<a href="${cert_pdf_url}" style="display:inline-block;padding:10px 20px;background:#143A37;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Download PDF</a>`;
+    const jpgLink = cert_jpg_url
+      ? `<a href="${cert_jpg_url}" style="display:inline-block;padding:10px 20px;background:#1ba89a;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;margin-right:8px">Download JPG</a>`
+      : '';
+    const pdfLink = `<a href="${cert_pdf_url}" style="display:inline-block;padding:10px 20px;background:#143A37;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Download PDF</a>`;
 
-      await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${resendKey}` },
-        body: JSON.stringify({
-          from: fromAddr,
-          to:   [entry.exhibitor_email],
-          subject: `${icon} Your award certificate — ${show.title}`,
-          html: `
-            <div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;color:#1c1626">
-              <p style="font-size:16px">Hi ${firstName},</p>
-              <p>Congratulations! <strong>${entry.animal_name}</strong> was awarded
-                 <strong>${placeStr}</strong> in the <strong>${catName}</strong> category
-                 at <strong>${show.title}</strong>. ${icon}</p>
-              <p>Get your award certificate here:</p>
-              <p style="margin:24px 0">${jpgLink}${pdfLink}</p>
-              <p style="font-size:12px;color:#9BB4AF">
-                Congratulations from the team at <a href="${siteUrl}" style="color:#1ba89a">Fur to Feathers</a>.
-              </p>
-            </div>
-          `,
-        }),
-      });
+    const emailRes = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${resendKey}` },
+      body: JSON.stringify({
+        from: fromAddr,
+        to:   [entry.exhibitor_email],
+        subject: `${icon} Your award certificate — ${show.title}`,
+        html: `
+          <div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;color:#1c1626">
+            <p style="font-size:16px">Hi ${firstName},</p>
+            <p>Congratulations! <strong>${entry.animal_name}</strong> was awarded
+               <strong>${placeStr}</strong> in the <strong>${catName}</strong> category
+               at <strong>${show.title}</strong>. ${icon}</p>
+            <p>Get your award certificate here:</p>
+            <p style="margin:24px 0">${jpgLink}${pdfLink}</p>
+            <p style="font-size:12px;color:#9BB4AF">
+              Congratulations from the team at <a href="${siteUrl}" style="color:#1ba89a">Fur to Feathers</a>.
+            </p>
+          </div>
+        `,
+      }),
+    });
+    if (!emailRes.ok) {
+      const detail = await emailRes.text();
+      throw new Error(`Resend API error ${emailRes.status}: ${detail}`);
     }
 
     // 10. Write cert URLs + sent timestamp back to entry

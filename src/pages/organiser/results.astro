@@ -151,8 +151,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
            data-category-id="${esc(entry.category_id || '')}">
            Send Certificate
          </button>`
-      : certEnabled && sentAt
-      ? `<span class="text-[12px] text-[#c4bed0] select-none">Already sent</span>`
+      : certEnabled && hasEmail && sentAt
+      ? `<button class="send-cert-btn text-[12px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-3 py-1.5 rounded-btn hover:bg-[#f0fafa] transition-colors"
+           data-entry-id="${esc(entry.id)}"
+           data-category-id="${esc(entry.category_id || '')}">
+           Send Again
+         </button>`
       : `<button disabled
            class="text-[12px] font-semibold text-[#c4bed0] border border-[#efebf5] px-3 py-1.5 rounded-btn cursor-not-allowed select-none"
            title="${certEnabled ? (hasEmail ? '' : 'No email for this entry') : 'Design and lock a certificate template first'}">
@@ -366,7 +370,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     if (!showId) { showError('No show specified.'); return; }
 
-    const [showRes, catsRes, entriesRes, sponsorsRes] = await Promise.all([
+    const [showRes, catsRes, entriesRes, sponsorsRes, judgeRes] = await Promise.all([
       supabase.from('shows').select('*').eq('id', showId).eq('created_by', uid).single(),
       supabase.from('show_categories').select('id, name').eq('show_id', showId).order('name'),
       supabase.from('show_entries')
@@ -376,6 +380,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         .lte('result_place', 3)
         .order('result_place'),
       supabase.from('show_sponsors').select('name, logo_url').eq('show_id', showId),
+      supabase.from('show_judges').select('first_name, last_name').eq('show_id', showId).limit(1).maybeSingle(),
     ]);
 
     if (showRes.error || !showRes.data) {
@@ -388,6 +393,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       showError('Results have not been published for this show yet.');
       return;
     }
+
+    // Attach judge name so renderCertificate can use it for the signature
+    const j = judgeRes?.data;
+    if (j) show.judge_name = `${j.first_name || ''} ${j.last_name || ''}`.trim();
 
     // Populate module-level state
     _show        = show;
