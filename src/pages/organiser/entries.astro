@@ -150,8 +150,20 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   import { getAuth } from '../../lib/auth.js';
   import { supabase } from '../../lib/supabase.js';
 
-  const { session, base } = await getAuth();
+  const { session, profile, base } = await getAuth();
   if (!session) { window.location.replace(base + 'login'); throw 0; }
+
+  const name = profile?.display_name || session.user.email?.split('@')[0] || 'Organiser';
+  const avatarEl = document.getElementById('sidebar-avatar');
+  const nameEl   = document.getElementById('sidebar-username');
+  const badgeEl  = document.getElementById('sidebar-role-badge');
+  if (avatarEl) avatarEl.textContent = name.charAt(0).toUpperCase();
+  if (nameEl)   nameEl.textContent   = name;
+  if (badgeEl)  badgeEl.textContent  = profile?.organiser_type === 'club' ? 'Club Organiser' : 'Organiser';
+  document.getElementById('sidebar-signout')?.addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.href = base + 'login';
+  });
 
   const uid   = session.user.id;
   const preId = new URLSearchParams(window.location.search).get('id');

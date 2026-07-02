@@ -358,6 +358,18 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       return;
     }
 
+    const name = auth.profile?.display_name || auth.session.user.email?.split('@')[0] || 'Organiser';
+    const avatarEl = document.getElementById('sidebar-avatar');
+    const nameEl   = document.getElementById('sidebar-username');
+    const badgeEl  = document.getElementById('sidebar-role-badge');
+    if (avatarEl) avatarEl.textContent = name.charAt(0).toUpperCase();
+    if (nameEl)   nameEl.textContent   = name;
+    if (badgeEl)  badgeEl.textContent  = auth.profile?.organiser_type === 'club' ? 'Club Organiser' : 'Organiser';
+    document.getElementById('sidebar-signout')?.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = base + 'login';
+    });
+
     const uid = auth.session.user.id;
     const params = new URLSearchParams(window.location.search);
     const showId = params.get('id');
