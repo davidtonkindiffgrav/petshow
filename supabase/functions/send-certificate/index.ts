@@ -35,6 +35,7 @@ async function buildPdf(
   category: any,
   sponsors: any[],
   design: any,
+  judgeName: string | null = null,
 ): Promise<Uint8Array> {
   const doc  = await PDFDocument.create();
   const pageDims = design.page_size === 'letter' ? [792, 612] : [841.89, 595.28];
@@ -173,30 +174,29 @@ async function buildPdf(
 
   // Photo
   let textOffsetX = 0;
-  if (design.show_photo && entry.photo_url) {
+  const showPhoto = design.image_mode === 'photo' || (!design.image_mode && !!design.show_photo);
+  if (showPhoto && entry.photo_url) {
     const photoBytes = await fetchBytes(entry.photo_url);
     if (photoBytes) {
       try {
         let photoImg;
-        if (entry.photo_url.toLowerCase().endsWith('.png')) {
+        const urlLower = entry.photo_url.toLowerCase();
+        if (urlLower.includes('.png') || urlLower.includes('image/png')) {
           photoImg = await doc.embedPng(photoBytes);
         } else {
           photoImg = await doc.embedJpg(photoBytes);
         }
-        const photoW = Math.min(Math.round(contentH * 0.72), 180);
-        // crop to fill photoW × contentH
-        const srcAspect = photoImg.width / photoImg.height;
-        const dstAspect = photoW / contentH;
-        let sx = 0, sy = 0, sw = photoImg.width, sh = photoImg.height;
-        if (srcAspect > dstAspect) { sw = sh * dstAspect; sx = (photoImg.width - sw) / 2; }
-        else                        { sh = sw / dstAspect; sy = (photoImg.height - sh) / 2; }
-        page.drawImage(photoImg, {
-          x: PAD, y: contentY, width: photoW, height: contentH,
-          xSkew: degrees(0), ySkew: degrees(0),
-        });
-        page.drawRectangle({ x: PAD, y: contentY, width: photoW, height: contentH,
+        // Preserve natural aspect ratio (don't stretch)
+        const photoSize = Math.min(Math.max(design.photo_size ?? 0.45, 0.20), 0.70);
+        const imgAspect = photoImg.width / photoImg.height;
+        const boxW = Math.round(Math.min(contentH * photoSize * 1.5, 200));
+        const drawH = imgAspect < 0.80 ? contentH : Math.min(Math.round(boxW / imgAspect), contentH);
+        const drawW = Math.round(drawH * imgAspect);
+        const drawY = contentY + Math.round((contentH - drawH) / 2);
+        page.drawImage(photoImg, { x: PAD, y: drawY, width: drawW, height: drawH });
+        page.drawRectangle({ x: PAD, y: drawY, width: drawW, height: drawH,
           borderColor: rgb(0.9, 0.93, 0.925), borderWidth: 0.75, color: rgb(1,1,1,0) });
-        textOffsetX = photoW + 24;
+        textOffsetX = boxW + 24;
       } catch {}
     }
   }
@@ -233,7 +233,7 @@ async function buildPdf(
   }
 
   // ── Footer ─────────────────────────────────────────────────────────────────
-  const footerLineY = PAD + footerH - 28;
+  const footerLineY = PAD + 24;  // matches canvas fy-28
   page.drawLine({
     start: { x: PAD, y: footerLineY }, end: { x: W - PAD, y: footerLineY },
     thickness: 0.5, color: rgb(ACCENT_R, ACCENT_G, ACCENT_B, 0.18),
@@ -247,14 +247,15 @@ async function buildPdf(
       if (!sBytes) continue;
       try {
         let sImg;
-        if (sponsor.logo_url.toLowerCase().endsWith('.png')) {
+        const sUrl = sponsor.logo_url.toLowerCase();
+        if (sUrl.includes('.png') || sUrl.includes('image/png')) {
           sImg = await doc.embedPng(sBytes);
         } else {
           sImg = await doc.embedJpg(sBytes);
         }
         const sh2 = 22;
         const sw2 = Math.min(sh2 * (sImg.width / sImg.height), 80);
-        page.drawImage(sImg, { x: sx, y: PAD, width: sw2, height: sh2 });
+        page.drawImage(sImg, { x: sx, y: PAD + footerH - 8, width: sw2, height: sh2 });
         sx += sw2 + 12;
       } catch {}
     }
@@ -263,10 +264,39 @@ async function buildPdf(
   const brandText = 'fur to feathers';
   const brandSize = 8;
   page.drawText(brandText, {
-    x: W - PAD - helvetica.widthOfTextAtSize(brandText, brandSize),
-    y: PAD + 4,
+    x: design.show_signature
+      ? PAD
+      : W - PAD - helvetica.widthOfTextAtSize(brandText, brandSize),
+    y: PAD + 10,
     font: helvetica, size: brandSize, color: rgb(LIGHT_R, LIGHT_G, LIGHT_B),
   });
+
+  // ── Judge signature ───────────────────────────────────────────────────────
+  if (design.show_signature) {
+    const timesItalic = await doc.embedFont(StandardFonts.TimesRomanItalic);
+    const sigName  = judgeName || 'Sebastian Montgomery';
+    const sigW     = 200;
+    const sigX     = W - PAD - sigW;
+    let   sigSize  = 22;
+    while (timesItalic.widthOfTextAtSize(sigName, sigSize) > sigW - 10 && sigSize > 10) sigSize--;
+    const sigTextW = timesItalic.widthOfTextAtSize(sigName, sigSize);
+    const sigLineY = PAD + 34;
+
+    page.drawText('Judge', {
+      x: sigX + (sigW - helvetica.widthOfTextAtSize('Judge', 8)) / 2,
+      y: sigLineY + 18,
+      font: helvetica, size: 8, color: rgb(LIGHT_R, LIGHT_G, LIGHT_B),
+    });
+    page.drawText(sigName, {
+      x: sigX + (sigW - sigTextW) / 2,
+      y: sigLineY + 4,
+      font: timesItalic, size: sigSize, color: rgb(DARK_R, DARK_G, DARK_B),
+    });
+    page.drawLine({
+      start: { x: sigX, y: sigLineY }, end: { x: sigX + sigW, y: sigLineY },
+      thickness: 0.5, color: rgb(MID_R, MID_G, MID_B, 0.5),
+    });
+  }
 
   return doc.save();
 }
@@ -321,7 +351,18 @@ serve(async (req: Request) => {
       .eq('id', entry.category_id)
       .single();
 
-    // 6. Parse design + fetch sponsors
+    // 6. Fetch judge name for signature
+    const { data: judgeRow } = await adminClient
+      .from('show_judges')
+      .select('first_name, last_name')
+      .eq('show_id', show_id)
+      .limit(1)
+      .maybeSingle();
+    const judgeName = judgeRow
+      ? `${judgeRow.first_name || ''} ${judgeRow.last_name || ''}`.trim() || null
+      : null;
+
+    // 7. Parse design + fetch sponsors
     let design: any = {};
     try { design = JSON.parse(show.cert_design_json || '{}'); } catch {}
 
@@ -334,10 +375,10 @@ serve(async (req: Request) => {
       sponsors = sp || [];
     }
 
-    // 7. Generate PDF
-    const pdfBytes = await buildPdf(show, entry, category, sponsors, design);
+    // 8. Generate PDF
+    const pdfBytes = await buildPdf(show, entry, category, sponsors, design, judgeName);
 
-    // 8. Upload PDF to storage
+    // 9. Upload PDF to storage
     const pdfPath = `certs/${show_id}/${entry_id}.pdf`;
     const { error: uploadErr } = await adminClient.storage
       .from('show-assets')
