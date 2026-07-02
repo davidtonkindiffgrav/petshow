@@ -182,10 +182,26 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
   y += 16;
 
   // ── Content zone ──────────────────────────────────────────────────────────
-  const footerH   = d.show_sponsors && sponsorImgs.some(Boolean) ? 56 : 36;
-  const contentH  = H - y - footerH - PAD;
-  const photoW    = photoImg ? Math.min(Math.round(contentH * 0.72), 180) : 0;
-  const textX     = PAD + (photoW > 0 ? photoW + 24 : 0);
+  const footerH  = d.show_sponsors && sponsorImgs.some(Boolean) ? 56 : 36;
+  const contentH = H - y - footerH - PAD;
+
+  // Adaptive photo column width based on detected aspect ratio
+  let photoW = 0;
+  if (photoImg) {
+    const aspect = photoImg.naturalWidth / photoImg.naturalHeight;
+    if (aspect >= 1.35) {
+      // Landscape: widen column so the photo isn't over-cropped
+      photoW = Math.min(Math.round(contentH * aspect * 0.70), 290);
+    } else if (aspect <= 0.72) {
+      // Portrait: narrow column, photo fills its height naturally
+      photoW = Math.min(Math.round(contentH * 0.52), 140);
+    } else {
+      // Square-ish
+      photoW = Math.min(Math.round(contentH * 0.70), 190);
+    }
+  }
+
+  const textX = PAD + (photoW > 0 ? photoW + 24 : 0);
 
   // Photo
   if (photoImg && photoW > 0) {

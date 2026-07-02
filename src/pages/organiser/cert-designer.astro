@@ -133,6 +133,27 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           </div>
         </div>
 
+        <!-- Preview Photo -->
+        <div class="bg-white rounded-card border border-[#b8e4e0] p-4">
+          <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider mb-1">Preview Photo</p>
+          <p class="text-[11px] text-[#9b94a8] mb-3 leading-relaxed">Test how different photo ratios affect the layout. Actual winner photos are used when certificates are sent.</p>
+          <div class="grid grid-cols-3 gap-1.5 mb-2" id="ratio-opts">
+            <button data-ratio="landscape" class="ratio-opt text-center text-[11px] font-semibold py-2 rounded-[8px] border leading-tight transition-colors">
+              Landscape<br><span class="text-[10px] font-normal opacity-60">3:2</span>
+            </button>
+            <button data-ratio="square" class="ratio-opt text-center text-[11px] font-semibold py-2 rounded-[8px] border leading-tight transition-colors">
+              Square<br><span class="text-[10px] font-normal opacity-60">1:1</span>
+            </button>
+            <button data-ratio="portrait" class="ratio-opt text-center text-[11px] font-semibold py-2 rounded-[8px] border leading-tight transition-colors">
+              Portrait<br><span class="text-[10px] font-normal opacity-60">2:3</span>
+            </button>
+          </div>
+          <button id="btn-real-photo" style="display:none"
+            class="w-full text-[11px] font-semibold text-brand border border-brand/30 py-1.5 rounded-[8px] hover:bg-brand/5 transition-colors">
+            ← Use real winner photo
+          </button>
+        </div>
+
       </div>
 
       <!-- Right: preview panel -->
@@ -140,7 +161,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         <div class="bg-white rounded-card border border-[#b8e4e0] p-4">
           <div class="flex items-center justify-between mb-3">
             <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider">Live Preview</p>
-            <p class="text-[11px] text-[#9b94a8]">Using first winner as sample</p>
+            <p id="preview-photo-label" class="text-[11px] text-[#9b94a8]">Landscape sample photo</p>
           </div>
           <div class="overflow-hidden rounded-[10px] border border-[#efebf5] bg-[#f9fffe]"
                style="aspect-ratio:842/595">
@@ -168,6 +189,46 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   let renderPending = false;
   let renderQueued  = false;
 
+  // Preview photo state
+  let placeholders   = {};  // { landscape, square, portrait } → data URLs
+  let realPhotoUrl   = null;
+  let currentRatio   = 'landscape'; // which placeholder is active (null = real photo)
+  let previewPhotoUrl = null;       // resolved after placeholders are built
+
+  function makePlaceholder(w, h, label) {
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const ctx = c.getContext('2d');
+    const g = ctx.createLinearGradient(0, 0, w, h);
+    g.addColorStop(0, '#d5f0ee'); g.addColorStop(1, '#a8d8d4');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = '#7ac4bf'; ctx.lineWidth = 3;
+    ctx.strokeRect(4, 4, w - 8, h - 8);
+    const fs = Math.round(Math.min(w, h) * 0.11);
+    ctx.fillStyle = '#3a6b68';
+    ctx.font = `600 ${fs}px system-ui, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(label, w / 2, h / 2 - fs * 0.65);
+    ctx.font = `400 ${Math.round(fs * 0.72)}px system-ui, sans-serif`;
+    ctx.fillStyle = '#5a9490';
+    ctx.fillText(`${w}×${h}`, w / 2, h / 2 + fs * 0.72);
+    return c.toDataURL('image/png');
+  }
+
+  function syncRatioUI() {
+    document.querySelectorAll('.ratio-opt').forEach(btn => {
+      const active = btn.dataset.ratio === currentRatio;
+      btn.className = `ratio-opt text-center text-[11px] font-semibold py-2 rounded-[8px] border leading-tight transition-colors ${
+        active ? 'border-brand bg-brand/10 text-brand' : 'border-[#efebf5] text-[#6f6880] hover:border-brand/40'
+      }`;
+    });
+    const realBtn = document.getElementById('btn-real-photo');
+    if (realBtn) realBtn.style.display = (currentRatio !== null && realPhotoUrl) ? 'block' : 'none';
+    const labelMap = { landscape: 'Landscape sample (3:2)', square: 'Square sample (1:1)', portrait: 'Portrait sample (2:3)' };
+    const labelEl = document.getElementById('preview-photo-label');
+    if (labelEl) labelEl.textContent = currentRatio ? labelMap[currentRatio] : 'Real winner photo';
+  }
+
   function showToast(msg, isError = false) {
     const el = document.getElementById('status-msg');
     el.textContent = msg;
@@ -183,9 +244,18 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (renderPending) { renderQueued = true; return; }
     renderPending = true;
     const canvas = document.getElementById('cert-canvas');
+
+    // Build the preview entry: always swap in the selected preview photo so
+    // the organiser can see the adaptive layout before any results exist.
+    const photoUrl = previewPhotoUrl ?? sampleEntry?.photo_url ?? null;
+    const previewEntry = sampleEntry
+      ? { ...sampleEntry, photo_url: photoUrl }
+      : { photo_url: photoUrl, animal_name: 'Sample Animal', breed: 'Sample Breed',
+          exhibitor_name: 'J. Smith', result_place: 1, category_id: null };
+
     await renderCertificate(canvas, {
       show:     show,
-      entry:    sampleEntry,
+      entry:    previewEntry,
       category: sampleCategory,
       sponsors: sponsors,
       design:   design,
@@ -295,7 +365,19 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     }
 
     document.getElementById('show-subtitle').textContent = show.title || 'Untitled Show';
-    if (sampleEntry) document.getElementById('preview-note').style.display = 'none';
+    // preview-note is now always hidden since we always have a placeholder
+    document.getElementById('preview-note').style.display = 'none';
+
+    // Build placeholder images and initialise preview photo state
+    placeholders = {
+      landscape: makePlaceholder(600, 400, 'Landscape'),
+      square:    makePlaceholder(400, 400, 'Square'),
+      portrait:  makePlaceholder(400, 600, 'Portrait'),
+    };
+    realPhotoUrl    = sampleEntry?.photo_url || null;
+    currentRatio    = 'landscape';
+    previewPhotoUrl = placeholders.landscape;
+    syncRatioUI();
 
     // Load saved design
     if (show.cert_design_json) {
@@ -311,6 +393,23 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     await redraw();
 
     // ── Event listeners ───────────────────────────────────────────────────
+
+    // Ratio picker
+    document.getElementById('ratio-opts').addEventListener('click', e => {
+      const btn = e.target.closest('.ratio-opt');
+      if (!btn) return;
+      currentRatio    = btn.dataset.ratio;
+      previewPhotoUrl = placeholders[currentRatio];
+      syncRatioUI();
+      redraw();
+    });
+
+    document.getElementById('btn-real-photo')?.addEventListener('click', () => {
+      currentRatio    = null;
+      previewPhotoUrl = realPhotoUrl;
+      syncRatioUI();
+      redraw();
+    });
 
     // Border buttons
     document.getElementById('border-opts').addEventListener('click', e => {
