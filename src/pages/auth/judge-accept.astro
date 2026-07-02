@@ -1,0 +1,199 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+const raw = import.meta.env.BASE_URL;
+const base = raw.endsWith('/') ? raw : raw + '/';
+---
+
+<BaseLayout title="Welcome — Fur to Feathers" description="Set up your judge account on Fur to Feathers.">
+
+  <div class="min-h-[80vh] flex items-center justify-center bg-brand-tint/50 px-4 py-12">
+
+    <!-- Loading -->
+    <div id="ja-loading" class="flex flex-col items-center gap-3">
+      <div class="w-10 h-10 rounded-full border-4 border-brand/20 border-t-brand animate-spin"></div>
+      <p class="text-[14px] text-[#9b94a8]">Setting up your account…</p>
+    </div>
+
+    <!-- Welcome card -->
+    <div id="ja-card" style="display:none" class="w-full max-w-md bg-white rounded-card-lg shadow-card-float p-10">
+
+      <!-- Logo -->
+      <div class="flex justify-center mb-6">
+        <a href={base} class="inline-flex items-center no-underline">
+          <img src={`${base}images/ftf_logo_1024x847.png`} alt="Fur to Feathers" style="height:64px;width:auto" class="block" />
+        </a>
+      </div>
+
+      <!-- Welcome message -->
+      <div class="text-center mb-8">
+        <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5" style="background:#e8f7f6">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+        </div>
+        <h1 class="text-[24px] font-extrabold text-[#1c1626] mb-2">
+          Welcome, <span id="ja-name">Judge</span>!
+        </h1>
+        <p class="text-[14px] text-[#6f6880] leading-relaxed">
+          Your judge account is set up. Set a password so you can log in again in future, then head to the judging portal.
+        </p>
+      </div>
+
+      <!-- Set password form -->
+      <form id="ja-pw-form" novalidate class="mb-4">
+        <div class="mb-3">
+          <label for="ja-pw" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">
+            Password <span class="text-[#9b94a8] font-normal">(at least 6 characters)</span>
+          </label>
+          <input
+            type="password"
+            id="ja-pw"
+            autocomplete="new-password"
+            placeholder="••••••••"
+            class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors"
+          />
+        </div>
+        <div class="mb-4">
+          <label for="ja-pw2" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Confirm password</label>
+          <input
+            type="password"
+            id="ja-pw2"
+            autocomplete="new-password"
+            placeholder="••••••••"
+            class="w-full border border-[#e6dcfb] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors"
+          />
+        </div>
+
+        <p id="ja-pw-error" style="display:none"
+          class="text-[13px] text-red-500 text-center mb-4 bg-red-50 border border-red-100 rounded-lg px-3 py-2" role="alert"></p>
+
+        <button
+          type="submit"
+          id="ja-pw-btn"
+          class="w-full bg-brand text-white text-[16px] font-bold py-[14px] rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors"
+        >
+          Set Password &amp; Go to Portal
+        </button>
+      </form>
+
+      <button
+        id="ja-skip"
+        class="w-full text-[13px] text-[#9b94a8] hover:text-[#6f6880] transition-colors py-2"
+      >
+        Skip for now — go to portal
+      </button>
+
+    </div>
+
+    <!-- Error card -->
+    <div id="ja-error" style="display:none" class="w-full max-w-md bg-white rounded-card-lg shadow-card-float p-10 text-center">
+      <p class="text-[15px] text-[#6f6880] mb-6">This invite link has expired or is invalid. Please ask the organiser to resend your invitation.</p>
+      <a href={`${base}login`}
+        class="inline-flex items-center justify-center bg-brand text-white text-[15px] font-bold px-8 py-[13px] rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">
+        Go to Login
+      </a>
+    </div>
+
+  </div>
+
+</BaseLayout>
+
+<script>
+  import { supabase } from '../../lib/supabase.js';
+
+  const raw  = import.meta.env.BASE_URL;
+  const base = raw.endsWith('/') ? raw : raw + '/';
+
+  (async () => {
+    // Supabase v2 auto-processes the invite token from the URL hash on init.
+    // For PKCE (code param), exchangeCodeForSession is called automatically.
+    let session = (await supabase.auth.getSession()).data.session;
+
+    // If getSession returned null, wait briefly for the async token exchange
+    if (!session) {
+      session = await new Promise(resolve => {
+        const timer = setTimeout(() => { sub.unsubscribe(); resolve(null); }, 5000);
+        const { data: { subscription: sub } } = supabase.auth.onAuthStateChange((event, s) => {
+          if (event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') {
+            clearTimeout(timer);
+            sub.unsubscribe();
+            resolve(s);
+          }
+        });
+      });
+    }
+
+    if (!session) {
+      document.getElementById('ja-loading').style.display = 'none';
+      document.getElementById('ja-error').style.display   = 'block';
+      return;
+    }
+
+    // Fetch profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('roles, first_name, last_name, display_name')
+      .eq('id', session.user.id)
+      .single();
+
+    const meta      = session.user.user_metadata || {};
+    const firstName = profile?.first_name  || meta.given_name    || meta.name?.split(' ')[0]              || '';
+    const lastName  = profile?.last_name   || meta.family_name   || meta.name?.split(' ').slice(1).join(' ') || '';
+    const display   = profile?.display_name || meta.full_name    || meta.name || firstName || session.user.email?.split('@')[0] || '';
+
+    const currentRoles = profile?.roles || [];
+    if (!currentRoles.includes('judge') || !profile?.first_name) {
+      await supabase.from('profiles').update({
+        roles:        [...new Set([...currentRoles, 'judge'])],
+        first_name:   firstName || profile?.first_name || '',
+        last_name:    lastName  || profile?.last_name  || '',
+        display_name: display   || profile?.display_name || '',
+      }).eq('id', session.user.id);
+    }
+
+    // Show welcome card
+    document.getElementById('ja-loading').style.display = 'none';
+    document.getElementById('ja-card').style.display    = 'block';
+    document.getElementById('ja-name').textContent      = firstName || 'Judge';
+
+    // Password form
+    document.getElementById('ja-pw-form')?.addEventListener('submit', async e => {
+      e.preventDefault();
+      const pw    = (document.getElementById('ja-pw')).value;
+      const pw2   = (document.getElementById('ja-pw2')).value;
+      const errEl = document.getElementById('ja-pw-error');
+      const btn   = document.getElementById('ja-pw-btn');
+
+      errEl.style.display = 'none';
+
+      if (!pw || pw.length < 6) {
+        errEl.textContent   = 'Password must be at least 6 characters.';
+        errEl.style.display = 'block';
+        return;
+      }
+      if (pw !== pw2) {
+        errEl.textContent   = 'Passwords do not match.';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      btn.disabled    = true;
+      btn.textContent = 'Saving…';
+
+      const { error } = await supabase.auth.updateUser({ password: pw });
+      if (error) {
+        errEl.textContent   = error.message;
+        errEl.style.display = 'block';
+        btn.disabled        = false;
+        btn.textContent     = 'Set Password & Go to Portal';
+        return;
+      }
+
+      window.location.href = base + 'judge';
+    });
+
+    document.getElementById('ja-skip')?.addEventListener('click', () => {
+      window.location.href = base + 'judge';
+    });
+  })();
+</script>

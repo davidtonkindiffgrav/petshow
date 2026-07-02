@@ -302,7 +302,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       email,
       password,
       options: {
-        emailRedirectTo: 'https://davidtonkindiffgrav.github.io/petshow/login',
+        emailRedirectTo: window.location.origin + base + 'login',
         data: {
           display_name: displayName || email.split('@')[0],
           first_name: firstName,

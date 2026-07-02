@@ -193,7 +193,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     if (!closeTime || closeTime >= now) return { label: 'Open for Entries', color: '#16a34a', bg: '#f0fdf4' };
     if (showTime && showTime > now)     return { label: 'Entries Closed',   color: '#d97706', bg: '#fffbeb' };
     if (show.results_published_at)      return { label: 'Results Live',     color: '#16a34a', bg: '#f0fdf4' };
-    if (showTime)                       return { label: 'Show Day',         color: '#7c3aed', bg: '#f5f3ff' };
+    if (showTime && new Date(showTime).toDateString() === new Date().toDateString()) return { label: 'Show Day', color: '#7c3aed', bg: '#f5f3ff' };
     return                                     { label: 'Ended',            color: '#6b7280', bg: '#f9fafb' };
   }
 

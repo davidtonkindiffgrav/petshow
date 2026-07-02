@@ -4,6 +4,6 @@ import tailwind from '@astrojs/tailwind';
 export default defineConfig({
   output: 'static',
   integrations: [tailwind()],
-  base: '/petshow',
-  site: 'https://davidtonkindiffgrav.github.io',
+  base: '/',
+  site: 'https://www.furtofeathers.com',
 });

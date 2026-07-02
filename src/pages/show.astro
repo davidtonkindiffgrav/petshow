@@ -165,7 +165,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     if (!open || open > now) return 'upcoming';
     if (!close || close >= now) return 'entries_open';
     if (!showDay || showDay > now) return s.is_judged === false ? 'voting' : 'judging';
-    return 'show_day';
+    if (showDay.toDateString() === now.toDateString()) return 'show_day';
+    return s.is_judged === false ? 'voting' : 'judging';
   }
 
   // ── Hero ──────────────────────────────────────────────────────────────────────
