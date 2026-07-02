@@ -1,0 +1,355 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+---
+
+<DashboardLayout title="Certificate Designer" activePage="judging">
+
+  <!-- Loading -->
+  <div id="state-loading" class="flex items-center justify-center h-64">
+    <div class="w-8 h-8 border-[3px] border-brand/20 border-t-brand rounded-full animate-spin"></div>
+  </div>
+
+  <!-- Error -->
+  <div id="state-error" style="display:none" class="flex items-center justify-center h-64">
+    <div class="text-center max-w-sm">
+      <p id="error-msg" class="text-[14px] text-[#6f6880] mb-4"></p>
+      <a id="back-link" href="#" class="text-[13px] font-semibold text-brand hover:text-brand-dark transition-colors">← Back</a>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div id="state-content" style="display:none">
+
+    <!-- Page header -->
+    <div class="flex items-start justify-between gap-4 mb-5 flex-wrap">
+      <div>
+        <a id="nav-back" href="#" class="text-[13px] font-semibold text-[#9b94a8] hover:text-brand transition-colors">← Manage Results</a>
+        <h1 class="text-[22px] font-extrabold text-[#1c1626] tracking-[-0.01em] mt-1">Certificate Designer</h1>
+        <p id="show-subtitle" class="text-[13px] text-[#6f6880] mt-0.5"></p>
+      </div>
+      <div class="flex items-center gap-3">
+        <div id="lock-status" style="display:none"
+          class="inline-flex items-center gap-1.5 text-[12px] font-bold px-3 py-1.5 rounded-full"
+          style="background:#dcf6e3;color:#166534">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          Design Locked
+        </div>
+        <button id="btn-unlock" style="display:none"
+          class="text-[12px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-3 py-1.5 rounded-btn hover:bg-[#f0fafa] transition-colors">
+          Unlock to Edit
+        </button>
+        <button id="btn-save"
+          class="text-[13px] font-semibold text-brand border border-brand/30 px-4 py-2 rounded-btn hover:bg-brand/5 transition-colors">
+          Save Design
+        </button>
+        <button id="btn-lock"
+          class="text-[13px] font-bold bg-brand text-white px-4 py-2 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">
+          Lock &amp; Activate
+        </button>
+      </div>
+    </div>
+
+    <!-- Status message -->
+    <p id="status-msg" style="display:none"
+      class="text-[13px] text-[#6f6880] bg-[#f0fafa] border border-brand/20 rounded-[11px] px-4 py-2.5 mb-4"></p>
+
+    <!-- Two-column layout -->
+    <div class="flex gap-5" style="align-items:flex-start">
+
+      <!-- Left: options panel -->
+      <div class="w-[280px] shrink-0 space-y-4">
+
+        <!-- Border style -->
+        <div class="bg-white rounded-card border border-[#b8e4e0] p-4">
+          <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider mb-3">Border Style</p>
+          <div class="grid grid-cols-2 gap-2" id="border-opts">
+            <button data-val="none"    class="border-opt text-[12px] font-semibold py-2 rounded-[8px] border transition-colors">None</button>
+            <button data-val="classic" class="border-opt text-[12px] font-semibold py-2 rounded-[8px] border transition-colors">Classic</button>
+            <button data-val="elegant" class="border-opt text-[12px] font-semibold py-2 rounded-[8px] border transition-colors">Elegant</button>
+            <button data-val="playful" class="border-opt text-[12px] font-semibold py-2 rounded-[8px] border transition-colors">Playful</button>
+          </div>
+        </div>
+
+        <!-- Background -->
+        <div class="bg-white rounded-card border border-[#b8e4e0] p-4">
+          <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider mb-3">Background</p>
+          <div class="flex gap-3" id="bg-opts">
+            <button data-val="#ffffff" class="bg-opt w-8 h-8 rounded-full border-2 transition-all" style="background:#ffffff" title="White"></button>
+            <button data-val="#fffef5" class="bg-opt w-8 h-8 rounded-full border-2 transition-all" style="background:#fffef5" title="Cream"></button>
+            <button data-val="#f0fafa" class="bg-opt w-8 h-8 rounded-full border-2 transition-all" style="background:#f0fafa" title="Light Teal"></button>
+          </div>
+        </div>
+
+        <!-- Toggles -->
+        <div class="bg-white rounded-card border border-[#b8e4e0] p-4 space-y-3">
+          <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider mb-1">Content</p>
+
+          <label class="flex items-center justify-between cursor-pointer">
+            <span class="text-[13px] font-semibold text-[#1c1626]">Winning Photo</span>
+            <input type="checkbox" id="tog-photo" class="cert-toggle w-4 h-4 accent-brand" data-key="show_photo" />
+          </label>
+
+          <label id="lbl-logo" class="flex items-center justify-between cursor-pointer">
+            <span class="text-[13px] font-semibold text-[#1c1626]">Show Logo</span>
+            <input type="checkbox" id="tog-logo" class="cert-toggle w-4 h-4 accent-brand" data-key="show_logo" />
+          </label>
+
+          <label id="lbl-sponsors" class="flex items-center justify-between cursor-pointer">
+            <span class="text-[13px] font-semibold text-[#1c1626]">Sponsor Logos</span>
+            <input type="checkbox" id="tog-sponsors" class="cert-toggle w-4 h-4 accent-brand" data-key="show_sponsors" />
+          </label>
+        </div>
+
+        <!-- Fields -->
+        <div class="bg-white rounded-card border border-[#b8e4e0] p-4">
+          <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider mb-3">Fields to Show</p>
+          <div class="space-y-2.5">
+            <label class="flex items-center gap-2.5 cursor-pointer">
+              <input type="checkbox" class="field-tog w-4 h-4 accent-brand" data-field="animal_name" />
+              <span class="text-[13px] text-[#1c1626]">Animal Name</span>
+            </label>
+            <label class="flex items-center gap-2.5 cursor-pointer">
+              <input type="checkbox" class="field-tog w-4 h-4 accent-brand" data-field="breed" />
+              <span class="text-[13px] text-[#1c1626]">Breed</span>
+            </label>
+            <label class="flex items-center gap-2.5 cursor-pointer">
+              <input type="checkbox" class="field-tog w-4 h-4 accent-brand" data-field="exhibitor_name" />
+              <span class="text-[13px] text-[#1c1626]">Owner Name</span>
+            </label>
+            <label class="flex items-center gap-2.5 cursor-pointer">
+              <input type="checkbox" class="field-tog w-4 h-4 accent-brand" data-field="category" />
+              <span class="text-[13px] text-[#1c1626]">Category</span>
+            </label>
+            <label class="flex items-center gap-2.5 cursor-pointer">
+              <input type="checkbox" class="field-tog w-4 h-4 accent-brand" data-field="place" />
+              <span class="text-[13px] text-[#1c1626]">Place</span>
+            </label>
+            <label class="flex items-center gap-2.5 cursor-pointer">
+              <input type="checkbox" class="field-tog w-4 h-4 accent-brand" data-field="show_date" />
+              <span class="text-[13px] text-[#1c1626]">Show Date</span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right: preview panel -->
+      <div class="flex-1 min-w-0">
+        <div class="bg-white rounded-card border border-[#b8e4e0] p-4">
+          <div class="flex items-center justify-between mb-3">
+            <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider">Live Preview</p>
+            <p class="text-[11px] text-[#9b94a8]">Using first winner as sample</p>
+          </div>
+          <div class="overflow-hidden rounded-[10px] border border-[#efebf5] bg-[#f9fffe]"
+               style="aspect-ratio:842/595">
+            <canvas id="cert-canvas" style="width:100%;height:100%;display:block"></canvas>
+          </div>
+          <p id="preview-note" class="text-[11px] text-[#9b94a8] mt-2 text-center">
+            No winner data yet — showing placeholder layout
+          </p>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</DashboardLayout>
+
+<script>
+  import { getAuth }        from '../../lib/auth.js';
+  import { supabase }       from '../../lib/supabase.js';
+  import { renderCertificate, CERT_DEFAULTS } from '../../lib/cert-renderer.js';
+
+  let show, sampleEntry, sampleCategory, sponsors;
+  let design = { ...CERT_DEFAULTS };
+  let renderPending = false;
+  let renderQueued  = false;
+
+  function showToast(msg, isError = false) {
+    const el = document.getElementById('status-msg');
+    el.textContent = msg;
+    el.style.display = 'block';
+    el.style.color = isError ? '#b91c1c' : '#1c1626';
+    el.style.background = isError ? '#fef2f2' : '#f0fafa';
+    el.style.borderColor = isError ? '#fca5a5' : 'rgba(27,168,154,0.2)';
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.style.display = 'none'; }, 4000);
+  }
+
+  async function redraw() {
+    if (renderPending) { renderQueued = true; return; }
+    renderPending = true;
+    const canvas = document.getElementById('cert-canvas');
+    await renderCertificate(canvas, {
+      show:     show,
+      entry:    sampleEntry,
+      category: sampleCategory,
+      sponsors: sponsors,
+      design:   design,
+    });
+    renderPending = false;
+    if (renderQueued) { renderQueued = false; redraw(); }
+  }
+
+  function syncUI() {
+    // Border buttons
+    document.querySelectorAll('.border-opt').forEach(btn => {
+      const active = btn.dataset.val === design.border_style;
+      btn.className = `border-opt text-[12px] font-semibold py-2 rounded-[8px] border transition-colors ${
+        active ? 'border-brand bg-brand/10 text-brand' : 'border-[#efebf5] text-[#6f6880] hover:border-brand/40'
+      }`;
+    });
+    // BG buttons
+    document.querySelectorAll('.bg-opt').forEach(btn => {
+      btn.style.borderColor = btn.dataset.val === design.bg_color ? '#1ba89a' : '#efebf5';
+    });
+    // Toggles
+    document.querySelectorAll('.cert-toggle').forEach(inp => {
+      inp.checked = !!design[inp.dataset.key];
+    });
+    // Field checkboxes
+    document.querySelectorAll('.field-tog').forEach(inp => {
+      inp.checked = design.fields.includes(inp.dataset.field);
+    });
+    // Greyed-out toggles
+    const hasLogo     = !!(show?.logo_url || show?.org_logo_url);
+    const hasSponsors = sponsors?.length > 0;
+    document.getElementById('lbl-logo').style.opacity     = hasLogo     ? '1' : '0.4';
+    document.getElementById('tog-logo').disabled          = !hasLogo;
+    document.getElementById('lbl-sponsors').style.opacity = hasSponsors ? '1' : '0.4';
+    document.getElementById('tog-sponsors').disabled      = !hasSponsors;
+  }
+
+  function updateLockUI(isLocked) {
+    document.getElementById('lock-status').style.display = isLocked ? 'inline-flex' : 'none';
+    document.getElementById('btn-unlock').style.display  = isLocked ? 'inline-flex' : 'none';
+    document.getElementById('btn-lock').style.display    = isLocked ? 'none' : 'inline-flex';
+  }
+
+  async function saveDesign(lock = false) {
+    const payload = { cert_design_json: JSON.stringify(design) };
+    if (lock) payload.cert_design_locked_at = new Date().toISOString();
+    const { error } = await supabase.from('shows').update(payload).eq('id', show.id);
+    if (error) { showToast('Failed to save — please try again', true); return false; }
+    if (lock) { show.cert_design_locked_at = payload.cert_design_locked_at; updateLockUI(true); }
+    showToast(lock ? 'Design locked and activated!' : 'Design saved.');
+    return true;
+  }
+
+  async function unlock() {
+    const { error } = await supabase.from('shows')
+      .update({ cert_design_locked_at: null })
+      .eq('id', show.id);
+    if (error) { showToast('Failed to unlock — please try again', true); return; }
+    show.cert_design_locked_at = null;
+    updateLockUI(false);
+    showToast('Design unlocked. Send Certificate is now disabled until you re-lock.');
+  }
+
+  (async () => {
+    const auth = await getAuth();
+    const base = auth.base;
+
+    document.getElementById('back-link').href = base + 'organiser/judging';
+
+    if (!auth.session) { window.location.replace(base + 'login'); return; }
+    const uid = auth.session.user.id;
+
+    const params  = new URLSearchParams(window.location.search);
+    const showId  = params.get('id');
+
+    function showError(msg) {
+      document.getElementById('state-loading').style.display = 'none';
+      document.getElementById('state-error').style.display   = 'flex';
+      document.getElementById('error-msg').textContent = msg;
+    }
+
+    if (!showId) { showError('No show specified.'); return; }
+
+    const [showRes, catsRes, winnersRes, sponsorsRes] = await Promise.all([
+      supabase.from('shows').select('*').eq('id', showId).eq('created_by', uid).single(),
+      supabase.from('show_categories').select('id, name').eq('show_id', showId),
+      supabase.from('show_entries')
+        .select('id, animal_name, breed, exhibitor_name, photo_url, result_place, category_id')
+        .eq('show_id', showId).eq('result_place', 1).limit(1),
+      supabase.from('show_sponsors').select('name, logo_url').eq('show_id', showId),
+    ]);
+
+    if (showRes.error || !showRes.data) { showError('Show not found or access denied.'); return; }
+
+    show      = showRes.data;
+    sponsors  = sponsorsRes.data || [];
+
+    const cats = catsRes.data || [];
+    sampleEntry = winnersRes.data?.[0] || null;
+    sampleCategory = cats.find(c => c.id === sampleEntry?.category_id) || cats[0] || null;
+
+    // Back link goes to results page if results are published
+    if (show.results_published_at) {
+      document.getElementById('nav-back').href = base + 'organiser/results?id=' + showId;
+    } else {
+      document.getElementById('nav-back').href = base + 'organiser/judging';
+    }
+
+    document.getElementById('show-subtitle').textContent = show.title || 'Untitled Show';
+    if (sampleEntry) document.getElementById('preview-note').style.display = 'none';
+
+    // Load saved design
+    if (show.cert_design_json) {
+      try { Object.assign(design, JSON.parse(show.cert_design_json)); } catch {}
+    }
+
+    updateLockUI(!!show.cert_design_locked_at);
+    syncUI();
+
+    document.getElementById('state-loading').style.display = 'none';
+    document.getElementById('state-content').style.display = 'block';
+
+    await redraw();
+
+    // ── Event listeners ───────────────────────────────────────────────────
+
+    // Border buttons
+    document.getElementById('border-opts').addEventListener('click', e => {
+      const btn = e.target.closest('.border-opt');
+      if (!btn) return;
+      design.border_style = btn.dataset.val;
+      syncUI(); redraw();
+    });
+
+    // BG buttons
+    document.getElementById('bg-opts').addEventListener('click', e => {
+      const btn = e.target.closest('.bg-opt');
+      if (!btn) return;
+      design.bg_color = btn.dataset.val;
+      syncUI(); redraw();
+    });
+
+    // Toggle checkboxes
+    document.querySelectorAll('.cert-toggle').forEach(inp => {
+      inp.addEventListener('change', () => {
+        design[inp.dataset.key] = inp.checked;
+        redraw();
+      });
+    });
+
+    // Field checkboxes
+    document.querySelectorAll('.field-tog').forEach(inp => {
+      inp.addEventListener('change', () => {
+        if (inp.checked) {
+          if (!design.fields.includes(inp.dataset.field)) design.fields.push(inp.dataset.field);
+        } else {
+          design.fields = design.fields.filter(f => f !== inp.dataset.field);
+        }
+        redraw();
+      });
+    });
+
+    document.getElementById('btn-save').addEventListener('click', () => saveDesign(false));
+    document.getElementById('btn-lock').addEventListener('click', () => saveDesign(true));
+    document.getElementById('btn-unlock').addEventListener('click', unlock);
+  })();
+</script>

@@ -39,13 +39,18 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       </a>
     </div>
 
-    <!-- Certificate notice -->
+    <!-- Certificate notice (shown when design not yet locked) -->
     <div id="cert-notice" style="display:none"
       class="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-[11px] px-4 py-3 mb-5">
       <svg class="shrink-0 mt-0.5" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
       </svg>
-      <p class="text-[13px] text-amber-800">Certificate sending is not yet available — you need to design a certificate template first. This will be available in a future update.</p>
+      <div class="flex-1 min-w-0">
+        <p class="text-[13px] text-amber-800 mb-1.5">Certificate sending is not yet available — you need to design and lock a certificate template first.</p>
+        <a id="cert-designer-link" href="#" class="text-[13px] font-bold text-amber-900 underline hover:text-amber-700 transition-colors">
+          Design Certificate →
+        </a>
+      </div>
     </div>
 
     <!-- Winners per category -->
@@ -69,11 +74,15 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 </DashboardLayout>
 
 <script>
-  import { getAuth }  from '../../lib/auth.js';
-  import { supabase } from '../../lib/supabase.js';
+  import { getAuth }        from '../../lib/auth.js';
+  import { supabase }       from '../../lib/supabase.js';
+  import { renderCertificate, CERT_DEFAULTS } from '../../lib/cert-renderer.js';
 
   const PLACE_LABELS = { 1: '1st', 2: '2nd', 3: '3rd' };
   const PLACE_ICONS  = { 1: '🥇', 2: '🥈', 3: '🥉' };
+
+  // Page-level state used by send-cert click handler
+  let _show, _categories, _sponsors, _design, _base;
 
   function esc(s) {
     return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -113,9 +122,17 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const hasEmail   = !!entry.exhibitor_email;
 
     const certStatus = sentAt
-      ? `<span class="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full" style="background:#dcf6e3;color:#166534">
-           <span class="w-1.5 h-1.5 rounded-full" style="background:#16a34a"></span>Sent ${fmtDate(sentAt)}
-         </span>`
+      ? `<div class="flex flex-col items-end gap-1">
+           <span class="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full" style="background:#dcf6e3;color:#166534">
+             <span class="w-1.5 h-1.5 rounded-full" style="background:#16a34a"></span>Sent ${fmtDate(sentAt)}
+           </span>
+           ${entry.cert_jpg_url
+             ? `<a href="${esc(entry.cert_jpg_url)}" target="_blank" rel="noopener"
+                  class="text-[11px] font-semibold text-brand hover:text-brand-dark transition-colors">
+                  Download JPG ↗
+                </a>`
+             : ''}
+         </div>`
       : `<span class="text-[12px] text-[#c4bed0]">—</span>`;
 
     const copyBtn = hasEmail
@@ -128,11 +145,19 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
          </button>`
       : `<span class="text-[12px] text-[#c4bed0]" title="Email not available for this entry">No email</span>`;
 
-    const certBtn = `<button disabled
-        class="text-[12px] font-semibold text-[#c4bed0] border border-[#efebf5] px-3 py-1.5 rounded-btn cursor-not-allowed select-none"
-        title="Design a certificate template first">
-        Send Certificate
-      </button>`;
+    const certBtn = certEnabled && hasEmail && !sentAt
+      ? `<button class="send-cert-btn text-[12px] font-semibold text-white bg-brand border border-brand px-3 py-1.5 rounded-btn hover:bg-brand-dark transition-colors"
+           data-entry-id="${esc(entry.id)}"
+           data-category-id="${esc(entry.category_id || '')}">
+           Send Certificate
+         </button>`
+      : certEnabled && sentAt
+      ? `<span class="text-[12px] text-[#c4bed0] select-none">Already sent</span>`
+      : `<button disabled
+           class="text-[12px] font-semibold text-[#c4bed0] border border-[#efebf5] px-3 py-1.5 rounded-btn cursor-not-allowed select-none"
+           title="${certEnabled ? (hasEmail ? '' : 'No email for this entry') : 'Design and lock a certificate template first'}">
+           Send Certificate
+         </button>`;
 
     return `
       <tr class="border-b border-[#f5f3fa] last:border-0">
@@ -166,11 +191,15 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       </tr>`;
   }
 
-  function renderCategories(categories, entries, certEnabled) {
+  // Module-level state (read by the single event listener)
+  let _entries     = [];
+  let _certEnabled = false;
+
+  function renderCategories() {
     const container = document.getElementById('categories-container');
     const noResults = document.getElementById('state-no-results');
 
-    const winningEntries = entries.filter(e => e.result_place >= 1 && e.result_place <= 3);
+    const winningEntries = _entries.filter(e => e.result_place >= 1 && e.result_place <= 3);
     if (!winningEntries.length) {
       container.innerHTML = '';
       noResults.style.display = 'flex';
@@ -179,9 +208,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     noResults.style.display = 'none';
 
     const catMap = {};
-    for (const c of categories) catMap[c.id] = c;
+    for (const c of _categories) catMap[c.id] = c;
 
-    // Group entries by category
     const byCat = {};
     for (const e of winningEntries) {
       if (!byCat[e.category_id]) byCat[e.category_id] = [];
@@ -189,9 +217,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     }
 
     const sections = Object.entries(byCat).map(([catId, catEntries]) => {
-      const cat = catMap[catId];
+      const cat     = catMap[catId];
       const catName = cat?.name || 'Unknown Category';
-      const sorted = [...catEntries].sort((a, b) => a.result_place - b.result_place);
+      const sorted  = [...catEntries].sort((a, b) => a.result_place - b.result_place);
 
       return `
         <div class="bg-white rounded-card border border-[#b8e4e0] overflow-hidden">
@@ -211,7 +239,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
                 </tr>
               </thead>
               <tbody>
-                ${sorted.map(e => renderWinnerRow(e, certEnabled)).join('')}
+                ${sorted.map(e => renderWinnerRow(e, _certEnabled)).join('')}
               </tbody>
             </table>
           </div>
@@ -222,19 +250,93 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     });
 
     container.innerHTML = sections.join('');
+  }
 
-    // Wire up copy-email buttons
+  function wireContainerEvents() {
+    const container = document.getElementById('categories-container');
     container.addEventListener('click', async e => {
-      const btn = e.target.closest('.copy-email-btn');
-      if (!btn) return;
-      const email = btn.dataset.email;
+      // Copy email
+      const copyBtn = e.target.closest('.copy-email-btn');
+      if (copyBtn) {
+        const email = copyBtn.dataset.email;
+        try {
+          await navigator.clipboard.writeText(email);
+          const inner = copyBtn.innerHTML;
+          copyBtn.textContent = 'Copied!';
+          setTimeout(() => { copyBtn.innerHTML = inner; }, 2000);
+        } catch {
+          showToast('Could not copy — please copy manually: ' + email);
+        }
+        return;
+      }
+
+      // Send certificate
+      const certBtn = e.target.closest('.send-cert-btn');
+      if (!certBtn || certBtn.disabled) return;
+
+      const entryId    = certBtn.dataset.entryId;
+      const categoryId = certBtn.dataset.categoryId;
+      const entry      = _entries.find(en => en.id === entryId);
+      const category   = _categories.find(c => c.id === categoryId);
+      if (!entry) return;
+
+      certBtn.disabled = true;
+      certBtn.textContent = 'Generating…';
+
       try {
-        await navigator.clipboard.writeText(email);
-        const orig = btn.textContent;
-        btn.textContent = 'Copied!';
-        setTimeout(() => { btn.textContent = orig; }, 2000);
-      } catch {
-        showToast('Could not copy — please copy manually: ' + email);
+        // 1. Render certificate to offscreen canvas
+        const canvas = document.createElement('canvas');
+        await renderCertificate(canvas, {
+          show:     _show,
+          entry,
+          category,
+          sponsors: _sponsors,
+          design:   _design,
+        });
+
+        // 2. Export as JPG blob
+        certBtn.textContent = 'Uploading…';
+        const jpgDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+        const fetchRes   = await fetch(jpgDataUrl);
+        const blob       = await fetchRes.blob();
+
+        // 3. Upload to storage
+        const jpgPath = `certs/${_show.id}/${entryId}.jpg`;
+        const { error: uploadErr } = await supabase.storage
+          .from('show-assets')
+          .upload(jpgPath, blob, { contentType: 'image/jpeg', upsert: true });
+        if (uploadErr) throw new Error('Upload failed: ' + uploadErr.message);
+
+        const { data: { publicUrl: cert_jpg_url } } = supabase.storage
+          .from('show-assets').getPublicUrl(jpgPath);
+
+        // 4. Call Edge Function → generates PDF + sends email
+        certBtn.textContent = 'Sending…';
+        const { data: { session } } = await supabase.auth.getSession();
+        const fnRes = await fetch(
+          `${import.meta.env.PUBLIC_SUPABASE_URL}/functions/v1/send-certificate`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ show_id: _show.id, entry_id: entryId, cert_jpg_url }),
+          },
+        );
+        const result = await fnRes.json();
+        if (result.error) throw new Error(result.error);
+
+        // 5. Update local state + re-render
+        entry.cert_email_sent_at = new Date().toISOString();
+        entry.cert_jpg_url = cert_jpg_url;
+        renderCategories();
+        showToast('Certificate sent!');
+
+      } catch (err) {
+        certBtn.disabled = false;
+        certBtn.textContent = 'Send Certificate';
+        showToast('Failed: ' + (err.message || 'unknown error'));
       }
     });
   }
@@ -242,9 +344,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   (async () => {
     const auth = await getAuth();
     const base = auth.base;
+    _base = base;
 
-    document.getElementById('back-link').href   = base + 'organiser/judging';
-    document.getElementById('nav-back').href    = base + 'organiser/judging';
+    document.getElementById('back-link').href = base + 'organiser/judging';
+    document.getElementById('nav-back').href  = base + 'organiser/judging';
 
     if (!auth.session) {
       window.location.replace(base + 'login');
@@ -261,21 +364,18 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       document.getElementById('error-msg').textContent = msg;
     }
 
-    if (!showId) {
-      showError('No show specified.');
-      return;
-    }
+    if (!showId) { showError('No show specified.'); return; }
 
-    // Fetch show, categories, and winning entries in parallel
-    const [showRes, catsRes, entriesRes] = await Promise.all([
+    const [showRes, catsRes, entriesRes, sponsorsRes] = await Promise.all([
       supabase.from('shows').select('*').eq('id', showId).eq('created_by', uid).single(),
       supabase.from('show_categories').select('id, name').eq('show_id', showId).order('name'),
       supabase.from('show_entries')
-        .select('id, category_id, animal_name, breed, exhibitor_name, exhibitor_email, photo_url, result_place, cert_email_sent_at')
+        .select('id, category_id, animal_name, breed, exhibitor_name, exhibitor_email, photo_url, result_place, cert_email_sent_at, cert_jpg_url')
         .eq('show_id', showId)
         .not('result_place', 'is', null)
         .lte('result_place', 3)
         .order('result_place'),
+      supabase.from('show_sponsors').select('name, logo_url').eq('show_id', showId),
     ]);
 
     if (showRes.error || !showRes.data) {
@@ -284,29 +384,35 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     }
 
     const show = showRes.data;
-
     if (!show.results_published_at) {
       showError('Results have not been published for this show yet.');
       return;
     }
 
-    // Update page header
+    // Populate module-level state
+    _show        = show;
+    _categories  = catsRes.data  || [];
+    _entries     = entriesRes.data || [];
+    _sponsors    = sponsorsRes.data || [];
+    _certEnabled = !!show.cert_design_locked_at;
+    try { _design = { ...CERT_DEFAULTS, ...JSON.parse(show.cert_design_json || '{}') }; }
+    catch { _design = { ...CERT_DEFAULTS }; }
+
+    // Page header
     document.getElementById('show-title').textContent = show.title || 'Untitled Show';
     document.getElementById('show-published-date').textContent = 'Results published ' + fmtDate(show.results_published_at);
+    document.getElementById('view-public-link').href = base + 'show?id=' + encodeURIComponent(showId);
 
-    // View public results link
-    const pubLink = document.getElementById('view-public-link');
-    pubLink.href = base + 'show?id=' + encodeURIComponent(showId);
+    // Cert notice: show when design not locked, hide when locked
+    const certDesignerLink = document.getElementById('cert-designer-link');
+    if (certDesignerLink) certDesignerLink.href = base + 'organiser/cert-designer?id=' + showId;
 
-    // Certificate notice (always shown for now since designer not built)
-    document.getElementById('cert-notice').style.display = 'flex';
+    if (!_certEnabled) {
+      document.getElementById('cert-notice').style.display = 'flex';
+    }
 
-    // Render winners
-    const categories  = catsRes.data  || [];
-    const entries     = entriesRes.data || [];
-    const certEnabled = false; // will be true once cert designer is built
-
-    renderCategories(categories, entries, certEnabled);
+    renderCategories();
+    wireContainerEvents();
 
     document.getElementById('state-loading').style.display = 'none';
     document.getElementById('state-content').style.display = 'block';
