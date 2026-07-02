@@ -401,14 +401,18 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
               ? `<span style="color:#16a34a;font-weight:600">Published ${fmtDate(show.results_published_at)}</span>`
               : disabledReason}
           </p>
-          <button class="publish-results-btn shrink-0 text-[13px] font-bold px-4 py-2 rounded-btn transition-colors
-            ${alreadyPublished ? 'bg-[#dcf6e3] text-[#166534] cursor-default'
-              : canPublish     ? 'bg-brand text-white shadow-btn-primary hover:bg-brand-dark'
-              :                  'bg-[#f5f3fa] text-[#c4bed0] cursor-not-allowed'}"
-            data-show-id="${esc(show.id)}"
-            ${!canPublish || alreadyPublished ? 'disabled' : ''}>
-            ${alreadyPublished ? '✓ Results Published' : 'Publish Results'}
-          </button>
+          ${alreadyPublished
+            ? `<a href="${base}organiser/results?id=${esc(show.id)}"
+                 class="shrink-0 text-[13px] font-bold px-4 py-2 rounded-btn bg-brand text-white shadow-btn-primary hover:bg-brand-dark transition-colors">
+                 Manage Results →
+               </a>`
+            : `<button class="publish-results-btn shrink-0 text-[13px] font-bold px-4 py-2 rounded-btn transition-colors
+                ${canPublish ? 'bg-brand text-white shadow-btn-primary hover:bg-brand-dark' : 'bg-[#f5f3fa] text-[#c4bed0] cursor-not-allowed'}"
+                data-show-id="${esc(show.id)}"
+                ${!canPublish ? 'disabled' : ''}>
+                Publish Results
+              </button>`
+          }
         </div>`;
 
     } else if (isPublic) {
@@ -496,6 +500,38 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         const showId = publishBtn.dataset.showId;
         publishBtn.disabled = true;
         publishBtn.textContent = 'Publishing…';
+
+        // Fetch all rankings for this show (single judge), keep top 3 per category
+        const { data: rankings, error: rankErr } = await supabase
+          .from('judge_rankings')
+          .select('entry_id, rank')
+          .eq('show_id', showId)
+          .lte('rank', 3);
+
+        if (rankErr || !rankings?.length) {
+          publishBtn.disabled = false;
+          publishBtn.textContent = 'Publish Results';
+          showToast('Failed to read judge rankings — please try again');
+          return;
+        }
+
+        // Write result_place onto each winning entry
+        const placements = await Promise.all(
+          rankings.map(r =>
+            supabase.from('show_entries')
+              .update({ result_place: r.rank })
+              .eq('id', r.entry_id)
+          )
+        );
+        const placementErr = placements.find(r => r.error);
+        if (placementErr) {
+          publishBtn.disabled = false;
+          publishBtn.textContent = 'Publish Results';
+          showToast('Failed to write placements — please try again');
+          return;
+        }
+
+        // Stamp results_published_at
         const ts = new Date().toISOString();
         const { error } = await supabase.from('shows')
           .update({ results_published_at: ts })

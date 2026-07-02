@@ -1,0 +1,314 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+---
+
+<DashboardLayout title="Results" activePage="judging">
+
+  <!-- Loading -->
+  <div id="state-loading" class="flex items-center justify-center h-64">
+    <div class="w-8 h-8 border-[3px] border-brand/20 border-t-brand rounded-full animate-spin"></div>
+  </div>
+
+  <!-- Error -->
+  <div id="state-error" style="display:none" class="flex items-center justify-center h-64">
+    <div class="text-center max-w-sm">
+      <p id="error-msg" class="text-[14px] text-[#6f6880] mb-4"></p>
+      <a id="back-link" href="#" class="text-[13px] font-semibold text-brand hover:text-brand-dark transition-colors">← Back to Judging &amp; Results</a>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div id="state-content" style="display:none">
+
+    <!-- Page header -->
+    <div class="flex items-start justify-between gap-4 mb-6 flex-wrap">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <a id="nav-back" href="#" class="text-[13px] font-semibold text-[#9b94a8] hover:text-brand transition-colors">← Judging &amp; Results</a>
+        </div>
+        <h1 id="show-title" class="text-[22px] font-extrabold text-[#1c1626] tracking-[-0.01em]"></h1>
+        <p id="show-published-date" class="text-[13px] text-[#6f6880] mt-0.5"></p>
+      </div>
+      <a id="view-public-link" href="#" target="_blank"
+        class="shrink-0 inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand border border-brand/30 px-3 py-2 rounded-btn hover:bg-brand/5 transition-colors">
+        View public results
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+          <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+        </svg>
+      </a>
+    </div>
+
+    <!-- Certificate notice -->
+    <div id="cert-notice" style="display:none"
+      class="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-[11px] px-4 py-3 mb-5">
+      <svg class="shrink-0 mt-0.5" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <p class="text-[13px] text-amber-800">Certificate sending is not yet available — you need to design a certificate template first. This will be available in a future update.</p>
+    </div>
+
+    <!-- Winners per category -->
+    <div id="categories-container" class="space-y-6"></div>
+
+    <!-- Empty state -->
+    <div id="state-no-results" style="display:none" class="flex items-center justify-center min-h-[40vh]">
+      <div class="text-center max-w-sm">
+        <div class="w-16 h-16 rounded-full bg-brand-tint flex items-center justify-center mx-auto mb-4">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+        </div>
+        <p class="text-[16px] font-extrabold text-[#1c1626] mb-2">No placements found</p>
+        <p class="text-[13px] text-[#6f6880]">No entries have placements recorded for this show.</p>
+      </div>
+    </div>
+
+  </div>
+
+</DashboardLayout>
+
+<script>
+  import { getAuth }  from '../../lib/auth.js';
+  import { supabase } from '../../lib/supabase.js';
+
+  const PLACE_LABELS = { 1: '1st', 2: '2nd', 3: '3rd' };
+  const PLACE_ICONS  = { 1: '🥇', 2: '🥈', 3: '🥉' };
+
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function fmtDate(d) {
+    return d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  }
+
+  function fmtDateTime(d) {
+    return d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+  }
+
+  function showToast(msg) {
+    let toast = document.getElementById('res-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'res-toast';
+      Object.assign(toast.style, {
+        position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
+        background: '#1c1626', color: 'white', padding: '10px 20px', borderRadius: '11px',
+        fontSize: '13px', fontWeight: '600', zIndex: '200', transition: 'opacity 0.3s',
+        whiteSpace: 'nowrap', opacity: '0', pointerEvents: 'none',
+      });
+      document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.style.opacity = '1';
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => { toast.style.opacity = '0'; }, 3000);
+  }
+
+  function renderWinnerRow(entry, certEnabled) {
+    const placeLabel = PLACE_LABELS[entry.result_place] || `#${entry.result_place}`;
+    const placeIcon  = PLACE_ICONS[entry.result_place]  || '';
+    const sentAt     = entry.cert_email_sent_at;
+    const hasEmail   = !!entry.exhibitor_email;
+
+    const certStatus = sentAt
+      ? `<span class="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full" style="background:#dcf6e3;color:#166534">
+           <span class="w-1.5 h-1.5 rounded-full" style="background:#16a34a"></span>Sent ${fmtDate(sentAt)}
+         </span>`
+      : `<span class="text-[12px] text-[#c4bed0]">—</span>`;
+
+    const copyBtn = hasEmail
+      ? `<button class="copy-email-btn inline-flex items-center gap-1.5 text-[12px] font-semibold text-brand border border-brand/30 px-3 py-1.5 rounded-btn hover:bg-brand/5 transition-colors"
+           data-email="${esc(entry.exhibitor_email)}">
+           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+             <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+           </svg>
+           Copy Email
+         </button>`
+      : `<span class="text-[12px] text-[#c4bed0]" title="Email not available for this entry">No email</span>`;
+
+    const certBtn = `<button disabled
+        class="text-[12px] font-semibold text-[#c4bed0] border border-[#efebf5] px-3 py-1.5 rounded-btn cursor-not-allowed select-none"
+        title="Design a certificate template first">
+        Send Certificate
+      </button>`;
+
+    return `
+      <tr class="border-b border-[#f5f3fa] last:border-0">
+        <td class="px-4 py-3.5">
+          <span class="text-[16px]">${placeIcon}</span>
+          <span class="text-[12px] font-bold text-[#1c1626] ml-1">${placeLabel}</span>
+        </td>
+        <td class="px-4 py-3.5">
+          ${entry.photo_url
+            ? `<img src="${esc(entry.photo_url)}" alt="" class="w-10 h-10 rounded-[8px] object-cover border border-[#efebf5]" />`
+            : `<div class="w-10 h-10 rounded-[8px] bg-[#f5f3fa] flex items-center justify-center text-[18px]">🐾</div>`
+          }
+        </td>
+        <td class="px-4 py-3.5">
+          <p class="text-[13px] font-semibold text-[#1c1626]">${esc(entry.animal_name || 'Unnamed')}</p>
+          ${entry.breed ? `<p class="text-[11px] text-[#9b94a8]">${esc(entry.breed)}</p>` : ''}
+        </td>
+        <td class="px-4 py-3.5">
+          <p class="text-[13px] text-[#1c1626]">${esc(entry.exhibitor_name || '—')}</p>
+          ${hasEmail ? `<p class="text-[11px] text-[#9b94a8]">${esc(entry.exhibitor_email)}</p>` : ''}
+        </td>
+        <td class="px-4 py-3.5">
+          <div class="flex items-center gap-2 flex-wrap">
+            ${copyBtn}
+            ${certBtn}
+          </div>
+        </td>
+        <td class="px-4 py-3.5 text-right">
+          ${certStatus}
+        </td>
+      </tr>`;
+  }
+
+  function renderCategories(categories, entries, certEnabled) {
+    const container = document.getElementById('categories-container');
+    const noResults = document.getElementById('state-no-results');
+
+    const winningEntries = entries.filter(e => e.result_place >= 1 && e.result_place <= 3);
+    if (!winningEntries.length) {
+      container.innerHTML = '';
+      noResults.style.display = 'flex';
+      return;
+    }
+    noResults.style.display = 'none';
+
+    const catMap = {};
+    for (const c of categories) catMap[c.id] = c;
+
+    // Group entries by category
+    const byCat = {};
+    for (const e of winningEntries) {
+      if (!byCat[e.category_id]) byCat[e.category_id] = [];
+      byCat[e.category_id].push(e);
+    }
+
+    const sections = Object.entries(byCat).map(([catId, catEntries]) => {
+      const cat = catMap[catId];
+      const catName = cat?.name || 'Unknown Category';
+      const sorted = [...catEntries].sort((a, b) => a.result_place - b.result_place);
+
+      return `
+        <div class="bg-white rounded-card border border-[#b8e4e0] overflow-hidden">
+          <div class="px-5 py-3.5 border-b border-[#efebf5] bg-[#f9fffe]">
+            <h2 class="text-[14px] font-extrabold text-[#1c1626]">${esc(catName)}</h2>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full border-collapse">
+              <thead>
+                <tr class="border-b border-[#efebf5]">
+                  <th class="px-4 py-3 text-left text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider">Place</th>
+                  <th class="px-4 py-3 text-left text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider">Photo</th>
+                  <th class="px-4 py-3 text-left text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider">Animal</th>
+                  <th class="px-4 py-3 text-left text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider">Exhibitor</th>
+                  <th class="px-4 py-3 text-left text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider">Actions</th>
+                  <th class="px-4 py-3 text-right text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider">Certificate</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${sorted.map(e => renderWinnerRow(e, certEnabled)).join('')}
+              </tbody>
+            </table>
+          </div>
+          <div class="px-5 py-3 border-t border-[#f5f3fa] bg-[#fafffe]">
+            <p class="text-[11px] text-[#9b94a8]">To ask winners for a postal address for physical prizes, copy their email above and reach out directly.</p>
+          </div>
+        </div>`;
+    });
+
+    container.innerHTML = sections.join('');
+
+    // Wire up copy-email buttons
+    container.addEventListener('click', async e => {
+      const btn = e.target.closest('.copy-email-btn');
+      if (!btn) return;
+      const email = btn.dataset.email;
+      try {
+        await navigator.clipboard.writeText(email);
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = orig; }, 2000);
+      } catch {
+        showToast('Could not copy — please copy manually: ' + email);
+      }
+    });
+  }
+
+  (async () => {
+    const auth = await getAuth();
+    const base = auth.base;
+
+    document.getElementById('back-link').href   = base + 'organiser/judging';
+    document.getElementById('nav-back').href    = base + 'organiser/judging';
+
+    if (!auth.session) {
+      window.location.replace(base + 'login');
+      return;
+    }
+
+    const uid = auth.session.user.id;
+    const params = new URLSearchParams(window.location.search);
+    const showId = params.get('id');
+
+    function showError(msg) {
+      document.getElementById('state-loading').style.display = 'none';
+      document.getElementById('state-error').style.display  = 'flex';
+      document.getElementById('error-msg').textContent = msg;
+    }
+
+    if (!showId) {
+      showError('No show specified.');
+      return;
+    }
+
+    // Fetch show, categories, and winning entries in parallel
+    const [showRes, catsRes, entriesRes] = await Promise.all([
+      supabase.from('shows').select('*').eq('id', showId).eq('created_by', uid).single(),
+      supabase.from('show_categories').select('id, name').eq('show_id', showId).order('name'),
+      supabase.from('show_entries')
+        .select('id, category_id, animal_name, breed, exhibitor_name, exhibitor_email, photo_url, result_place, cert_email_sent_at')
+        .eq('show_id', showId)
+        .not('result_place', 'is', null)
+        .lte('result_place', 3)
+        .order('result_place'),
+    ]);
+
+    if (showRes.error || !showRes.data) {
+      showError('Show not found or you do not have access.');
+      return;
+    }
+
+    const show = showRes.data;
+
+    if (!show.results_published_at) {
+      showError('Results have not been published for this show yet.');
+      return;
+    }
+
+    // Update page header
+    document.getElementById('show-title').textContent = show.title || 'Untitled Show';
+    document.getElementById('show-published-date').textContent = 'Results published ' + fmtDate(show.results_published_at);
+
+    // View public results link
+    const pubLink = document.getElementById('view-public-link');
+    pubLink.href = base + 'show?id=' + encodeURIComponent(showId);
+
+    // Certificate notice (always shown for now since designer not built)
+    document.getElementById('cert-notice').style.display = 'flex';
+
+    // Render winners
+    const categories  = catsRes.data  || [];
+    const entries     = entriesRes.data || [];
+    const certEnabled = false; // will be true once cert designer is built
+
+    renderCategories(categories, entries, certEnabled);
+
+    document.getElementById('state-loading').style.display = 'none';
+    document.getElementById('state-content').style.display = 'block';
+  })();
+</script>

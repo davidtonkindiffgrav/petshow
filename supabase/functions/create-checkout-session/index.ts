@@ -74,14 +74,15 @@ serve(async (req: Request) => {
     // 8. Insert all entries as pending
     const rows = entries.map((e: any, i: number) => ({
       show_id,
-      user_id:        user.id,
-      category_id:    e.category_id    || null,
-      animal_name:    e.animal_name,
-      breed:          e.breed          || null,
-      photo_url:      e.photo_url      || null,
-      exhibitor_name: e.exhibitor_name || null,
-      status:         'pending',
-      entry_number:   startNumber + i,
+      user_id:         user.id,
+      category_id:     e.category_id    || null,
+      animal_name:     e.animal_name,
+      breed:           e.breed          || null,
+      photo_url:       e.photo_url      || null,
+      exhibitor_name:  e.exhibitor_name || null,
+      exhibitor_email: user.email       || null,
+      status:          'pending',
+      entry_number:    startNumber + i,
     }));
 
     const { data: inserted, error: insertErr } = await supabase
