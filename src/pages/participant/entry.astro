@@ -19,6 +19,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 <script>
   import { getAuth } from '../../lib/auth.js';
   import { supabase } from '../../lib/supabase.js';
+  import { renderCertificate, CERT_DEFAULTS } from '../../lib/cert-renderer.js';
 
   const { session, profile, base } = await getAuth();
   if (!session) { window.location.replace(base + 'login'); throw 0; }
@@ -46,18 +47,18 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
   const { data: entry, error } = await supabase
     .from('show_entries')
-    .select('id, show_id, status, photo_url, created_at')
+    .select('id, show_id, category_id, status, photo_url, animal_name, breed, result_place, entry_number, entry_fee_paid, cert_jpg_url, exhibitor_name, created_at')
     .eq('id', entryId)
     .eq('user_id', session.user.id)
     .single();
 
   if (!error && entry) {
     const [showRes, catRes] = await Promise.all([
-      entry.show_id    ? supabase.from('shows').select('id, title, host_org, show_date, entry_close_date, currency').eq('id', entry.show_id).single() : { data: null },
+      entry.show_id     ? supabase.from('shows').select('id, title, host_org, show_date, entry_close_date, currency, results_published_at, cert_design_json, logo_url, org_logo_url').eq('id', entry.show_id).single() : { data: null },
       entry.category_id ? supabase.from('show_categories').select('id, name').eq('id', entry.category_id).single() : { data: null },
     ]);
-    entry.shows           = showRes.data  || null;
-    entry.show_categories = catRes.data   || null;
+    entry.shows           = showRes.data || null;
+    entry.show_categories = catRes.data  || null;
   }
 
   const root = document.getElementById('entry-root');
@@ -215,5 +216,84 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     </div>
   </div>
 
+  ${kind === 'won' && entry.cert_jpg_url ? `
+  <!-- Certificate download -->
+  <div style="background:linear-gradient(115deg,#fffbea,#fff8d6);border:1.5px solid #f0d97a;border-radius:18px;padding:20px 22px;margin-top:16px;box-shadow:0 6px 18px rgba(10,31,68,0.04);">
+    <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;">
+      <div style="width:44px;height:44px;border-radius:13px;background:#fff8d6;border:1.5px solid #f0d97a;display:flex;align-items:center;justify-content:center;flex:none;font-size:22px;">🏆</div>
+      <div style="flex:1;min-width:180px;">
+        <div style="font-size:16px;font-weight:800;color:#0a1f44;margin-bottom:3px;">Your Certificate</div>
+        <div style="font-size:13px;color:#6b7c89;">You placed <strong style="color:#8a5a00;">${placeLabel(entry.result_place)}</strong>${cat ? ' in ' + esc(cat) : ''}. Download your award certificate below.</div>
+        <div style="display:flex;gap:9px;margin-top:13px;flex-wrap:wrap;">
+          <a id="cert-dl-jpg" href="${esc(entry.cert_jpg_url)}" download="certificate-${esc(entry.animal_name || 'award')}.jpg"
+            style="display:inline-flex;align-items:center;gap:7px;background:#002d6b;color:#fff;font-weight:700;font-size:13.5px;padding:10px 16px;border-radius:11px;text-decoration:none;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 3v13M7 12l5 5 5-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+            Download JPG
+          </a>
+          <button id="cert-dl-pdf"
+            style="display:inline-flex;align-items:center;gap:7px;background:#fff;color:#0a1f44;font-weight:700;font-size:13.5px;padding:10px 16px;border-radius:11px;border:1.5px solid #e7eef0;cursor:pointer;font-family:inherit;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 3v13M7 12l5 5 5-5" stroke="#0a1f44" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" stroke="#0a1f44" stroke-width="2" stroke-linecap="round"/></svg>
+            Download PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  ` : ''}
+
 `;
+  // PDF download for winners
+  const pdfBtn = document.getElementById('cert-dl-pdf');
+  if (pdfBtn) {
+    pdfBtn.addEventListener('click', async () => {
+      pdfBtn.textContent = 'Generating…';
+      pdfBtn.disabled = true;
+      try {
+        const canvas = document.createElement('canvas');
+        const design = { ...CERT_DEFAULTS, ...(show.cert_design_json ? JSON.parse(show.cert_design_json) : {}) };
+        await renderCertificate(canvas, { show, entry, category: entry.show_categories, sponsors: [], design });
+        const PAGE_PT = { a4: [842, 595], letter: [792, 612] };
+        const [W, H] = PAGE_PT[design.page_size || 'a4'];
+        const pdfBytes = await buildPdf(canvas, W, H);
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const url  = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `certificate-${entry.animal_name || 'award'}.pdf`;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+      } catch (err) {
+        console.error(err);
+        alert('PDF generation failed. Please use the JPG download instead.');
+      } finally {
+        pdfBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 3v13M7 12l5 5 5-5" stroke="#0a1f44" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" stroke="#0a1f44" stroke-width="2" stroke-linecap="round"/></svg> Download PDF';
+        pdfBtn.disabled = false;
+      }
+    });
+  }
+
+  async function buildPdf(canvas, W, H) {
+    const jpegBlob  = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
+    const jpegBytes = new Uint8Array(await jpegBlob.arrayBuffer());
+    const iw = canvas.width, ih = canvas.height;
+    const enc = s => typeof s === 'string' ? new TextEncoder().encode(s) : s;
+    const parts = []; let pos = 0; const off = {};
+    const push = s => { const b = enc(s); parts.push(b); pos += b.length; };
+    push('%PDF-1.4\n');
+    off[1] = pos; push('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+    off[2] = pos; push('2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n');
+    off[3] = pos; push(`3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /XObject << /img 4 0 R >> >> /Contents 5 0 R >>\nendobj\n`);
+    off[4] = pos; push(`4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${iw} /Height ${ih} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpegBytes.length} >>\nstream\n`);
+    push(jpegBytes); push('\nendstream\nendobj\n');
+    const cs = `q ${W} 0 0 ${H} 0 0 cm /img Do Q`;
+    off[5] = pos; push(`5 0 obj\n<< /Length ${cs.length} >>\nstream\n${cs}\nendstream\nendobj\n`);
+    const xref = pos;
+    push('xref\n0 6\n0000000000 65535 f \n');
+    for (let i = 1; i <= 5; i++) push(off[i].toString().padStart(10, '0') + ' 00000 n \n');
+    push(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+    const total = parts.reduce((n, b) => n + b.length, 0);
+    const out = new Uint8Array(total); let p = 0;
+    for (const b of parts) { out.set(b, p); p += b.length; }
+    return out;
+  }
 </script>

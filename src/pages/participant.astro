@@ -39,7 +39,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   // Fetch entries, then related shows and categories separately
   const { data: rawEntries } = await supabase
     .from('show_entries')
-    .select('id, show_id, category_id, animal_name, breed, photo_url, status, created_at')
+    .select('id, show_id, category_id, animal_name, breed, photo_url, status, result_place, created_at')
     .eq('user_id', session.user.id)
     .eq('status', 'confirmed')
     .order('created_at', { ascending: false });
@@ -48,7 +48,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   const catIds     = [...new Set((rawEntries ?? []).map(e => e.category_id).filter(Boolean))];
 
   const [showsRes, catsRes] = await Promise.all([
-    showIds.length ? supabase.from('shows').select('id, title, host_org, show_date, entry_close_date, currency').in('id', showIds) : { data: [] },
+    showIds.length ? supabase.from('shows').select('id, title, host_org, show_date, entry_close_date, currency, results_published_at').in('id', showIds) : { data: [] },
     catIds.length  ? supabase.from('show_categories').select('id, name').in('id', catIds) : { data: [] },
   ]);
 
@@ -102,60 +102,117 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   // ── Render ────────────────────────────────────────────────────────────────────
   let filter = 'all';
 
-  function visibleEntries() {
-    return (entries || []).filter(e => {
+  // Which show groups are expanded (Set of show_id strings)
+  const expandedShows = new Set();
+
+  function groupByShow(list) {
+    const map = new Map();
+    for (const e of list) {
+      const sid = e.show_id || '__unknown__';
+      if (!map.has(sid)) map.set(sid, []);
+      map.get(sid).push(e);
+    }
+    return [...map.entries()].map(([showId, grpEntries]) => ({ showId, entries: grpEntries, show: grpEntries[0]?.shows || {} }));
+  }
+
+  function visibleGroups() {
+    const all = entries || [];
+    const filtered = filter === 'all' ? all : all.filter(e => {
       const k = entryKind(e);
       if (filter === 'active')  return k === 'open' || k === 'judging';
       if (filter === 'results') return k === 'won'  || k === 'noplace';
       return true;
     });
+    return groupByShow(filtered);
   }
 
-  function renderCard(entry, idx) {
-    const kind  = entryKind(entry);
-    const km    = kindMap[kind];
-    const grad  = thumbGrads[idx % 4];
-    const init  = (entry.animal_name || '?')[0].toUpperCase();
-    const show  = entry.shows || {};
-    const cat   = entry.show_categories?.name || '';
-    const stripText = kind === 'won'
-      ? `🥇 ${placeLabel(entry.result_place)}${cat ? ' · ' + cat : ''}`
-      : km.stripText;
+  function groupStatus(grpEntries) {
+    const kinds = grpEntries.map(entryKind);
+    if (kinds.includes('won'))     return 'won';
+    if (kinds.includes('noplace')) return 'noplace';
+    if (kinds.includes('judging')) return 'judging';
+    return 'open';
+  }
+
+  function placeBadge(place, isNZ) {
+    if (!place || place > 10) return '';
+    if (place <= 3) {
+      const colors = isNZ
+        ? ['#dc2626', '#2563eb', '#d97706']  // NZ: 1st=red, 2nd=blue, 3rd=amber
+        : ['#2563eb', '#dc2626', '#d97706']; // default: 1st=blue, 2nd=red, 3rd=amber
+      const bg = colors[place - 1];
+      return `<div style="width:26px;height:26px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;flex:none;font-size:13px;font-weight:800;color:#fff;">${place}</div>`;
+    }
+    // 4th–10th: outline only
+    return `<div style="width:26px;height:26px;border-radius:50%;border:2px solid #d1d5db;display:flex;align-items:center;justify-content:center;flex:none;font-size:11px;font-weight:700;color:#9aa8b4;">${place}</div>`;
+  }
+
+  function renderEntryRow(entry, idx) {
+    const kind   = entryKind(entry);
+    const km     = kindMap[kind];
+    const cat    = entry.show_categories?.name || '';
+    const grad   = thumbGrads[idx % 4];
+    const init   = (entry.animal_name || '?')[0].toUpperCase();
+    const detailParts = [entry.breed, cat].filter(Boolean).join(' · ');
+    const isNZ   = entry.shows?.currency === 'NZD';
+    const badge  = placeBadge(entry.result_place, isNZ);
+
+    return `
+    <div class="entry-row" data-entry-id="${esc(entry.id)}"
+      style="display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;transition:background .12s;">
+      ${entry.photo_url
+        ? `<img src="${esc(entry.photo_url)}" style="width:42px;height:42px;border-radius:10px;flex:none;object-fit:cover;" alt="${esc(entry.animal_name)}" />`
+        : `<div style="width:42px;height:42px;border-radius:10px;flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:17px;background:${grad};">${esc(init)}</div>`}
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:14px;font-weight:700;color:#0a1f44;">${esc(entry.animal_name || '—')}</div>
+        ${detailParts ? `<div style="font-size:12px;color:#6b7c89;margin-top:1px;">${esc(detailParts)}</div>` : ''}
+      </div>
+      ${badge}
+      <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;background:${km.badgeBg};color:${km.badgeColor};white-space:nowrap;flex:none;">${km.badgeText}</span>
+      <span style="flex:none;font-size:13px;font-weight:700;color:#1ba89a;display:flex;align-items:center;gap:3px;">View
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 3l5 5-5 5" stroke="#1ba89a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+    </div>`;
+  }
+
+  function renderShowGroup({ showId, entries: grpEntries, show }) {
+    const expanded  = expandedShows.has(showId);
+    const count     = grpEntries.length;
+    const kind      = groupStatus(grpEntries);
+    const km        = kindMap[kind];
     const dateLabel = show.results_published_at
       ? 'Held · ' + formatDate(show.show_date)
       : show.entry_close_date && new Date(show.entry_close_date) > new Date()
         ? 'Closes · ' + formatDate(show.entry_close_date)
         : show.show_date ? 'Show Day · ' + formatDate(show.show_date) : '';
 
+    const rowsHtml = grpEntries.map((e, i) =>
+      (i > 0 ? `<div style="height:1px;background:#f0f4f5;margin:0 16px;"></div>` : '') + renderEntryRow(e, i)
+    ).join('');
+
     return `
-    <div class="hub-card" data-entry-id="${esc(entry.id)}" style="background:#fff;border:1px solid #e7eef0;border-radius:16px;padding:16px;cursor:pointer;box-shadow:0 6px 18px rgba(10,31,68,0.04);display:flex;flex-direction:column;gap:13px;transition:box-shadow .15s,transform .15s;">
-      <div style="display:flex;gap:13px;align-items:flex-start;">
-        ${entry.photo_url
-          ? `<img src="${esc(entry.photo_url)}" style="width:62px;height:62px;border-radius:14px;flex:none;object-fit:cover;" alt="${esc(entry.animal_name)}" />`
-          : `<div style="width:62px;height:62px;border-radius:14px;flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:24px;background:${grad};">${esc(init)}</div>`}
+    <div class="show-group" style="background:#fff;border:1px solid #e7eef0;border-radius:16px;overflow:hidden;box-shadow:0 6px 18px rgba(10,31,68,0.04);">
+      <div class="show-group-header" data-show-id="${esc(showId)}"
+        style="display:flex;align-items:center;gap:13px;padding:15px 16px;cursor:pointer;transition:background .12s;">
         <div style="flex:1;min-width:0;">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
-            <div style="font-size:16px;font-weight:800;line-height:1.25;color:#0a1f44;">${esc(show.title || 'Untitled Show')}</div>
-            <span style="flex:none;font-size:11px;font-weight:700;padding:4px 9px;border-radius:99px;background:${km.badgeBg};color:${km.badgeColor};white-space:nowrap;">${km.badgeText}</span>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:3px;">
+            <div style="font-size:16px;font-weight:800;color:#0a1f44;line-height:1.25;">${esc(show.title || 'Untitled Show')}</div>
+            <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;background:${km.badgeBg};color:${km.badgeColor};white-space:nowrap;">${km.badgeText}</span>
           </div>
-          <div style="font-size:12.5px;color:#6b7c89;margin-top:3px;display:flex;align-items:center;gap:6px;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="3" stroke="#9aa8b4" stroke-width="1.8"/><path d="M3 9h18M8 2.5v4M16 2.5v4" stroke="#9aa8b4" stroke-width="1.8" stroke-linecap="round"/></svg>
-            ${esc(dateLabel)}
+          <div style="font-size:12.5px;color:#9aa8b4;display:flex;align-items:center;gap:10px;">
+            ${dateLabel ? `<span style="display:flex;align-items:center;gap:4px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="3" stroke="#9aa8b4" stroke-width="1.8"/><path d="M3 9h18M8 2.5v4M16 2.5v4" stroke="#9aa8b4" stroke-width="1.8" stroke-linecap="round"/></svg>
+              ${esc(dateLabel)}</span><span style="opacity:.5;">·</span>` : ''}
+            <span>${count} ${count === 1 ? 'entry' : 'entries'}</span>
           </div>
         </div>
+        <svg class="group-chevron" style="flex:none;transition:transform .2s;transform:${expanded ? 'rotate(180deg)' : 'rotate(0deg)'};"
+          width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M6 9l6 6 6-6" stroke="#9aa8b4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;padding:8px 11px;background:#f6f9f9;border-radius:11px;">
-        <div style="width:24px;height:24px;border-radius:50%;background:#fff;border:1px solid #e7eef0;display:flex;align-items:center;justify-content:center;flex:none;">
-          <img src="${base}images/ftf_logo_256x212.png" width="13" style="height:auto;display:block;" alt="" aria-hidden="true" />
-        </div>
-        <div style="font-size:13px;color:#48586a;flex:1;min-width:0;"><strong style="color:#0a1f44;">${esc(entry.animal_name || '')}</strong>${entry.breed ? ' · ' + esc(entry.breed) : ''}</div>
-        ${cat ? `<div style="font-size:11.5px;font-weight:600;color:#1ba89a;background:#e3f5f2;padding:3px 9px;border-radius:99px;white-space:nowrap;flex:none;">${esc(cat)}</div>` : ''}
-      </div>
-      <div style="display:flex;align-items:center;gap:9px;padding:10px 13px;border-radius:11px;background:${km.stripBg};">
-        <span style="font-size:13.5px;font-weight:700;color:${km.stripColor};flex:1;">${esc(stripText || '')}</span>
-        <span style="flex:none;font-size:13px;font-weight:700;color:#1ba89a;display:flex;align-items:center;gap:4px;">View entry
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 3l5 5-5 5" stroke="#1ba89a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </span>
+      <div class="show-group-entries" style="display:${expanded ? 'block' : 'none'};border-top:1px solid #f0f4f5;">
+        <div style="padding:6px 0;">${rowsHtml}</div>
       </div>
     </div>`;
   }
@@ -186,7 +243,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     const total    = all.length;
     const active   = all.filter(e => { const k = entryKind(e); return k === 'open' || k === 'judging'; }).length;
     const results  = all.filter(e => { const k = entryKind(e); return k === 'won'  || k === 'noplace'; }).length;
-    const visible  = visibleEntries();
+    const groups   = visibleGroups();
     const name     = displayName.split(' ')[0] || 'there';
 
     const upgradeBanner = dualRole ? '' : `
@@ -212,10 +269,10 @@ const base = raw.endsWith('/') ? raw : raw + '/';
           <button class="filter-btn" data-filter="results" style="${tabStyle(filter === 'results')}">Results</button>
         </div>
       </div>
-      <div id="cards-grid" style="display:flex;flex-direction:column;gap:12px;">
-        ${visible.map((e, i) => renderCard(e, i)).join('')}
+      <div id="cards-grid" style="display:flex;flex-direction:column;gap:10px;">
+        ${groups.map(g => renderShowGroup(g)).join('')}
       </div>
-      ${visible.length === 0 ? `<p style="text-align:center;color:#6b7c89;padding:32px 0;font-size:15px;">No entries match this filter.</p>` : ''}
+      ${groups.length === 0 ? `<p style="text-align:center;color:#6b7c89;padding:32px 0;font-size:15px;">No entries match this filter.</p>` : ''}
     </div>`;
 
     return `
@@ -264,20 +321,49 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       return;
     }
 
-    // Card click
-    const card = e.target.closest('.hub-card');
-    if (card?.dataset.entryId) {
-      window.location.href = base + 'participant/entry?id=' + encodeURIComponent(card.dataset.entryId);
+    // Show group header — toggle expand/collapse
+    const groupHeader = e.target.closest('.show-group-header');
+    if (groupHeader) {
+      const showId  = groupHeader.dataset.showId;
+      const panel   = groupHeader.closest('.show-group');
+      const body    = panel?.querySelector('.show-group-entries');
+      const chevron = panel?.querySelector('.group-chevron');
+      if (expandedShows.has(showId)) {
+        expandedShows.delete(showId);
+        if (body)    body.style.display    = 'none';
+        if (chevron) chevron.style.transform = 'rotate(0deg)';
+      } else {
+        expandedShows.add(showId);
+        if (body)    body.style.display    = 'block';
+        if (chevron) chevron.style.transform = 'rotate(180deg)';
+      }
+      return;
+    }
+
+    // Entry row click — navigate to entry detail
+    const entryRow = e.target.closest('.entry-row');
+    if (entryRow?.dataset.entryId) {
+      window.location.href = base + 'participant/entry?id=' + encodeURIComponent(entryRow.dataset.entryId);
     }
   });
 
-  // Hover lift on cards
+  // Hover highlight on entry rows
   root.addEventListener('mouseover', e => {
-    const card = e.target.closest('.hub-card');
-    if (card) { card.style.boxShadow = '0 12px 28px rgba(10,31,68,0.10)'; card.style.transform = 'translateY(-2px)'; }
+    const row = e.target.closest('.entry-row');
+    if (row) row.style.background = '#f6f9f9';
   });
   root.addEventListener('mouseout', e => {
-    const card = e.target.closest('.hub-card');
-    if (card) { card.style.boxShadow = '0 6px 18px rgba(10,31,68,0.04)'; card.style.transform = ''; }
+    const row = e.target.closest('.entry-row');
+    if (row) row.style.background = 'transparent';
+  });
+
+  // Hover lift on show-group header
+  root.addEventListener('mouseover', e => {
+    const hdr = e.target.closest('.show-group-header');
+    if (hdr) hdr.style.background = '#f9fbfb';
+  });
+  root.addEventListener('mouseout', e => {
+    const hdr = e.target.closest('.show-group-header');
+    if (hdr) hdr.style.background = 'transparent';
   });
 </script>
