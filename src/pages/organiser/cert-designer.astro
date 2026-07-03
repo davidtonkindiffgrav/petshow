@@ -121,7 +121,16 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
           <!-- Image -->
           <div class="bg-white rounded-card border border-[#b8e4e0] p-4 space-y-3">
-            <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider">Image</p>
+            <div class="flex items-center justify-between">
+              <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider">Image</p>
+              <div class="relative group">
+                <button type="button" class="w-4 h-4 rounded-full bg-[#e8e4f0] text-[#9b94a8] text-[10px] font-bold flex items-center justify-center leading-none hover:bg-[#d4cfe3] transition-colors" aria-label="Image mode info">?</button>
+                <div class="absolute right-0 bottom-full mb-2 w-56 bg-[#1c1626] text-white text-[11px] leading-relaxed rounded-[8px] px-3 py-2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" style="z-index:9999">
+                  The preview uses a sample image to show approximate layout. The actual certificate will adapt to each winner's photo — portrait, square, or landscape images will each adjust the layout automatically.
+                  <span class="absolute right-2 top-full border-4 border-transparent border-t-[#1c1626]"></span>
+                </div>
+              </div>
+            </div>
 
             <!-- Mode selector -->
             <div class="grid grid-cols-3 gap-1.5" id="image-mode-opts">
