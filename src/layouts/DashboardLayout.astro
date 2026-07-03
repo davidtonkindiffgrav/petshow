@@ -105,7 +105,7 @@ function navClass(page: string) {
           Messages
         </a>
 
-        <a href="#" class={navClass('settings')}>
+        <a href={`${base}organiser/settings`} class={navClass('settings')}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="3"/>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -115,22 +115,48 @@ function navClass(page: string) {
 
       </nav>
 
-      <!-- User info -->
-      <div class="px-4 py-5 border-t border-white/10">
-        <div class="flex items-center gap-3 mb-3">
-          <div id="sidebar-avatar" class="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-white text-[12px] font-extrabold shrink-0">?</div>
-          <div class="min-w-0">
+      <!-- User popover -->
+      <div class="relative px-4 py-4 border-t border-white/10">
+        <button id="user-popover-trigger"
+          class="flex items-center gap-3 w-full text-left hover:opacity-80 transition-opacity"
+          aria-haspopup="true" aria-expanded="false">
+          <div id="sidebar-avatar" class="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-white text-[12px] font-extrabold shrink-0 overflow-hidden">?</div>
+          <div class="min-w-0 flex-1">
             <p id="sidebar-username" class="text-[13px] font-semibold text-white truncate">Loading…</p>
             <p id="sidebar-role-badge" class="text-[11px] text-white/40">Organiser</p>
           </div>
-        </div>
-        <button id="sidebar-signout" class="flex items-center gap-1.5 text-[12px] text-white/35 hover:text-white/70 transition-colors">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-            <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+          <svg id="user-popover-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-white/40 shrink-0 transition-transform" aria-hidden="true">
+            <polyline points="18 15 12 9 6 15"/>
           </svg>
-          Sign out
         </button>
+
+        <!-- Menu (flies upward) -->
+        <div id="user-popover"
+          style="display:none"
+          class="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-[14px] shadow-[0_-6px_28px_rgba(28,22,38,0.13)] py-1.5 z-50">
+          <a href={`${base}organiser/settings`}
+            class="flex items-center gap-3 px-4 py-2.5 text-[13.5px] font-semibold text-[#1c1626] hover:bg-[#f0fafa] transition-colors">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+            Settings
+          </a>
+          <button id="sidebar-switch-participant"
+            class="flex items-center gap-3 px-4 py-2.5 text-[13.5px] font-semibold text-[#1c1626] hover:bg-[#f0fafa] transition-colors w-full text-left">
+            <img src={`${base}images/ftf_logo_256x212.png`} width="15" style="height:auto;display:block;" alt="" aria-hidden="true" />
+            My Show Hub
+          </button>
+          <div class="my-1 mx-3 border-t border-[#efebf5]"></div>
+          <button id="sidebar-signout"
+            class="flex items-center gap-3 px-4 py-2.5 text-[13.5px] font-semibold text-red-500 hover:bg-red-50 transition-colors w-full text-left">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            Sign out
+          </button>
+        </div>
       </div>
 
     </aside>
@@ -151,10 +177,6 @@ function navClass(page: string) {
         <h1 class="text-[17px] min-[900px]:text-[19px] font-extrabold text-[#1c1626] tracking-[-0.01em] flex-1 min-[900px]:flex-none truncate">{title}</h1>
         <div class="flex items-center gap-3 shrink-0">
           <slot name="actions" />
-          <button id="sidebar-switch-participant" class="flex items-center gap-1.5 text-[13px] font-semibold text-brand border border-[#b8e4e0] rounded-btn px-3 py-2 hover:bg-brand-tint transition-colors">
-            <img src={`${base}images/ftf_logo_256x212.png`} width="13" style="height:auto;display:block;" alt="" aria-hidden="true" />
-            My Show Hub
-          </button>
         </div>
       </header>
 
@@ -191,12 +213,35 @@ function navClass(page: string) {
   toggle?.addEventListener('click', openSidebar);
   closeBtn?.addEventListener('click', closeSidebar);
   backdrop?.addEventListener('click', closeSidebar);
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSidebar(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeSidebar(); closePopover(); } });
 
   // Auto-close when a nav link is tapped on mobile
   sidebar?.querySelectorAll('a').forEach(a =>
     a.addEventListener('click', () => { if (window.innerWidth < 900) closeSidebar(); })
   );
+
+  // User popover (bottom-left)
+  const userTrigger  = document.getElementById('user-popover-trigger');
+  const userPopover  = document.getElementById('user-popover');
+  const userChevron  = document.getElementById('user-popover-chevron');
+
+  function openPopover() {
+    userPopover.style.display = 'block';
+    userTrigger?.setAttribute('aria-expanded', 'true');
+    userChevron?.style.setProperty('transform', 'rotate(180deg)');
+  }
+  function closePopover() {
+    userPopover.style.display = 'none';
+    userTrigger?.setAttribute('aria-expanded', 'false');
+    userChevron?.style.setProperty('transform', '');
+  }
+
+  userTrigger?.addEventListener('click', e => {
+    e.stopPropagation();
+    userPopover.style.display === 'none' ? openPopover() : closePopover();
+  });
+  document.addEventListener('click', closePopover);
+  userPopover?.addEventListener('click', e => e.stopPropagation());
 
   // Switch to participant view — adds role if missing, then redirects
   document.getElementById('sidebar-switch-participant')?.addEventListener('click', async () => {

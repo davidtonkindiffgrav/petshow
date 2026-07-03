@@ -1,0 +1,46 @@
+export const TIMEZONES = [
+  { group: 'Australia & New Zealand', zones: [
+    { id: 'Pacific/Auckland',    label: 'New Zealand — Auckland, Wellington' },
+    { id: 'Pacific/Chatham',     label: 'New Zealand — Chatham Islands' },
+    { id: 'Australia/Sydney',    label: 'Australia — Sydney, Melbourne, Canberra (AEDT/AEST)' },
+    { id: 'Australia/Brisbane',  label: 'Australia — Brisbane, QLD (no DST)' },
+    { id: 'Australia/Adelaide',  label: 'Australia — Adelaide, SA (ACDT/ACST)' },
+    { id: 'Australia/Darwin',    label: 'Australia — Darwin, NT (no DST)' },
+    { id: 'Australia/Perth',     label: 'Australia — Perth, WA (AWST)' },
+    { id: 'Australia/Hobart',    label: 'Australia — Hobart, TAS' },
+  ]},
+  { group: 'Pacific', zones: [
+    { id: 'Pacific/Fiji',        label: 'Fiji' },
+    { id: 'Pacific/Honolulu',    label: 'Hawaii (no DST)' },
+    { id: 'Pacific/Guam',        label: 'Guam / Chamorro' },
+  ]},
+  { group: 'Asia', zones: [
+    { id: 'Asia/Singapore',      label: 'Singapore / Malaysia / Western Indonesia' },
+    { id: 'Asia/Hong_Kong',      label: 'Hong Kong' },
+    { id: 'Asia/Tokyo',          label: 'Japan' },
+    { id: 'Asia/Seoul',          label: 'South Korea' },
+    { id: 'Asia/Kolkata',        label: 'India' },
+    { id: 'Asia/Dubai',          label: 'UAE / Gulf (GST)' },
+    { id: 'Asia/Bangkok',        label: 'Thailand / Vietnam / Indonesia (WIB)' },
+    { id: 'Asia/Shanghai',       label: 'China' },
+  ]},
+  { group: 'Europe', zones: [
+    { id: 'Europe/London',       label: 'UK / Ireland (GMT/BST)' },
+    { id: 'Europe/Paris',        label: 'Central Europe — Paris, Berlin, Rome, Madrid' },
+    { id: 'Europe/Helsinki',     label: 'Eastern Europe — Helsinki, Kyiv, Riga' },
+    { id: 'Europe/Moscow',       label: 'Moscow Time' },
+  ]},
+  { group: 'Americas', zones: [
+    { id: 'America/New_York',    label: 'Eastern US / Canada (ET)' },
+    { id: 'America/Chicago',     label: 'Central US / Canada (CT)' },
+    { id: 'America/Denver',      label: 'Mountain US / Canada (MT)' },
+    { id: 'America/Los_Angeles', label: 'Pacific US / Canada (PT)' },
+    { id: 'America/Anchorage',   label: 'Alaska' },
+    { id: 'America/Sao_Paulo',   label: 'Brazil — São Paulo (BRT)' },
+  ]},
+  { group: 'Africa', zones: [
+    { id: 'Africa/Johannesburg', label: 'South Africa (SAST)' },
+    { id: 'Africa/Lagos',        label: 'West Africa Time (WAT)' },
+    { id: 'Africa/Nairobi',      label: 'East Africa Time (EAT)' },
+  ]},
+];

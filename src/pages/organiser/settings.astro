@@ -1,0 +1,413 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+---
+
+<DashboardLayout title="Account Settings" activePage="settings">
+
+  <div class="grid grid-cols-1 min-[820px]:grid-cols-2 gap-6 items-start max-w-[1080px]">
+
+    <!-- ─── Left column: Profile Picture + Personal Details ────────────────────── -->
+    <div class="space-y-6">
+
+      <!-- Section A: Profile Picture -->
+      <div class="bg-white rounded-card shadow-winner-card p-6 md:p-8">
+        <h2 class="text-[16px] font-extrabold text-[#1c1626] tracking-[-0.01em] mb-1">Profile Picture</h2>
+        <p class="text-[13px] text-[#6f6880] mb-6">Shown in the sidebar while you're logged in.</p>
+
+        <div class="flex items-start gap-6">
+          <div id="avatar-preview"
+            class="w-[88px] h-[88px] rounded-full bg-brand flex items-center justify-center text-white text-[28px] font-extrabold shrink-0 overflow-hidden">
+            ?
+          </div>
+          <div class="flex flex-col gap-3 pt-1">
+            <label class="inline-flex items-center gap-2 bg-brand text-white text-[13.5px] font-bold px-5 py-2.5 rounded-btn cursor-pointer hover:bg-brand-dark transition-colors shadow-btn-primary">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              Upload photo
+              <input id="avatar-file-input" type="file" accept="image/*" class="hidden" />
+            </label>
+            <button id="avatar-remove-btn" style="display:none"
+              class="text-[13px] text-[#9b94a8] hover:text-red-500 transition-colors text-left">
+              Remove photo
+            </button>
+            <p id="avatar-status" class="text-[12px]" style="display:none"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section B: Personal Details -->
+      <div class="bg-white rounded-card shadow-winner-card p-6 md:p-8">
+        <h2 class="text-[16px] font-extrabold text-[#1c1626] tracking-[-0.01em] mb-1">Personal Details</h2>
+        <p class="text-[13px] text-[#6f6880] mb-6">Your name and public display name.</p>
+
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label for="pd-first-name" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">First name</label>
+            <input id="pd-first-name" type="text"
+              class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+          </div>
+          <div>
+            <label for="pd-last-name" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Last name</label>
+            <input id="pd-last-name" type="text"
+              class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label for="pd-display-name" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Display name</label>
+          <input id="pd-display-name" type="text" placeholder="How your name appears on certificates and communications"
+            class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        </div>
+
+        <div class="mb-6">
+          <label for="pd-bio" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Bio <span class="font-normal text-[#9b94a8]">(optional)</span></label>
+          <textarea id="pd-bio" rows="3" placeholder="A short description of yourself or your club"
+            class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors resize-none"></textarea>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button id="pd-save-btn"
+            class="bg-brand text-white text-[13.5px] font-bold px-6 py-2.5 rounded-btn hover:bg-brand-dark transition-colors shadow-btn-primary">
+            Save details
+          </button>
+          <p id="pd-status" class="text-[13px]" style="display:none"></p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ─── Right column: Defaults + Organisation + Password ─────────────────── -->
+    <div class="space-y-6">
+
+      <!-- Section D: Defaults -->
+      <div class="bg-white rounded-card shadow-winner-card p-6 md:p-8">
+        <h2 class="text-[16px] font-extrabold text-[#1c1626] tracking-[-0.01em] mb-1">Defaults</h2>
+        <p class="text-[13px] text-[#6f6880] mb-6">Pre-fill new shows with your preferred timezone and currency. You can still override these per show.</p>
+
+        <div class="mb-4">
+          <label for="def-timezone" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Default timezone</label>
+          <select id="def-timezone"
+            class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] bg-white focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors">
+            <!-- populated by JS -->
+          </select>
+        </div>
+
+        <div class="mb-6">
+          <label for="def-currency" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Default currency</label>
+          <select id="def-currency"
+            class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] bg-white focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors">
+            <!-- populated by JS -->
+          </select>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button id="def-save-btn"
+            class="bg-brand text-white text-[13.5px] font-bold px-6 py-2.5 rounded-btn hover:bg-brand-dark transition-colors shadow-btn-primary">
+            Save defaults
+          </button>
+          <p id="def-status" class="text-[13px]" style="display:none"></p>
+        </div>
+      </div>
+
+      <!-- Section C: Organisation (club accounts only) -->
+      <div id="org-section" style="display:none" class="bg-white rounded-card shadow-winner-card p-6 md:p-8">
+        <h2 class="text-[16px] font-extrabold text-[#1c1626] tracking-[-0.01em] mb-1">Organisation</h2>
+        <p class="text-[13px] text-[#6f6880] mb-6">Your club or organisation name. Used as the default organiser name when creating new shows.</p>
+
+        <div class="mb-6">
+          <label for="org-name" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Organisation name</label>
+          <input id="org-name" type="text"
+            class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button id="org-save-btn"
+            class="bg-brand text-white text-[13.5px] font-bold px-6 py-2.5 rounded-btn hover:bg-brand-dark transition-colors shadow-btn-primary">
+            Save organisation
+          </button>
+          <p id="org-status" class="text-[13px]" style="display:none"></p>
+        </div>
+      </div>
+
+      <!-- Section E: Change Password -->
+      <div class="bg-white rounded-card shadow-winner-card p-6 md:p-8">
+        <h2 class="text-[16px] font-extrabold text-[#1c1626] tracking-[-0.01em] mb-1">Change Password</h2>
+        <p class="text-[13px] text-[#6f6880] mb-6">Choose a new password for your account.</p>
+
+        <div class="mb-4">
+          <label for="pw-new" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">New password</label>
+          <input id="pw-new" type="password" autocomplete="new-password"
+            class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        </div>
+
+        <div class="mb-6">
+          <label for="pw-confirm" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Confirm new password</label>
+          <input id="pw-confirm" type="password" autocomplete="new-password"
+            class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button id="pw-save-btn"
+            class="bg-brand text-white text-[13.5px] font-bold px-6 py-2.5 rounded-btn hover:bg-brand-dark transition-colors shadow-btn-primary">
+            Change password
+          </button>
+          <p id="pw-status" class="text-[13px]" style="display:none"></p>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</DashboardLayout>
+
+<script>
+  import { supabase } from '../../lib/supabase.js';
+  import { getAuth }  from '../../lib/auth.js';
+  import { uploadImage } from '../../lib/storage.js';
+  import { TIMEZONES } from '../../lib/timezones.js';
+  import { CURRENCIES } from '../../lib/currencies.js';
+
+  const raw  = import.meta.env.BASE_URL;
+  const base = raw.endsWith('/') ? raw : raw + '/';
+
+  let userId        = null;
+  let organisationId = null;
+
+  // ─── Status helpers ──────────────────────────────────────────────────────────
+  function showStatus(id, msg, isError = false) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent  = msg;
+    el.style.color  = isError ? '#ef4444' : '#16a34a';
+    el.style.display = 'block';
+    if (!isError) setTimeout(() => { el.style.display = 'none'; }, 3500);
+  }
+
+  function setBusy(btnId, busy, label = '') {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.disabled    = busy;
+    btn.textContent = busy ? 'Saving…' : label;
+  }
+
+  // ─── Populate selects ────────────────────────────────────────────────────────
+  function buildTimezoneSelect(currentVal) {
+    const sel = document.getElementById('def-timezone');
+    if (!sel) return;
+    sel.innerHTML = TIMEZONES.map(g =>
+      `<optgroup label="${g.group}">${g.zones.map(z =>
+        `<option value="${z.id}"${z.id === currentVal ? ' selected' : ''}>${z.label}</option>`
+      ).join('')}</optgroup>`
+    ).join('');
+    if (!currentVal) {
+      const browser = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      sel.value = browser || 'Australia/Sydney';
+    }
+  }
+
+  function buildCurrencySelect(currentVal) {
+    const sel = document.getElementById('def-currency');
+    if (!sel) return;
+    sel.innerHTML = CURRENCIES.map(c =>
+      `<option value="${c.code}"${c.code === currentVal ? ' selected' : ''}>${c.label}</option>`
+    ).join('');
+    if (!sel.value) sel.value = 'AUD';
+  }
+
+  // ─── Avatar preview helper ───────────────────────────────────────────────────
+  function setAvatarPreview(url, initial) {
+    const el = document.getElementById('avatar-preview');
+    if (!el) return;
+    if (url) {
+      el.innerHTML = `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+      document.getElementById('avatar-remove-btn').style.display = 'block';
+    } else {
+      el.innerHTML  = '';
+      el.textContent = initial || '?';
+      document.getElementById('avatar-remove-btn').style.display = 'none';
+    }
+  }
+
+  function updateSidebarAvatar(url, initial) {
+    const el = document.getElementById('sidebar-avatar');
+    if (!el) return;
+    if (url) {
+      el.innerHTML = `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+    } else {
+      el.innerHTML  = '';
+      el.textContent = initial || '?';
+    }
+  }
+
+  // ─── Boot ────────────────────────────────────────────────────────────────────
+  (async () => {
+    const { session, profile } = await getAuth();
+    if (!session) { window.location.replace(base + 'login'); return; }
+
+    userId         = session.user.id;
+    organisationId = profile?.organisation_id || null;
+
+    const name    = profile?.display_name || session.user.email?.split('@')[0] || 'Organiser';
+    const initial = name.charAt(0).toUpperCase();
+
+    // Sidebar
+    const avatarEl = document.getElementById('sidebar-avatar');
+    const nameEl   = document.getElementById('sidebar-username');
+    const badgeEl  = document.getElementById('sidebar-role-badge');
+    if (avatarEl) {
+      if (profile?.avatar_url) {
+        avatarEl.innerHTML = `<img src="${profile.avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+      } else {
+        avatarEl.textContent = initial;
+      }
+    }
+    if (nameEl)  nameEl.textContent  = name;
+    if (badgeEl) badgeEl.textContent = profile?.organiser_type === 'club' ? 'Club Organiser' : 'Organiser';
+
+    document.getElementById('sidebar-signout')?.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = base + 'login';
+    });
+
+    // Section A — avatar preview
+    setAvatarPreview(profile?.avatar_url || null, initial);
+
+    // Section B — personal details
+    document.getElementById('pd-first-name').value   = profile?.first_name   || '';
+    document.getElementById('pd-last-name').value    = profile?.last_name    || '';
+    document.getElementById('pd-display-name').value = profile?.display_name || '';
+    document.getElementById('pd-bio').value          = profile?.bio          || '';
+
+    // Section C — organisation (club only)
+    if (profile?.organiser_type === 'club' && organisationId) {
+      document.getElementById('org-section').style.display = 'block';
+      const { data: org } = await supabase
+        .from('organisations')
+        .select('name')
+        .eq('id', organisationId)
+        .single();
+      if (org) document.getElementById('org-name').value = org.name || '';
+    }
+
+    // Section D — defaults
+    buildTimezoneSelect(profile?.default_timezone || '');
+    buildCurrencySelect(profile?.default_currency || '');
+  })();
+
+  // ─── Section A: avatar upload ─────────────────────────────────────────────────
+  document.getElementById('avatar-file-input')?.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !userId) return;
+
+    showStatus('avatar-status', 'Uploading…', false);
+    document.getElementById('avatar-status').style.color = '#6f6880';
+    document.getElementById('avatar-status').style.display = 'block';
+
+    try {
+      const url = await uploadImage(`profiles/${userId}/avatar`, file);
+
+      await supabase.from('profiles').update({ avatar_url: url }).eq('id', userId);
+
+      const initial = (document.getElementById('pd-display-name')?.value ||
+                       document.getElementById('pd-first-name')?.value || '?').charAt(0).toUpperCase();
+      setAvatarPreview(url, initial);
+      updateSidebarAvatar(url, initial);
+      showStatus('avatar-status', 'Photo updated', false);
+    } catch (err) {
+      showStatus('avatar-status', err.message || 'Upload failed', true);
+    }
+    e.target.value = '';
+  });
+
+  document.getElementById('avatar-remove-btn')?.addEventListener('click', async () => {
+    if (!userId) return;
+    await supabase.from('profiles').update({ avatar_url: null }).eq('id', userId);
+    const initial = (document.getElementById('pd-display-name')?.value ||
+                     document.getElementById('pd-first-name')?.value || '?').charAt(0).toUpperCase();
+    setAvatarPreview(null, initial);
+    updateSidebarAvatar(null, initial);
+  });
+
+  // ─── Section B: personal details ──────────────────────────────────────────────
+  document.getElementById('pd-save-btn')?.addEventListener('click', async () => {
+    setBusy('pd-save-btn', true);
+
+    const firstName   = document.getElementById('pd-first-name').value.trim();
+    const lastName    = document.getElementById('pd-last-name').value.trim();
+    const displayName = document.getElementById('pd-display-name').value.trim();
+    const bio         = document.getElementById('pd-bio').value.trim();
+
+    const { error } = await supabase.from('profiles').update({
+      first_name:   firstName   || null,
+      last_name:    lastName    || null,
+      display_name: displayName || null,
+      bio:          bio         || null,
+    }).eq('id', userId);
+
+    setBusy('pd-save-btn', false, 'Save details');
+
+    if (error) {
+      showStatus('pd-status', error.message, true);
+    } else {
+      const name = displayName || firstName || document.getElementById('sidebar-username').textContent;
+      const nameEl   = document.getElementById('sidebar-username');
+      const avatarEl = document.getElementById('sidebar-avatar');
+      if (nameEl) nameEl.textContent = name;
+      if (avatarEl && !avatarEl.querySelector('img')) avatarEl.textContent = name.charAt(0).toUpperCase();
+      showStatus('pd-status', 'Details saved', false);
+    }
+  });
+
+  // ─── Section C: organisation ───────────────────────────────────────────────────
+  document.getElementById('org-save-btn')?.addEventListener('click', async () => {
+    if (!organisationId) return;
+    setBusy('org-save-btn', true);
+
+    const name = document.getElementById('org-name').value.trim();
+    const { error } = await supabase.from('organisations').update({ name }).eq('id', organisationId);
+
+    setBusy('org-save-btn', false, 'Save organisation');
+    showStatus('org-status', error ? error.message : 'Organisation saved', !!error);
+  });
+
+  // ─── Section D: defaults ──────────────────────────────────────────────────────
+  document.getElementById('def-save-btn')?.addEventListener('click', async () => {
+    setBusy('def-save-btn', true);
+
+    const timezone = document.getElementById('def-timezone').value;
+    const currency = document.getElementById('def-currency').value;
+
+    const { error } = await supabase.from('profiles').update({
+      default_timezone: timezone || null,
+      default_currency: currency || null,
+    }).eq('id', userId);
+
+    setBusy('def-save-btn', false, 'Save defaults');
+    showStatus('def-status', error ? error.message : 'Defaults saved', !!error);
+  });
+
+  // ─── Section E: password ──────────────────────────────────────────────────────
+  document.getElementById('pw-save-btn')?.addEventListener('click', async () => {
+    const pw1 = document.getElementById('pw-new').value;
+    const pw2 = document.getElementById('pw-confirm').value;
+
+    if (!pw1) { showStatus('pw-status', 'Please enter a new password', true); return; }
+    if (pw1 !== pw2) { showStatus('pw-status', 'Passwords do not match', true); return; }
+    if (pw1.length < 8) { showStatus('pw-status', 'Password must be at least 8 characters', true); return; }
+
+    setBusy('pw-save-btn', true);
+    const { error } = await supabase.auth.updateUser({ password: pw1 });
+    setBusy('pw-save-btn', false, 'Change password');
+
+    if (error) {
+      showStatus('pw-status', error.message, true);
+    } else {
+      document.getElementById('pw-new').value    = '';
+      document.getElementById('pw-confirm').value = '';
+      showStatus('pw-status', 'Password changed', false);
+    }
+  });
+</script>

@@ -768,7 +768,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const avatarEl = document.getElementById('sidebar-avatar');
     const nameEl   = document.getElementById('sidebar-username');
     const badgeEl  = document.getElementById('sidebar-role-badge');
-    if (avatarEl) avatarEl.textContent = name.charAt(0).toUpperCase();
+    if (avatarEl) {
+      if (profile?.avatar_url) {
+        avatarEl.innerHTML = `<img src="${profile.avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+      } else {
+        avatarEl.textContent = name.charAt(0).toUpperCase();
+      }
+    }
     if (nameEl)   nameEl.textContent   = name;
     if (badgeEl)  badgeEl.textContent  = profile?.organiser_type === 'club' ? 'Club Organiser' : 'Organiser';
     document.getElementById('sidebar-signout')?.addEventListener('click', async () => {
