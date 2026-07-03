@@ -502,9 +502,14 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
           + Add another entry
         </button>
 
+        <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;cursor:pointer;">
+          <input id="chk-photo" type="checkbox" style="margin-top:2px;width:16px;height:16px;accent-color:#1ba89a;flex-shrink:0;" />
+          <span style="font-size:13px;color:#4a4357;line-height:1.5;">I own this photo or have the right to submit it, and I grant Fur to Feathers permission to display it publicly for show judging. If any person is identifiable in this photo, they have consented to being publicly displayed — and if any child appears, I am their parent or legal guardian and consent on their behalf.</span>
+        </label>
+
         <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;cursor:pointer;">
           <input id="chk-terms" type="checkbox" style="margin-top:2px;width:16px;height:16px;accent-color:#1ba89a;flex-shrink:0;" />
-          <span style="font-size:13px;color:#4a4357;line-height:1.5;">I agree to the <a href="${base}terms" target="_blank" style="color:#1ba89a;font-weight:600;">Terms &amp; Conditions</a>, including that service fees are non-refundable.</span>
+          <span style="font-size:13px;color:#4a4357;line-height:1.5;">I agree to the <a href="${base}terms" target="_blank" style="color:#1ba89a;font-weight:600;">Terms &amp; Conditions</a> and <a href="${base}privacy" target="_blank" style="color:#1ba89a;font-weight:600;">Privacy Policy</a>, including that service fees are non-refundable.</span>
         </label>
 
         ${errorEl()}
@@ -614,22 +619,27 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
         step = 1; render();
       });
 
-      // Enable submit only when T&C checkbox is ticked
+      // Enable submit only when both checkboxes are ticked
+      const chkPhoto  = document.getElementById('chk-photo')  as HTMLInputElement;
       const chkTerms  = document.getElementById('chk-terms')  as HTMLInputElement;
       const btnSubmit = document.getElementById('btn-submit')  as HTMLButtonElement;
-      chkTerms?.addEventListener('change', () => {
-        btnSubmit.disabled = !chkTerms.checked;
-        btnSubmit.style.opacity = chkTerms.checked ? '1' : '0.5';
-        btnSubmit.style.cursor  = chkTerms.checked ? 'pointer' : 'not-allowed';
-      });
+      function updateSubmitState() {
+        const allChecked = chkPhoto?.checked && chkTerms?.checked;
+        btnSubmit.disabled = !allChecked;
+        btnSubmit.style.opacity = allChecked ? '1' : '0.5';
+        btnSubmit.style.cursor  = allChecked ? 'pointer' : 'not-allowed';
+      }
+      chkPhoto?.addEventListener('change', updateSubmitState);
+      chkTerms?.addEventListener('change', updateSubmitState);
     }
 
     // Step 4: submit all entries
     if (step === 4) {
       document.getElementById('btn-submit')?.addEventListener('click', async () => {
         if (submitting) return;
-        const chk = document.getElementById('chk-terms') as HTMLInputElement;
-        if (!chk?.checked) return;
+        const chkP = document.getElementById('chk-photo') as HTMLInputElement;
+        const chk  = document.getElementById('chk-terms') as HTMLInputElement;
+        if (!chkP?.checked || !chk?.checked) return;
         submitting = true;
         const totalEntries = pendingEntries.length + 1;
         const grandTotal   = totalFee * totalEntries;

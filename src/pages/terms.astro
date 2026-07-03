@@ -4,7 +4,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 const raw  = import.meta.env.BASE_URL;
 const base = raw.endsWith('/') ? raw : raw + '/';
 
-const updated = '29 June 2026';
+const updated = '3 July 2026';
 ---
 
 <BaseLayout title="Terms & Conditions — Fur to Feathers" description="Terms of use, refund policy, and platform rules for Fur to Feathers.">
@@ -35,8 +35,11 @@ const updated = '29 June 2026';
       <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 10px;">
         All payments are processed securely by Stripe. By completing a payment you also agree to <a href="https://stripe.com/legal/consumer" target="_blank" rel="noopener" style="color:#1ba89a;font-weight:600;">Stripe's Terms of Service</a>.
       </p>
-      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0;">
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 10px;">
         Fur to Feathers does not store card details. All card data is handled directly by Stripe.
+      </p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0;">
+        For information on how we handle your personal data, including how Stripe processes payment information, please read our <a href={`${base}privacy`} style="color:#1ba89a;font-weight:600;">Privacy Policy</a>.
       </p>
     </section>
 
@@ -87,7 +90,7 @@ const updated = '29 June 2026';
         {[
           'Provide accurate information about themselves and their pet(s).',
           'Only enter animals they own or have the legal right to enter on behalf of the owner.',
-          'Ensure any photos uploaded are their own or that they have the rights to use them. By uploading a photo you grant Fur to Feathers a non-exclusive licence to display that photo in connection with the relevant show.',
+          'Submit only photos they own or have the right to use. Photos are made publicly accessible on the internet so that judges can view entries — by uploading a photo you confirm this, grant Fur to Feathers a non-exclusive licence to display it in connection with the relevant show, and take full responsibility for obtaining consent from any identifiable person in the photo (including acting as parent or legal guardian for any child who appears).',
           'Accept that entry fees and service fees are committed at the point of payment.',
         ].map(item => (
           <li style="font-size:14px;color:#4a4357;line-height:1.7;">{item}</li>

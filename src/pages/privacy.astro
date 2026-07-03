@@ -1,0 +1,332 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const raw  = import.meta.env.BASE_URL;
+const base = raw.endsWith('/') ? raw : raw + '/';
+
+const updated = '3 July 2026';
+---
+
+<BaseLayout title="Privacy Policy — Fur to Feathers" description="How Fur to Feathers collects, uses, and protects your personal information.">
+
+  <div style="max-width:720px;margin:0 auto;padding:60px 24px 100px;">
+
+    <p style="font-size:13px;font-weight:700;color:#1ba89a;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 10px;">Legal</p>
+    <h1 style="font-size:32px;font-weight:900;color:#1c1626;margin:0 0 8px;line-height:1.2;">Privacy Policy</h1>
+    <p style="font-size:13px;color:#9b94a8;margin:0 0 48px;">Last updated {updated}</p>
+
+    <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 40px;">
+      This policy explains what personal information we collect when you use Fur to Feathers, why we collect it, how we use it, who we share it with, and what rights you have. We've written it in plain English.
+    </p>
+
+    <!-- 1 -->
+    <section style="margin-bottom:40px;">
+      <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">1. Who we are</h2>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 10px;">
+        Fur to Feathers is an online platform for virtual pet shows, operated by David Tonkin, sole trader, based in Victoria, Australia ("we", "us", "our").
+      </p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0;">
+        This policy applies to everyone who uses the platform, including show participants and show organisers.
+      </p>
+    </section>
+
+    <!-- 2 -->
+    <section style="margin-bottom:40px;">
+      <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">2. What personal information we collect</h2>
+
+      <p style="font-size:13px;font-weight:700;color:#4a4357;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 8px;">Account information</p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 16px;">
+        When you create an account we collect your name and email address. Show organisers may provide additional details such as a club or business name when setting up their profile.
+      </p>
+
+      <p style="font-size:13px;font-weight:700;color:#4a4357;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 8px;">Show and entry information</p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 16px;">
+        When you enter a pet into a show we collect the pet details you provide (name, breed, category) and your exhibitor name.
+      </p>
+
+      <p style="font-size:13px;font-weight:700;color:#4a4357;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 8px;">Photos</p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 16px;">
+        When you submit a show entry you upload a photo of your pet. That photo is stored on our platform and made publicly accessible as described in Section 5.
+      </p>
+
+      <p style="font-size:13px;font-weight:700;color:#4a4357;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 8px;">Payment information</p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 16px;">
+        We use Stripe to process payments. <strong>We never see or store your credit card number.</strong> Stripe collects your payment details directly and securely. We receive confirmation from Stripe that a payment was made, along with your name and email, so we can confirm your entry. See Section 7 for more about Stripe.
+      </p>
+
+      <p style="font-size:13px;font-weight:700;color:#4a4357;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 8px;">Technical information</p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0;">
+        Our platform automatically collects basic technical information when you use it, including your browser type, pages visited, and time of visit. This is used only to keep the platform running correctly.
+      </p>
+    </section>
+
+    <!-- 3 -->
+    <section style="margin-bottom:40px;">
+      <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">3. Why we collect and use your information</h2>
+      <ul style="margin:0 0 16px;padding-left:20px;display:flex;flex-direction:column;gap:8px;">
+        {[
+          'Creating and managing your account',
+          'Processing your show entries and payments',
+          'Displaying your pet photos to judges and other participants for show judging (see Section 5)',
+          'Publishing show results and certificates',
+          'Communicating with you about your entries, results, and account',
+          'Enabling show organisers to manage the shows they run',
+          'Complying with our legal obligations',
+        ].map(item => (
+          <li style="font-size:14px;color:#4a4357;line-height:1.7;">{item}</li>
+        ))}
+      </ul>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0;font-weight:700;">
+        We do not use your personal information for advertising. We do not sell your information to any third party.
+      </p>
+    </section>
+
+    <!-- 4 -->
+    <section style="margin-bottom:40px;">
+      <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">4. Legal basis for processing (GDPR)</h2>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 12px;">
+        If you are in the European Economic Area or United Kingdom, we process your personal information on the following legal bases:
+      </p>
+      <ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;">
+        {[
+          'Performance of a contract — processing your account, show entries, and payments is necessary to provide the service you signed up for.',
+          'Consent — displaying your uploaded photos publicly for judging is done on the basis of your explicit consent, given when you tick the image consent checkbox at the time of entry.',
+          'Legal obligation — we retain payment records to comply with financial recordkeeping law.',
+          'Legitimate interests — collecting basic technical information to maintain platform security and stability.',
+        ].map(item => (
+          <li style="font-size:14px;color:#4a4357;line-height:1.7;">{item}</li>
+        ))}
+      </ul>
+    </section>
+
+    <!-- 5 -->
+    <section style="margin-bottom:40px;background:#fff8e6;border:1.5px solid #fbbf24;border-radius:14px;padding:24px 24px 20px;">
+      <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">5. Photos and public display — please read this carefully</h2>
+
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 12px;font-weight:700;">
+        Photos you submit as show entries are made publicly accessible on the internet.
+      </p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 12px;">This means:</p>
+      <ul style="margin:0 0 16px;padding-left:20px;display:flex;flex-direction:column;gap:6px;">
+        {[
+          'Judges can view them without logging in',
+          'Other platform users and visitors can view them',
+          'Photos may be indexed by search engines or accessible to anyone who discovers the URL',
+        ].map(item => (
+          <li style="font-size:14px;color:#4a4357;line-height:1.7;">{item}</li>
+        ))}
+      </ul>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 12px;">
+        This is a deliberate and necessary feature of the platform — pet show judging requires judges to be able to view entries.
+      </p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 12px;font-weight:700;">You are responsible for what you upload.</p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 12px;">By submitting a photo and ticking the consent checkbox on the entry form, you confirm that:</p>
+      <ul style="margin:0 0 16px;padding-left:20px;display:flex;flex-direction:column;gap:6px;">
+        {[
+          'You own the photo or have the right to submit it.',
+          'You grant Fur to Feathers a non-exclusive licence to store and publicly display the photo for show judging purposes.',
+          'If any identifiable person appears in the photo, that person has consented to their image being publicly displayed on this platform.',
+          'If any child appears in the photo, you are their parent or legal guardian and you consent on their behalf.',
+        ].map(item => (
+          <li style="font-size:14px;color:#4a4357;line-height:1.7;">{item}</li>
+        ))}
+      </ul>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 12px;">
+        We do not verify these things independently. If we receive a credible complaint that a photo shows a person's image without their consent, we may remove it pending investigation and will contact the person who uploaded it.
+      </p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0;">
+        <strong>Note on show records:</strong> If you later request removal of a photo, we will remove it from public display, but historical show result records may still reference that an entry existed.
+      </p>
+    </section>
+
+    <!-- 6 -->
+    <section style="margin-bottom:40px;">
+      <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">6. Show organiser access</h2>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 10px;">
+        Show organisers can see the entry details and photos submitted to their shows. This includes your name, your pet's details, and your entry photo. Organisers may use this information only to administer their shows and are not permitted to use participant information for other purposes.
+      </p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0;">
+        Show organisers are themselves bound by this policy when operating their shows on this platform.
+      </p>
+    </section>
+
+    <!-- 7 -->
+    <section style="margin-bottom:40px;">
+      <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">7. Payment processing — Stripe</h2>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 10px;">
+        All payments on this platform are processed by <strong>Stripe, Inc.</strong>, a third-party payment processor. When you pay for a show entry, your payment card details go directly to Stripe — we do not receive them.
+      </p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 10px;">
+        Stripe processes your payment information under its own privacy policy and security standards, and is certified to the Payment Card Industry Data Security Standard (PCI-DSS).
+      </p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0;">
+        You can read Stripe's privacy policy at <a href="https://stripe.com/privacy" target="_blank" rel="noopener" style="color:#1ba89a;font-weight:600;">stripe.com/privacy</a>.
+      </p>
+    </section>
+
+    <!-- 8 -->
+    <section style="margin-bottom:40px;">
+      <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">8. Who else receives your information</h2>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 16px;">
+        To operate the platform, your data passes through the following third-party services:
+      </p>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr style="background:#f5f3fa;">
+              <th style="text-align:left;padding:10px 14px;font-weight:700;color:#1c1626;border-bottom:1px solid #efebf5;">Service</th>
+              <th style="text-align:left;padding:10px 14px;font-weight:700;color:#1c1626;border-bottom:1px solid #efebf5;">Purpose</th>
+              <th style="text-align:left;padding:10px 14px;font-weight:700;color:#1c1626;border-bottom:1px solid #efebf5;">Location</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding:10px 14px;color:#4a4357;border-bottom:1px solid #f0eef5;">Supabase</td>
+              <td style="padding:10px 14px;color:#4a4357;border-bottom:1px solid #f0eef5;">Database storage, user authentication, file storage</td>
+              <td style="padding:10px 14px;color:#4a4357;border-bottom:1px solid #f0eef5;">Japan (AWS Tokyo)</td>
+            </tr>
+            <tr>
+              <td style="padding:10px 14px;color:#4a4357;border-bottom:1px solid #f0eef5;">Stripe</td>
+              <td style="padding:10px 14px;color:#4a4357;border-bottom:1px solid #f0eef5;">Payment processing</td>
+              <td style="padding:10px 14px;color:#4a4357;border-bottom:1px solid #f0eef5;">United States</td>
+            </tr>
+            <tr>
+              <td style="padding:10px 14px;color:#4a4357;">GitHub Pages</td>
+              <td style="padding:10px 14px;color:#4a4357;">Website hosting (static files only — no personal data)</td>
+              <td style="padding:10px 14px;color:#4a4357;">United States</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:16px 0 0;">
+        Beyond these services, we do not share your personal information with anyone.
+      </p>
+    </section>
+
+    <!-- 9 -->
+    <section style="margin-bottom:40px;">
+      <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">9. Overseas disclosure</h2>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 10px;">
+        Your personal information — including your name, email address, and uploaded photos — is transferred to and stored in Japan and the United States.
+      </p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 10px;">
+        Japan maintains a privacy law (the Act on the Protection of Personal Information) that is broadly comparable to Australian law, and has received an EU adequacy decision. The United States does not have an equivalent national privacy law, but Stripe maintains its own security and data protection standards.
+      </p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0;">
+        By using this platform, you acknowledge that your information will be transferred overseas for these purposes.
+      </p>
+    </section>
+
+    <!-- 10 -->
+    <section style="margin-bottom:40px;">
+      <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">10. Children's privacy</h2>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 10px;">
+        This platform is intended for adults and is not directed at children under 13. We do not knowingly create accounts for children under 13.
+      </p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 10px;">
+        If you are a parent or guardian and believe your child under 13 has created an account without your consent, please contact us and we will delete the account and associated information.
+      </p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0;">
+        Photos submitted by adult users may incidentally show children (for example, a family pet photo taken in a family setting). The person who submits the photo is responsible for having the appropriate consent — see Section 5.
+      </p>
+    </section>
+
+    <!-- 11 -->
+    <section style="margin-bottom:40px;">
+      <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">11. Data retention</h2>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr style="background:#f5f3fa;">
+              <th style="text-align:left;padding:10px 14px;font-weight:700;color:#1c1626;border-bottom:1px solid #efebf5;">Type of data</th>
+              <th style="text-align:left;padding:10px 14px;font-weight:700;color:#1c1626;border-bottom:1px solid #efebf5;">How long we keep it</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              ['Account information (name, email)', 'While account is active, plus 90 days after deletion'],
+              ['Pet and show entry information', '12 months after the show closes'],
+              ['Uploaded photos', '12 months after the show closes, then deleted from live systems'],
+              ['Payment confirmation records', 'Up to 7 years (Australian financial/tax recordkeeping)'],
+              ['Technical/log data', 'Up to 90 days'],
+              ['Encrypted backups', 'May persist up to 90 days after deletion from live systems'],
+            ].map(([type, period], i) => (
+              <tr>
+                <td style={`padding:10px 14px;color:#4a4357;${i < 5 ? 'border-bottom:1px solid #f0eef5;' : ''}`}>{type}</td>
+                <td style={`padding:10px 14px;color:#4a4357;${i < 5 ? 'border-bottom:1px solid #f0eef5;' : ''}`}>{period}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 12 -->
+    <section style="margin-bottom:40px;">
+      <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">12. Security</h2>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 10px;">
+        We take reasonable steps to protect your personal information, including encrypting data in transit (TLS), using industry-standard password hashing, and restricting access to administrative systems.
+      </p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 10px;">
+        No internet platform can guarantee perfect security. If you become aware of a security issue, please contact us immediately at <a href="mailto:hello@furtofeathers.com" style="color:#1ba89a;font-weight:600;">hello@furtofeathers.com</a>.
+      </p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0;">
+        If we become aware of a data breach that is likely to result in serious harm, we will notify you and the Office of the Australian Information Commissioner as required under the Notifiable Data Breaches scheme.
+      </p>
+    </section>
+
+    <!-- 13 -->
+    <section style="margin-bottom:40px;">
+      <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">13. Your rights</h2>
+      <ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:10px;">
+        {[
+          'Access your information — you can request a copy of the personal information we hold about you.',
+          'Correct your information — if any information we hold is inaccurate, you can ask us to correct it.',
+          'Delete your account — you can request deletion of your account (see Section 11 for what this means in practice).',
+          'Withdraw image consent — if you want a photo removed from public display, contact us and we will act on this (see the qualification in Section 5 about show records).',
+          'Lodge a complaint — see Section 14.',
+        ].map(item => (
+          <li style="font-size:14px;color:#4a4357;line-height:1.7;">{item}</li>
+        ))}
+      </ul>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:16px 0 0;">
+        If you are in the EEA or UK, you additionally have the right to data portability and the right to object to certain processing. To exercise any of these rights, contact us at <a href="mailto:hello@furtofeathers.com" style="color:#1ba89a;font-weight:600;">hello@furtofeathers.com</a>. We will respond within 30 days.
+      </p>
+    </section>
+
+    <!-- 14 -->
+    <section style="margin-bottom:40px;">
+      <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">14. Complaints</h2>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 10px;">
+        If you believe we have mishandled your personal information, please contact us first at <a href="mailto:hello@furtofeathers.com" style="color:#1ba89a;font-weight:600;">hello@furtofeathers.com</a>. We take privacy complaints seriously and will respond within 30 days.
+      </p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 10px;">
+        <strong>Australia:</strong> If you are not satisfied with our response, you may lodge a complaint with the Office of the Australian Information Commissioner (OAIC) at <a href="https://www.oaic.gov.au" target="_blank" rel="noopener" style="color:#1ba89a;font-weight:600;">oaic.gov.au</a> or by calling 1300 363 992.
+      </p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0;">
+        <strong>EEA / UK:</strong> You have the right to complain to your local data protection supervisory authority.
+      </p>
+    </section>
+
+    <!-- 15 -->
+    <section style="margin-bottom:48px;">
+      <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">15. Changes to this policy</h2>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0;">
+        We may update this policy from time to time. When we make material changes we will update the date at the top of this page and notify registered users by email. Continued use of the platform after changes take effect means you accept the updated policy.
+      </p>
+    </section>
+
+    <!-- Contact -->
+    <div style="background:#f5f8f9;border-radius:14px;padding:24px;">
+      <h2 style="font-size:16px;font-weight:800;color:#1c1626;margin:0 0 8px;">Contact us</h2>
+      <p style="font-size:14px;color:#4a4357;line-height:1.7;margin:0 0 6px;">
+        David Tonkin — Fur to Feathers (sole trader)
+      </p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.7;margin:0;">
+        <a href="mailto:hello@furtofeathers.com" style="color:#1ba89a;font-weight:600;">hello@furtofeathers.com</a>
+      </p>
+    </div>
+
+  </div>
+
+</BaseLayout>
