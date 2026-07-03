@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { PDFDocument, rgb, StandardFonts, degrees } from 'npm:pdf-lib@1.17.1';
+import fontkit from 'npm:@pdf-lib/fontkit@1.1.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -56,6 +57,7 @@ async function buildPdf(
   judgeName: string | null = null,
 ): Promise<Uint8Array> {
   const doc  = await PDFDocument.create();
+  doc.registerFontkit(fontkit);
   const pageDims = design.page_size === 'letter' ? [792, 612] : [841.89, 595.28];
   const page = doc.addPage(pageDims);
   const { width: W, height: H } = page.getSize();
