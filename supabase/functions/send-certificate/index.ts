@@ -26,19 +26,10 @@ async function fetchBytes(url: string): Promise<ArrayBuffer | null> {
 
 async function fetchHandwritingFont(): Promise<Uint8Array | null> {
   try {
-    // Legacy UA makes Google Fonts return TTF URLs instead of WOFF2 (pdf-lib needs TTF/OTF)
-    const cssRes = await fetch(
-      'https://fonts.googleapis.com/css?family=Homemade+Apple',
-      { headers: { 'User-Agent': 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)' } },
-    );
-    if (!cssRes.ok) return null;
-    const css = await cssRes.text();
-    const m = css.match(/url\(([^)]+)\)/);
-    if (!m) return null;
-    const fontUrl = m[1].replace(/['"]/g, '');
-    const fontRes = await fetch(fontUrl);
-    if (!fontRes.ok) return null;
-    return new Uint8Array(await fontRes.arrayBuffer());
+    // TTF bundled alongside this function — Google Fonts only serves WOFF2 at runtime
+    // which fontkit (pdf-lib v1.x) cannot parse. Deploy the TTF by placing
+    // HomemadeApple-Regular.ttf in supabase/functions/send-certificate/.
+    return await Deno.readFile(new URL('./HomemadeApple-Regular.ttf', import.meta.url));
   } catch { return null; }
 }
 
@@ -293,10 +284,12 @@ async function buildPdf(
 
   // ── Judge signature ───────────────────────────────────────────────────────
   if (design.show_signature) {
-    const hwBytes  = await fetchHandwritingFont();
-    const sigFont  = hwBytes
-      ? await doc.embedFont(hwBytes)
-      : await doc.embedFont(StandardFonts.TimesRomanItalic);
+    const hwBytes = await fetchHandwritingFont();
+    let sigFont;
+    if (hwBytes) {
+      try { sigFont = await doc.embedFont(hwBytes); } catch { /* fall through */ }
+    }
+    if (!sigFont) sigFont = await doc.embedFont(StandardFonts.TimesRomanItalic);
     const sigName  = judgeName || 'Sebastian Montgomery';
     const sigW     = 200;
     const sigX     = W - PAD - sigW;
