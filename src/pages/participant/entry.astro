@@ -53,12 +53,15 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     .single();
 
   if (!error && entry) {
-    const [showRes, catRes] = await Promise.all([
+    const [showRes, catRes, judgeRes] = await Promise.all([
       entry.show_id     ? supabase.from('shows').select('id, title, host_org, show_date, entry_close_date, currency, results_published_at, cert_design_json, logo_url, org_logo_url').eq('id', entry.show_id).single() : { data: null },
       entry.category_id ? supabase.from('show_categories').select('id, name').eq('id', entry.category_id).single() : { data: null },
+      entry.show_id     ? supabase.from('show_judges').select('first_name, last_name').eq('show_id', entry.show_id).limit(1).maybeSingle() : { data: null },
     ]);
     entry.shows           = showRes.data || null;
     entry.show_categories = catRes.data  || null;
+    const j = judgeRes?.data;
+    if (entry.shows && j) entry.shows.judge_name = `${j.first_name || ''} ${j.last_name || ''}`.trim() || null;
   }
 
   const root = document.getElementById('entry-root');
