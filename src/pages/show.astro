@@ -268,8 +268,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const goal = show.fundraising_goal || 0;
     const pct  = goal > 0 ? Math.round(totalRaised / goal * 100) : 0;
     return `
-      <p style="font-size:13px;font-weight:800;color:#143A37;margin:0 0 2px">${pct >= 100 ? 'We Reached Our Goal! 🎉' : '❤️ Thank You!'}</p>
-      <p style="font-size:11px;color:#6B7C79;margin:0 0 10px">Thank you for helping animals in need.</p>
+      <p style="font-size:13px;font-weight:800;color:#143A37;margin:0 0 10px">${pct >= 100 ? 'We Reached Our Goal! 🎉' : '❤️ Thank You!'}</p>
       <p style="font-size:30px;font-weight:900;color:#1E8E7E;margin:0 0 2px">${sym}${totalRaised.toLocaleString()}</p>
       ${goal > 0 ? `<p style="font-size:12px;color:#6B7C79;margin:0 0 10px">raised of ${sym}${goal.toLocaleString()} goal</p>` : ''}
       <div style="height:10px;border-radius:999px;background:#E6EEEC;overflow:hidden;margin-bottom:4px">
@@ -277,7 +276,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       </div>
       <p style="font-size:12px;font-weight:700;color:#5FB23E;margin:0 0 8px">${pct}%</p>
       ${show.description ? `<p style="font-size:11px;color:#6B7C79;margin:0 0 4px">${esc(show.description)}</p>` : ''}
-      ${show.website_url ? `<a href="${esc(absUrl(show.website_url))}" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:#1E8E7E;font-weight:600;text-decoration:none">Learn more about our cause →</a>` : ''}`;
+      ${show.website_url ? `<a href="${esc(absUrl(show.website_url))}" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:#1E8E7E;font-weight:600;text-decoration:none">Learn more →</a>` : ''}`;
   }
 
   // ── Body dispatcher ───────────────────────────────────────────────────────────
