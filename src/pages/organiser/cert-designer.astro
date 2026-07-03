@@ -551,19 +551,23 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     if (!showId) { showError('No show specified.'); return; }
 
-    const [showRes, catsRes, winnersRes, sponsorsRes] = await Promise.all([
+    const [showRes, catsRes, winnersRes, sponsorsRes, judgeRes] = await Promise.all([
       supabase.from('shows').select('*').eq('id', showId).eq('created_by', uid).single(),
       supabase.from('show_categories').select('id, name').eq('show_id', showId),
       supabase.from('show_entries')
         .select('id, animal_name, breed, exhibitor_name, photo_url, result_place, category_id')
         .eq('show_id', showId).eq('result_place', 1).limit(1),
       supabase.from('show_sponsors').select('name, logo_url').eq('show_id', showId),
+      supabase.from('show_judges').select('first_name, last_name').eq('show_id', showId).limit(1).maybeSingle(),
     ]);
 
     if (showRes.error || !showRes.data) { showError('Show not found or access denied.'); return; }
 
     show      = showRes.data;
     sponsors  = sponsorsRes.data || [];
+
+    const j = judgeRes?.data;
+    if (j) show.judge_name = `${j.first_name || ''} ${j.last_name || ''}`.trim() || null;
 
     const cats = catsRes.data || [];
     sampleEntry = winnersRes.data?.[0] || null;
