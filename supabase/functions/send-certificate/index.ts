@@ -23,6 +23,24 @@ async function fetchBytes(url: string): Promise<ArrayBuffer | null> {
   } catch { return null; }
 }
 
+async function fetchHandwritingFont(): Promise<Uint8Array | null> {
+  try {
+    // Legacy UA makes Google Fonts return TTF URLs instead of WOFF2 (pdf-lib needs TTF/OTF)
+    const cssRes = await fetch(
+      'https://fonts.googleapis.com/css?family=Homemade+Apple',
+      { headers: { 'User-Agent': 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)' } },
+    );
+    if (!cssRes.ok) return null;
+    const css = await cssRes.text();
+    const m = css.match(/url\(([^)]+)\)/);
+    if (!m) return null;
+    const fontUrl = m[1].replace(/['"]/g, '');
+    const fontRes = await fetch(fontUrl);
+    if (!fontRes.ok) return null;
+    return new Uint8Array(await fontRes.arrayBuffer());
+  } catch { return null; }
+}
+
 function hexToRgb(hex: string) {
   const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(hex);
   if (!m) return { r: 1, g: 1, b: 1 };
@@ -58,15 +76,15 @@ async function buildPdf(
     const m = 14;
     if (borderStyle === 'classic') {
       page.drawRectangle({ x: m, y: m, width: W - m * 2, height: H - m * 2,
-        borderColor: accentColor, borderWidth: 1.5, color: rgb(1,1,1,0) });
+        borderColor: accentColor, borderWidth: 1.5 });
     } else if (borderStyle === 'elegant') {
       page.drawRectangle({ x: m,     y: m,     width: W - m * 2,     height: H - m * 2,
-        borderColor: accentColor, borderWidth: 0.75, color: rgb(1,1,1,0) });
+        borderColor: accentColor, borderWidth: 0.75 });
       page.drawRectangle({ x: m + 5, y: m + 5, width: W - (m + 5) * 2, height: H - (m + 5) * 2,
-        borderColor: accentColor, borderWidth: 0.75, color: rgb(1,1,1,0) });
+        borderColor: accentColor, borderWidth: 0.75 });
     } else if (borderStyle === 'playful') {
       page.drawRectangle({ x: m, y: m, width: W - m * 2, height: H - m * 2,
-        borderColor: accentColor, borderWidth: 3, color: rgb(1,1,1,0), borderLineCap: 0 });
+        borderColor: accentColor, borderWidth: 3, borderLineCap: 0 });
     }
   }
 
@@ -79,7 +97,7 @@ async function buildPdf(
     if (logoBytes) {
       try {
         let logoImg;
-        if (logoUrl.toLowerCase().endsWith('.png') || logoUrl.startsWith('data:image/png')) {
+        if (logoUrl.toLowerCase().includes('.png') || logoUrl.startsWith('data:image/png')) {
           logoImg = await doc.embedPng(logoBytes);
         } else {
           logoImg = await doc.embedJpg(logoBytes);
@@ -195,8 +213,8 @@ async function buildPdf(
         const drawY = contentY + Math.round((contentH - drawH) / 2);
         page.drawImage(photoImg, { x: PAD, y: drawY, width: drawW, height: drawH });
         page.drawRectangle({ x: PAD, y: drawY, width: drawW, height: drawH,
-          borderColor: rgb(0.9, 0.93, 0.925), borderWidth: 0.75, color: rgb(1,1,1,0) });
-        textOffsetX = boxW + 24;
+          borderColor: rgb(0.9, 0.93, 0.925), borderWidth: 0.75 });
+        textOffsetX = drawW + 24;
       } catch {}
     }
   }
@@ -273,13 +291,16 @@ async function buildPdf(
 
   // ── Judge signature ───────────────────────────────────────────────────────
   if (design.show_signature) {
-    const timesItalic = await doc.embedFont(StandardFonts.TimesRomanItalic);
+    const hwBytes  = await fetchHandwritingFont();
+    const sigFont  = hwBytes
+      ? await doc.embedFont(hwBytes)
+      : await doc.embedFont(StandardFonts.TimesRomanItalic);
     const sigName  = judgeName || 'Sebastian Montgomery';
     const sigW     = 200;
     const sigX     = W - PAD - sigW;
     let   sigSize  = 22;
-    while (timesItalic.widthOfTextAtSize(sigName, sigSize) > sigW - 10 && sigSize > 10) sigSize--;
-    const sigTextW = timesItalic.widthOfTextAtSize(sigName, sigSize);
+    while (sigFont.widthOfTextAtSize(sigName, sigSize) > sigW - 10 && sigSize > 10) sigSize--;
+    const sigTextW = sigFont.widthOfTextAtSize(sigName, sigSize);
     const sigLineY = PAD + 34;
 
     page.drawText('Judge', {
@@ -290,7 +311,7 @@ async function buildPdf(
     page.drawText(sigName, {
       x: sigX + (sigW - sigTextW) / 2,
       y: sigLineY + 4,
-      font: timesItalic, size: sigSize, color: rgb(DARK_R, DARK_G, DARK_B),
+      font: sigFont, size: sigSize, color: rgb(DARK_R, DARK_G, DARK_B),
     });
     page.drawLine({
       start: { x: sigX, y: sigLineY }, end: { x: sigX + sigW, y: sigLineY },
