@@ -465,7 +465,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
       <div class="mb-6">
         <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Entry Fee per Entry <span class="text-[#9b94a8] font-normal">— the total each entrant pays</span></label>
-        <p id="s8-fee-hint" class="text-[12px] text-[#9b94a8] mb-2">Minimum A$3. Whole dollars. Includes all fees — nothing is added at checkout.</p>
+        <p id="s8-fee-hint" class="text-[12px] text-[#9b94a8] mb-2">Minimum A$3</p>
         <div class="flex items-center gap-5">
           <div class="flex items-center gap-2">
             <button type="button" id="s8-fee-minus" aria-label="Decrease entry fee"
@@ -485,7 +485,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           </div>
         </div>
         <div class="mt-3 rounded-[13px] bg-[#f0fafa] border border-[#b8e4e0] p-4">
-          <p id="s8-fee-breakdown" class="text-[12px] text-[#9b94a8]">—</p>
+          <div id="s8-fee-breakdown" class="space-y-1.5 max-w-[300px] text-[12px] text-[#9b94a8]">—</div>
         </div>
       </div>
 
@@ -2123,7 +2123,18 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const pf = platformFee(total, code, serviceFees);
     const sf = stripeFeeEstimate(total, code, serviceFees);
     if (netEl) netEl.textContent = `${sym}${net.toFixed(2)}`;
-    if (bdEl)  bdEl.textContent  = `${sym}${total.toFixed(2)} entry − ${sym}${pf.toFixed(2)} platform fee − ~${sym}${sf.toFixed(2)} card processing (estimate) ≈ ${sym}${net.toFixed(2)} to your organisation per entry.`;
+    if (bdEl)  bdEl.innerHTML = feeBreakdownRows(sym, total, pf, sf, net);
+  }
+
+  function feeBreakdownRows(sym, total, pf, sf, net) {
+    const row = (label, value) =>
+      `<div class="flex items-center justify-between"><span class="text-[12px] text-[#6f6880]">${label}</span><span class="text-[12px] font-semibold text-[#1c1626]">${value}</span></div>`;
+    return [
+      row('Entrant pays', `${sym}${total.toFixed(2)}`),
+      row('Platform fee', `− ${sym}${pf.toFixed(2)}`),
+      row('Card processing (estimate)', `− ${sym}${sf.toFixed(2)}`),
+      `<div class="flex items-center justify-between border-t border-[#b8e4e0] pt-1.5"><span class="text-[12px] font-bold text-[#1c1626]">You receive per entry</span><span class="text-[13px] font-extrabold text-brand">≈ ${sym}${net.toFixed(2)}</span></div>`,
+    ].join('');
   }
 
   function applyCurrencySymbol(code) {
@@ -2131,7 +2142,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.getElementById('s8-symbol-fee').textContent = sym;
     const minFee2 = getMin(code);
     document.getElementById('s8-fee-hint').textContent = minFee2 != null
-      ? `Minimum ${sym}${minFee2}. Whole dollars. Includes all fees — nothing is added at checkout.`
+      ? `Minimum ${sym}${minFee2}`
       : 'Error — fee settings unavailable. Please refresh the page.';
     setFeeValue(getFeeValue());
   }
