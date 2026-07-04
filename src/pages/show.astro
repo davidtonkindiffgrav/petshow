@@ -90,6 +90,25 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     </div>
   </div>
 
+  <!-- Entry image viewer (voting grid lightbox) -->
+  <div id="image-modal" style="display:none;position:fixed;inset:0;z-index:120;background:rgba(14,42,42,0.82);backdrop-filter:blur(4px)" role="dialog" aria-modal="true" aria-label="Entry photo">
+    <button id="close-image-modal" aria-label="Close" style="position:absolute;top:16px;right:16px;z-index:2;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.12);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:white">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div id="image-modal-backdrop" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px">
+      <div style="max-width:min(640px,92vw)">
+        <div id="image-modal-photo" style="border-radius:16px;overflow:hidden;display:flex;align-items:center;justify-content:center"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:14px">
+          <div style="min-width:0">
+            <p id="image-modal-name" style="color:white;font-weight:800;font-size:18px;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></p>
+            <p id="image-modal-sub" style="color:rgba(255,255,255,0.7);font-size:13px;margin:3px 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></p>
+          </div>
+          <button id="image-modal-vote" style="flex-shrink:0;background:#1E8E7E;color:white;font-weight:700;font-size:13.5px;padding:11px 22px;border-radius:10px;border:none;cursor:pointer;font-family:inherit"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Vote basket sticky footer (shown during public voting) -->
   <div id="vote-basket" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:50;background:#1E8E7E;box-shadow:0 -2px 16px rgba(0,0,0,0.15)">
     <div style="max-width:1200px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px">
@@ -1000,12 +1019,23 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     document.getElementById('vote-modal-cancel').addEventListener('click', closeVoteModal);
     document.getElementById('basket-submit-btn').addEventListener('click', openVoteModal);
     document.getElementById('vote-modal-submit').addEventListener('click', submitVotes);
+    document.getElementById('close-image-modal').addEventListener('click', closeImageModal);
+    document.getElementById('image-modal-backdrop').addEventListener('click', e => {
+      if (e.target === e.currentTarget) closeImageModal();
+    });
+    document.getElementById('image-modal-vote').addEventListener('click', e => {
+      const entryId = (e.currentTarget as HTMLElement).dataset.entryId;
+      const card = document.querySelector(`.vote-card[data-entry-id="${CSS.escape(entryId)}"]`);
+      if (card) selectEntry(card);
+      closeImageModal();
+    });
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') {
         closeClassesModal();
         closeEntriesModal();
         closeResultsModal();
         closeVoteModal();
+        closeImageModal();
       }
     });
   }
@@ -1023,22 +1053,24 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       : '';
 
     const catSections = categories.map(cat => {
-      const catEntries = entries.filter(e => e.category_id === cat.id);
+      // Shuffled per page load so late entrants get seen too, not buried
+      // under the pets that entered first
+      const catEntries = shuffle(entries.filter(e => e.category_id === cat.id));
       if (catEntries.length === 0) return '';
       const cards = catEntries.map(e => `
         <div class="vote-card" data-entry-id="${esc(e.id)}" data-cat-id="${esc(e.category_id)}"
-          style="border-radius:14px;border:2.5px solid #E6EEEC;background:#fff;cursor:pointer;overflow:hidden;transition:border-color .15s,box-shadow .15s;position:relative;-webkit-tap-highlight-color:transparent">
-          <div style="aspect-ratio:1;overflow:hidden;background:#E6EEEC;position:relative">
+          style="border-radius:14px;border:2.5px solid #E6EEEC;background:#fff;overflow:hidden;transition:border-color .15s,box-shadow .15s;position:relative;-webkit-tap-highlight-color:transparent">
+          <div style="aspect-ratio:1;overflow:hidden;background:#E6EEEC;position:relative;cursor:zoom-in" title="Tap to view larger photo">
             ${e.photo_url
               ? `<img src="${esc(e.photo_url)}" style="width:100%;height:100%;object-fit:cover;display:block" alt="${esc(e.animal_name)}" loading="lazy">`
               : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:36px;color:#9BB4AF;font-weight:800">${esc((e.animal_name||'?')[0].toUpperCase())}</div>`}
-            <div class="vote-check-overlay" style="display:none;position:absolute;inset:0;background:rgba(30,142,126,0.15)">
+            <div class="vote-check-overlay" style="display:none;position:absolute;inset:0;background:rgba(30,142,126,0.15);pointer-events:none">
               <div style="position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:50%;background:#1E8E7E;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.2)">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
               </div>
             </div>
           </div>
-          <div style="padding:8px 10px 6px">
+          <div style="padding:8px 10px 10px">
             <p style="font-size:13px;font-weight:700;color:#143A37;margin:0 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.animal_name)}</p>
             ${e.breed ? `<p style="font-size:11px;color:#6B7C79;margin:0 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.breed)}</p>` : '<p style="margin:0 0 4px"></p>'}
             <div style="display:flex;align-items:center;justify-content:space-between">
@@ -1052,6 +1084,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
                 </svg>
               </button>
             </div>
+            <button class="vote-entry-btn" aria-label="Vote for ${esc(e.animal_name || 'this entry')}"
+              style="width:100%;margin-top:7px;padding:7px 0;border-radius:8px;border:1.5px solid #1E8E7E;background:white;color:#1E8E7E;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;transition:background .15s,color .15s">
+              Vote
+            </button>
           </div>
         </div>`).join('');
 
@@ -1077,12 +1113,14 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   function postRenderVoting() {
     updateVoteBasket();
 
-    // Wire card clicks and share buttons
+    // Wire card interactions: Vote button selects, photo/card opens the viewer
     document.getElementById('show-body').addEventListener('click', e => {
       const shareBtn = e.target.closest('.share-entry-btn');
       if (shareBtn) { e.stopPropagation(); copyEntryLink(shareBtn.dataset.entryId); return; }
+      const voteBtn = e.target.closest('.vote-entry-btn');
+      if (voteBtn) { selectEntry(voteBtn.closest('.vote-card')); return; }
       const card = e.target.closest('.vote-card');
-      if (card) selectEntry(card);
+      if (card) openImageModal(card.dataset.entryId);
     });
 
     // Scroll to focused category
@@ -1098,6 +1136,19 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     }
   }
 
+  function applyCardState(cardEl, selected) {
+    cardEl.style.borderColor = selected ? '#1E8E7E' : '#E6EEEC';
+    cardEl.style.boxShadow   = selected ? '0 0 0 2px rgba(30,142,126,0.18)' : '';
+    const overlay = cardEl.querySelector('.vote-check-overlay');
+    if (overlay) overlay.style.display = selected ? 'block' : 'none';
+    const btn = cardEl.querySelector('.vote-entry-btn');
+    if (btn) {
+      btn.textContent      = selected ? 'Voted ✓' : 'Vote';
+      btn.style.background = selected ? '#1E8E7E' : 'white';
+      btn.style.color      = selected ? 'white' : '#1E8E7E';
+    }
+  }
+
   function selectEntry(card) {
     const entryId = card.dataset.entryId;
     const catId   = card.dataset.catId;
@@ -1107,27 +1158,50 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const prevId = voteSelections[catId];
     if (prevId) {
       const prev = document.querySelector(`.vote-card[data-entry-id="${CSS.escape(prevId)}"]`);
-      if (prev) {
-        prev.style.borderColor = '#E6EEEC';
-        prev.style.boxShadow   = '';
-        const overlay = prev.querySelector('.vote-check-overlay');
-        if (overlay) overlay.style.display = 'none';
-      }
+      if (prev) applyCardState(prev, false);
     }
 
     if (already) {
-      // Toggle off
       delete voteSelections[catId];
     } else {
-      // Select this card
       voteSelections[catId] = entryId;
-      card.style.borderColor = '#1E8E7E';
-      card.style.boxShadow   = '0 0 0 2px rgba(30,142,126,0.18)';
-      const overlay = card.querySelector('.vote-check-overlay');
-      if (overlay) overlay.style.display = 'block';
+      applyCardState(card, true);
     }
 
     updateVoteBasket();
+  }
+
+  // ── Entry image viewer ────────────────────────────────────────────────────────
+
+  function openImageModal(entryId) {
+    const entry = entries.find(x => x.id === entryId);
+    if (!entry) return;
+
+    const photoEl = document.getElementById('image-modal-photo');
+    photoEl.innerHTML = entry.photo_url
+      ? `<img src="${esc(entry.photo_url)}" alt="${esc(entry.animal_name || '')}" style="max-width:100%;max-height:70vh;object-fit:contain;display:block;border-radius:16px">`
+      : `<div style="width:min(480px,80vw);aspect-ratio:1;background:#143A37;display:flex;align-items:center;justify-content:center;font-size:72px;color:#9BB4AF;font-weight:800;border-radius:16px">${esc((entry.animal_name || '?')[0].toUpperCase())}</div>`;
+
+    const catName = categories.find(c => c.id === entry.category_id)?.name || '';
+    document.getElementById('image-modal-name').textContent = entry.animal_name || 'Unnamed';
+    document.getElementById('image-modal-sub').textContent = [
+      entry.breed,
+      entry.entry_number ? `Entry #${entry.entry_number}` : '',
+      catName,
+    ].filter(Boolean).join(' · ');
+
+    const voteBtn = document.getElementById('image-modal-vote') as HTMLButtonElement;
+    const selected = voteSelections[entry.category_id] === entry.id;
+    voteBtn.textContent = selected ? 'Voted ✓' : `Vote for ${entry.animal_name || 'this entry'}`;
+    voteBtn.dataset.entryId = entry.id;
+
+    document.getElementById('image-modal').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeImageModal() {
+    document.getElementById('image-modal').style.display = 'none';
+    document.body.style.overflow = '';
   }
 
   function updateVoteBasket() {
@@ -1272,6 +1346,15 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   function absUrl(url) {
     if (!url) return '#';
     return /^https?:\/\//i.test(url) ? url : 'https://' + url;
+  }
+
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
   }
 
   function getCountdown(target) {
