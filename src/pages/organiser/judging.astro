@@ -131,6 +131,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           class="text-[12.5px] font-semibold text-brand hover:underline">
           Upload photo
         </button>
+        <button type="button" id="drawer-photo-remove" style="display:none"
+          class="text-[12px] font-semibold text-red-400 hover:underline">
+          Remove photo
+        </button>
         <input type="file" id="drawer-photo-input" accept="image/jpeg,image/png,image/webp"
                class="hidden" />
       </div>
@@ -844,6 +848,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     drawerPhotoUrl = url || null;
     const circle = document.getElementById('drawer-photo-circle');
     const btn    = document.getElementById('drawer-photo-btn');
+    const removeBtn = document.getElementById('drawer-photo-remove');
+    if (removeBtn) removeBtn.style.display = url ? '' : 'none';
     if (url) {
       circle.innerHTML = `<img src="${url}" class="w-full h-full object-cover" alt="" />`;
       btn.textContent  = 'Change photo';
@@ -1063,6 +1069,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const triggerPhotoInput = () => photoInput.click();
     photoBtn.addEventListener('click', triggerPhotoInput);
     photoCircle.addEventListener('click', triggerPhotoInput);
+    document.getElementById('drawer-photo-remove')?.addEventListener('click', () => {
+      photoInput.value = '';
+      setDrawerPhoto(null);
+    });
     photoInput.addEventListener('change', async () => {
       const file = photoInput.files?.[0];
       if (!file) return;

@@ -668,6 +668,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   let maxUploadMb    = 5;
   let mgmtClasses    = []; // { name, description, enabled, custom }
   let pendingBranding = { logo: null, orgLogo: null, banner: null };
+  let brandingRemoval = { logo: false, orgLogo: false, banner: false };
 
   const SHOW_TYPE_LABELS  = { beauty_contest: 'Beauty Contest', fun_stakes: 'Fun Stakes', memorial: 'Memorial Show', other: 'Other' };
   const BREED_SCOPE_LABELS = { all: 'All Breeds', breed_specific: 'Breed Specific', group_specific: 'Group Specific' };
@@ -1619,18 +1620,42 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       if (icon) icon.classList.remove('hidden');
       label.textContent = 'Click to upload';
     }
-    // Clear any previously queued file
+    // Clear any previously queued file / removal
     pendingBranding[key] = null;
+    brandingRemoval[key] = false;
     input.value = '';
+
+    let removeBtn = el.querySelector('.upload-remove');
+    if (!removeBtn) {
+      removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'upload-remove';
+      removeBtn.textContent = 'Remove image';
+      removeBtn.style.cssText = 'background:none;border:none;color:#ef4444;font-size:11.5px;font-weight:600;cursor:pointer;margin-top:6px;padding:0;font-family:inherit';
+      el.appendChild(removeBtn);
+    }
+    removeBtn.style.display = currentUrl ? 'inline-block' : 'none';
+    removeBtn.onclick = () => {
+      pendingBranding[key] = null;
+      brandingRemoval[key] = true;
+      preview.src = ''; preview.classList.add('hidden');
+      if (icon) icon.classList.remove('hidden');
+      label.textContent = 'Click to upload (removal unsaved)';
+      input.value = '';
+      removeBtn.style.display = 'none';
+    };
+
     function processFile(file) {
       if (!file) return;
       if (file.size > maxUploadMb * 1024 * 1024) { label.textContent = `Too large (max ${maxUploadMb} MB)`; return; }
       pendingBranding[key] = file;
+      brandingRemoval[key] = false;
       const reader = new FileReader();
       reader.onload = e => {
         preview.src = e.target.result; preview.classList.remove('hidden');
         if (icon) icon.classList.add('hidden');
         label.textContent = 'Click to replace (unsaved)';
+        removeBtn.style.display = 'inline-block';
       };
       reader.readAsDataURL(file);
     }
@@ -1674,12 +1699,16 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           if (pendingBranding.banner)  updates.banner_url   = await uploadImage(`shows/${showId}/banner`,   pendingBranding.banner);
         } finally { hideUploadOverlay(); }
       }
+      if (brandingRemoval.logo)    updates.logo_url     = null;
+      if (brandingRemoval.orgLogo) updates.org_logo_url = null;
+      if (brandingRemoval.banner)  updates.banner_url   = null;
       {
         const { error } = await supabase.from('shows').update(updates).eq('id', showId);
         if (error) throw error;
         Object.assign(show, updates);
       }
       pendingBranding = { logo: null, orgLogo: null, banner: null };
+      brandingRemoval = { logo: false, orgLogo: false, banner: false };
       renderAllHeaders();
       closeDrawer();
     } catch (err) {
@@ -2112,6 +2141,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       if (match.photo_url && photoCircle) {
         photoCircle.innerHTML = `<img src="${match.photo_url}" class="w-full h-full object-cover" />`;
         if (photoBtn) photoBtn.textContent = 'Replace photo';
+        const rm = panel.querySelector('.judge-photo-remove');
+        if (rm) rm.style.display = '';
       }
       panel.dataset.savedId = match.id;
       prompt.remove();
@@ -2196,6 +2227,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           <div>
             <p class="text-[12px] font-semibold text-[#4a4357]">Profile Photo <span class="text-[11px] text-[#9b94a8] font-normal">(optional)</span></p>
             <button type="button" class="judge-photo-btn text-[12px] font-semibold text-brand hover:underline">${j.photo_url ? 'Replace photo' : 'Upload photo'}</button>
+            <button type="button" class="judge-photo-remove text-[12px] font-semibold text-red-400 hover:underline ml-2" style="${j.photo_url ? '' : 'display:none'}">Remove</button>
             <input type="file" class="judge-photo-input hidden" accept="image/jpeg,image/png,image/webp" />
           </div>
         </div>`;
@@ -2236,6 +2268,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       const photoInput   = p.querySelector('.judge-photo-input');
       const photoCircle  = p.querySelector('.judge-photo-circle');
       const photoUrlInput = p.querySelector('.j-photo-url');
+      const photoRemove  = p.querySelector('.judge-photo-remove');
 
       async function processJudgePhoto(file) {
         if (!file || file.size > maxUploadMb * 1024 * 1024) return;
@@ -2246,9 +2279,18 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           photoUrlInput.value = url;
           photoCircle.innerHTML = `<img src="${url}" class="w-full h-full object-cover" />`;
           photoBtn.textContent = 'Replace photo';
+          if (photoRemove) photoRemove.style.display = '';
         } catch { photoBtn.textContent = 'Failed — try again'; }
         finally { hideUploadOverlay(); }
       }
+
+      photoRemove?.addEventListener('click', () => {
+        photoUrlInput.value = '';
+        photoCircle.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c4bed0" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>`;
+        photoBtn.textContent = 'Upload photo';
+        photoInput.value = '';
+        photoRemove.style.display = 'none';
+      });
 
       photoBtn.addEventListener('click', () => photoInput.click());
       photoInput.addEventListener('change', () => processJudgePhoto(photoInput.files[0]));

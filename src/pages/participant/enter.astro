@@ -427,6 +427,7 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
                  <p style="font-size:11.5px;color:#9b94a8;margin:0;">JPG, PNG, WebP · max 5 MB</p>`}
             <input id="photo-input" type="file" accept="image/jpeg,image/png,image/webp" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;" />
           </div>
+          ${hasPhoto ? `<button type="button" id="photo-remove" style="background:none;border:none;color:#ef4444;font-size:12px;font-weight:600;cursor:pointer;margin-top:8px;padding:0;">Remove photo</button>` : ''}
         </div>
 
         <div style="margin-bottom:24px;">
@@ -593,6 +594,11 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
         const reader = new FileReader();
         reader.onload = ev => { photoPreview = ev.target?.result as string; render(); };
         reader.readAsDataURL(file);
+      });
+
+      document.getElementById('photo-remove')?.addEventListener('click', () => {
+        photoFile = null; photoPreview = null; photoUrl = null;
+        render();
       });
 
       document.getElementById('btn-next')?.addEventListener('click', async () => {
