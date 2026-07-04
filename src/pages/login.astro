@@ -33,7 +33,10 @@ const base = raw.endsWith('/') ? raw : raw + '/';
         </div>
 
         <div class="mb-6">
-          <label for="password" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Password</label>
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="password" class="block text-[13px] font-semibold text-[#4a4357]">Password</label>
+            <a href={`${base}forgot-password`} class="text-[12.5px] text-brand font-semibold hover:underline">Forgot password?</a>
+          </div>
           <div class="relative">
             <input
               type="password"
