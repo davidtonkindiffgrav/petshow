@@ -54,7 +54,7 @@ serve(async (req: Request) => {
     if (judgesErr) throw new Error('Failed to load judges');
     if (!judges?.length) throw new Error('No judges assigned to this show');
 
-    const siteUrl    = Deno.env.get('SITE_URL') || 'https://davidtonkindiffgrav.github.io/petshow';
+    const siteUrl    = Deno.env.get('SITE_URL') || 'https://www.furtofeathers.com';
     const redirectTo = `${siteUrl}/auth/judge-accept`;
     const resendKey  = Deno.env.get('RESEND_API_KEY');
     const fromAddr   = Deno.env.get('RESEND_FROM') || 'Fur to Feathers <noreply@example.com>';

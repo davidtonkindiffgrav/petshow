@@ -92,7 +92,7 @@ serve(async (req: Request) => {
     if (insertErr || !inserted?.length) throw new Error('Failed to create entries: ' + (insertErr?.message || ''));
 
     const entryIds = inserted.map((e: any) => e.id);
-    const siteUrl  = Deno.env.get('SITE_URL') || 'https://davidtonkindiffgrav.github.io/petshow';
+    const siteUrl  = Deno.env.get('SITE_URL') || 'https://www.furtofeathers.com';
 
     // 7. Free show — confirm all immediately
     if (grandTotal <= 0) {

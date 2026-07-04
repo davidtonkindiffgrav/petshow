@@ -52,7 +52,7 @@ serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    const siteUrl  = Deno.env.get('SITE_URL') || 'https://davidtonkindiffgrav.github.io/petshow';
+    const siteUrl  = Deno.env.get('SITE_URL') || 'https://www.furtofeathers.com';
     const resendKey = Deno.env.get('RESEND_API_KEY');
     const fromAddr  = Deno.env.get('RESEND_FROM') || 'Fur to Feathers <noreply@furtofeathers.com>';
 
