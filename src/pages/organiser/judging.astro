@@ -803,6 +803,16 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       showToast(`${judge.first_name} is already assigned to ${showTitle}`);
       return;
     }
+    // Judges can't also be exhibitors in the same show
+    if (judge.email) {
+      const { data: entryRows } = await supabase.from('show_entries')
+        .select('exhibitor_email').eq('show_id', showId).not('exhibitor_email', 'is', null);
+      const em = judge.email.toLowerCase();
+      if ((entryRows || []).some(r => r.exhibitor_email.toLowerCase() === em)) {
+        showToast(`An exhibitor with the email ${judge.email} has entered ${showTitle} and can't be assigned as a judge`);
+        return;
+      }
+    }
     const { error } = await supabase.from('show_judges').insert({
       show_id:    showId,
       first_name: judge.first_name,

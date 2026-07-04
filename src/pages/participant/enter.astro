@@ -95,6 +95,16 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
     throw 0;
   }
 
+  // Judges can't enter the show they're judging
+  {
+    const { data: judgeRows } = await supabase.from('show_judges').select('email').eq('show_id', showId);
+    const myEmail = (session.user.email || '').toLowerCase();
+    if (myEmail && (judgeRows || []).some((j: any) => j.email?.toLowerCase() === myEmail)) {
+      root.innerHTML = `<div style="text-align:center;padding:60px 0;"><div style="font-size:40px;margin-bottom:14px;">⚖️</div><p style="font-size:20px;font-weight:800;color:#1c1626;margin-bottom:8px;">You're judging this show!</p><p style="color:#6b7c89;font-size:14px;margin-bottom:20px;max-width:380px;margin-left:auto;margin-right:auto;">As the assigned judge for ${esc(show.title)}, you can't enter a pet of your own — it keeps the competition fair for everyone.</p><a href="${base}show?id=${showId}" style="color:#1ba89a;font-weight:700;font-size:14px;">View Show →</a></div>`;
+      throw 0;
+    }
+  }
+
   const categories = catsRes.data || [];
   const sym = SYMS[show.currency] || '£';
   const feeLookup: Record<string,number> = {};

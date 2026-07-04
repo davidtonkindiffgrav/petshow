@@ -43,6 +43,16 @@ serve(async (req: Request) => {
     if (show.status !== 'published') throw new Error('Show is not published');
     if (show.entry_close_date && new Date(show.entry_close_date) < new Date()) throw new Error('Entries are closed');
 
+    // Judges can't enter the show they're judging
+    const { data: judgeRows } = await supabase
+      .from('show_judges')
+      .select('email')
+      .eq('show_id', show_id);
+    const userEmail = (user.email || '').toLowerCase();
+    if (userEmail && (judgeRows || []).some((j: any) => j.email?.toLowerCase() === userEmail)) {
+      throw new Error("You're the assigned judge for this show, so you can't enter it");
+    }
+
     // 4. Service fee & grand total
     const { data: feeRows } = await supabase
       .from('platform_settings')

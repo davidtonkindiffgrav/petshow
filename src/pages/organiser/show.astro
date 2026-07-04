@@ -1793,6 +1793,17 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         phone:      p.querySelector('.j-phone').value.trim() || null,
         photo_url:  p.querySelector('.j-photo-url').value || null,
       }));
+
+      // Judges can't also be exhibitors in the same show
+      const judgeEmails = newJudges.map(j => j.email?.toLowerCase()).filter(Boolean);
+      if (judgeEmails.length) {
+        const { data: entryRows } = await supabase.from('show_entries')
+          .select('exhibitor_email').eq('show_id', showId).not('exhibitor_email', 'is', null);
+        const entryEmails = new Set((entryRows || []).map((r: any) => r.exhibitor_email.toLowerCase()));
+        const clash = judgeEmails.find(em => entryEmails.has(em));
+        if (clash) return showPanelError('judging', `An exhibitor with the email ${clash} has entered this show and can't be assigned as a judge.`);
+      }
+
       // Save ticked judges to saved_judges (skip duplicates by email)
       for (const p of panels) {
         if (!p.querySelector('.j-save')?.checked) continue;
