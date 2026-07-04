@@ -48,7 +48,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   const catIds     = [...new Set((rawEntries ?? []).map(e => e.category_id).filter(Boolean))];
 
   const [showsRes, catsRes] = await Promise.all([
-    showIds.length ? supabase.from('shows').select('id, title, host_org, show_date, entry_close_date, currency, results_published_at').in('id', showIds) : { data: [] },
+    showIds.length ? supabase.from('shows').select('id, title, host_org, show_date, entry_close_date, currency, results_published_at, is_judged').in('id', showIds) : { data: [] },
     catIds.length  ? supabase.from('show_categories').select('id, name').in('id', catIds) : { data: [] },
   ]);
 
@@ -78,6 +78,35 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     const now = new Date();
     if (entry.shows?.entry_close_date && new Date(entry.shows.entry_close_date) > now) return 'open';
     return 'judging';
+  }
+
+  function isVotingNow(entry) {
+    const s = entry.shows;
+    if (!s || s.is_judged !== false || s.results_published_at) return false;
+    const now = new Date();
+    return s.entry_close_date && new Date(s.entry_close_date) <= now;
+  }
+
+  function copyEntryLink(entryId) {
+    const base2 = (typeof base === 'string' ? base : '/');
+    const url = window.location.origin + base2 + 'entry?id=' + encodeURIComponent(entryId);
+    navigator.clipboard.writeText(url).catch(() => {});
+    let toast = document.getElementById('part-link-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'part-link-toast';
+      Object.assign(toast.style, {
+        position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
+        background: '#1c1626', color: 'white', padding: '8px 16px', borderRadius: '10px',
+        fontSize: '13px', fontWeight: '600', zIndex: '200', transition: 'opacity 0.25s',
+        whiteSpace: 'nowrap', opacity: '0', pointerEvents: 'none',
+      });
+      document.body.appendChild(toast);
+    }
+    toast.textContent = 'Entry link copied!';
+    toast.style.opacity = '1';
+    clearTimeout((toast as any)._t);
+    (toast as any)._t = setTimeout(() => { toast.style.opacity = '0'; }, 2500);
   }
 
   const kindMap = {
@@ -169,6 +198,17 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       </div>
       ${badge}
       <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;background:${km.badgeBg};color:${km.badgeColor};white-space:nowrap;flex:none;">${km.badgeText}</span>
+      ${isVotingNow(entry)
+        ? `<button class="share-entry-btn" data-entry-id="${esc(entry.id)}"
+             style="flex:none;background:none;border:1.5px solid #cfeae6;border-radius:8px;padding:5px 10px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:#1ba89a"
+             title="Copy shareable link to boost votes">
+             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+               <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+               <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+             </svg>
+             Share
+           </button>`
+        : ''}
       <span style="flex:none;font-size:13px;font-weight:700;color:#1ba89a;display:flex;align-items:center;gap:3px;">View
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 3l5 5-5 5" stroke="#1ba89a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </span>
@@ -337,6 +377,14 @@ const base = raw.endsWith('/') ? raw : raw + '/';
         if (body)    body.style.display    = 'block';
         if (chevron) chevron.style.transform = 'rotate(180deg)';
       }
+      return;
+    }
+
+    // Share entry link (for public vote shows in voting phase)
+    const shareBtn = e.target.closest('.share-entry-btn');
+    if (shareBtn) {
+      e.stopPropagation();
+      copyEntryLink(shareBtn.dataset.entryId);
       return;
     }
 

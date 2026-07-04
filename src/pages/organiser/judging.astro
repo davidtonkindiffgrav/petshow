@@ -182,16 +182,15 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   import { supabase }    from '../../lib/supabase.js';
   import { uploadImage } from '../../lib/storage.js';
 
-  const MOCK_VOTES = [23, 41, 17, 35, 28, 19, 44, 31];
-
   let base = '';
   let uid  = '';
   let allShows      = [];
   let savedJudges   = [];
   let judgesByShow  = {};
   let catsByShow    = {};
-  let rankingsByShow  = {};  // [show_id][category_id] = Set of judge emails that submitted
+  let rankingsByShow    = {};  // [show_id][category_id] = Set of judge emails that submitted
   let entryCountsByShow = {}; // [show_id][category_id] = number of confirmed entries
+  let voteCountsByShow  = {}; // [show_id][category_id][entry_id] = { confirmed, pending }
   let currentEditJudge = null;
   let drawerPhotoUrl   = null;
 
@@ -424,22 +423,55 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         </div>`;
 
     } else if (isPublic) {
+      const voteCats  = voteCountsByShow[show.id] || {};
+      let totalConfirmed = 0;
+      let totalPending   = 0;
+      Object.values(voteCats).forEach((entryMap: any) => {
+        Object.values(entryMap).forEach((v: any) => {
+          totalConfirmed += v.confirmed || 0;
+          totalPending   += v.pending   || 0;
+        });
+      });
+
       const catBars = cats.length > 0
-        ? cats.map((c, i) => {
-            const votes = MOCK_VOTES[i % MOCK_VOTES.length];
-            const pct   = Math.round((votes / 50) * 100);
-            return `
-              <div class="mb-2.5">
-                <div class="flex justify-between mb-1">
-                  <span class="text-[12px] text-[#5b21b6]">${esc(c.name)}</span>
-                  <span class="text-[12px] font-bold text-[#7c3aed]">${votes}</span>
-                </div>
-                <div class="h-2 rounded-full overflow-hidden" style="background:#ede9fe">
+        ? cats.map(c => {
+            const entryVotes = voteCats[c.id] || {};
+            const catEntries = Object.entries(entryVotes)
+              .map(([eid, v]: [string, any]) => ({ eid, confirmed: v.confirmed || 0 }))
+              .sort((a, b) => b.confirmed - a.confirmed);
+            const maxVotes = catEntries[0]?.confirmed || 0;
+
+            if (catEntries.length === 0) {
+              return `<div class="mb-3">
+                <p class="text-[12px] font-semibold mb-0.5" style="color:#7c3aed">${esc(c.name)}</p>
+                <p class="text-[11px]" style="color:#9b94a8">No votes yet</p>
+              </div>`;
+            }
+
+            const bars = catEntries.slice(0, 5).map(({ eid, confirmed }) => {
+              const pct = maxVotes > 0 ? Math.round((confirmed / maxVotes) * 100) : 0;
+              return `<div class="flex items-center gap-2 mb-1">
+                <div class="flex-1 h-2 rounded-full overflow-hidden" style="background:#ede9fe">
                   <div class="h-full rounded-full" style="width:${pct}%;background:#8b5cf6"></div>
                 </div>
+                <span class="text-[11px] font-bold w-5 text-right shrink-0" style="color:#7c3aed">${confirmed}</span>
+              </div>`;
+            }).join('');
+
+            return `
+              <div class="mb-3">
+                <div class="flex justify-between mb-1">
+                  <p class="text-[12px] font-semibold" style="color:#7c3aed">${esc(c.name)}</p>
+                  <span class="text-[11px]" style="color:#9b94a8">${catEntries.reduce((s,v) => s + v.confirmed, 0)} votes</span>
+                </div>
+                ${bars}
               </div>`;
           }).join('')
-        : `<p class="text-[12px] text-[#7c3aed] opacity-70 mb-1">No classes configured yet — add them in show settings.</p>`;
+        : `<p class="text-[12px] mb-1" style="color:#9b94a8">No classes configured yet.</p>`;
+
+      const alreadyPublished = !!show.results_published_at;
+      const canPublish       = totalConfirmed > 0 && !alreadyPublished;
+      const disabledReason   = alreadyPublished ? '' : totalConfirmed === 0 ? 'No confirmed votes yet' : '';
 
       bodyHTML = `
         <div class="mt-4 pt-4 border-t border-[#efebf5]">
@@ -449,23 +481,39 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
                 <div class="w-2 h-2 rounded-full" style="background:#8b5cf6"></div>
                 <p class="text-[13px] font-bold" style="color:#5b21b6">Public Voting</p>
               </div>
-              <span class="text-[10px] font-bold text-[#9b94a8] bg-[#f5f3fa] px-2 py-0.5 rounded-full uppercase tracking-wide">Preview layout</span>
+              <span class="text-[11px] font-bold px-2 py-0.5 rounded-full" style="background:#ede9fe;color:#7c3aed">
+                ${totalConfirmed} confirmed · ${totalPending} pending
+              </span>
             </div>
-            <p class="text-[12px] mb-2" style="color:#7c3aed">Votes are counted as participants share the show link with friends and family.</p>
-            <button class="cat-toggle flex items-center justify-between w-full mb-1" data-target="cats-${show.id}">
+            <button class="cat-toggle flex items-center justify-between w-full mt-2 mb-1" data-target="cats-${show.id}">
               <span class="text-[11px] font-bold uppercase tracking-wider" style="color:#7c3aed">Vote Counts</span>
               <svg class="cat-chevron transition-transform duration-200" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <polyline points="6 9 12 15 18 9"/>
               </svg>
             </button>
-            <div id="cats-${show.id}" style="display:none">
+            <div id="cats-${show.id}" style="display:none" class="mt-1">
               ${catBars}
             </div>
-            <button disabled title="Coming soon"
-              class="mt-3 w-full text-[12px] font-bold text-[#c4bed0] border border-[#efebf5] px-3 py-2 rounded-btn cursor-not-allowed text-center select-none">
-              Voting: Open / Closed — Coming soon
-            </button>
           </div>
+        </div>
+        <div class="mt-4 pt-4 border-t border-[#efebf5] flex items-center justify-between gap-4">
+          <p class="text-[12px] text-[#9b94a8] min-w-0">
+            ${alreadyPublished
+              ? `<span style="color:#16a34a;font-weight:600">Published ${fmtDate(show.results_published_at)}</span>`
+              : disabledReason}
+          </p>
+          ${alreadyPublished
+            ? `<a href="${base}organiser/results?id=${esc(show.id)}"
+                 class="text-[13px] font-bold px-4 py-2 rounded-btn bg-brand text-white shadow-btn-primary hover:bg-brand-dark transition-colors shrink-0">
+                 Manage Results →
+               </a>`
+            : `<button class="publish-votes-btn shrink-0 text-[13px] font-bold px-4 py-2 rounded-btn transition-colors
+                ${canPublish ? 'bg-[#7c3aed] text-white hover:bg-[#6d28d9]' : 'bg-[#f5f3fa] text-[#c4bed0] cursor-not-allowed'}"
+                data-show-id="${esc(show.id)}"
+                ${!canPublish ? 'disabled' : ''}>
+                Publish Results
+              </button>`
+          }
         </div>`;
     }
 
@@ -555,6 +603,29 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           attachShowStatusListeners();
           showToast('Results published!');
         }
+      }
+
+      const publishVotesBtn = e.target.closest('.publish-votes-btn');
+      if (publishVotesBtn && !publishVotesBtn.disabled) {
+        const showId = publishVotesBtn.dataset.showId;
+        if (!confirm('Publish vote results? Once published, results will be visible to the public. This cannot be undone.')) return;
+        publishVotesBtn.disabled = true;
+        publishVotesBtn.textContent = 'Publishing…';
+
+        const { data, error } = await supabase.rpc('publish_vote_results', { p_show_id: showId });
+        if (error) {
+          publishVotesBtn.disabled = false;
+          publishVotesBtn.textContent = 'Publish Results';
+          showToast('Failed to publish — please try again');
+        } else {
+          const ts = new Date().toISOString();
+          const s  = allShows.find(x => x.id === showId);
+          if (s) s.results_published_at = ts;
+          renderShowStatus();
+          attachShowStatusListeners();
+          showToast('Results published!');
+        }
+        return;
       }
 
       const inviteBtn = e.target.closest('.send-invites-btn');
@@ -937,6 +1008,24 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       for (const e of (entriesRes.data || [])) {
         if (!entryCountsByShow[e.show_id]) entryCountsByShow[e.show_id] = {};
         entryCountsByShow[e.show_id][e.category_id] = (entryCountsByShow[e.show_id][e.category_id] || 0) + 1;
+      }
+
+      // Load vote counts for public vote shows
+      const publicVoteShows = allShows.filter(s => s.is_judged === false);
+      if (publicVoteShows.length > 0) {
+        const voteResults = await Promise.all(
+          publicVoteShows.map(s => supabase.rpc('get_vote_counts', { p_show_id: s.id }))
+        );
+        publicVoteShows.forEach((s, i) => {
+          voteCountsByShow[s.id] = {};
+          for (const row of (voteResults[i].data || [])) {
+            if (!voteCountsByShow[s.id][row.category_id]) voteCountsByShow[s.id][row.category_id] = {};
+            voteCountsByShow[s.id][row.category_id][row.entry_id] = {
+              confirmed: Number(row.confirmed_count) || 0,
+              pending:   Number(row.pending_count)   || 0,
+            };
+          }
+        });
       }
     }
 

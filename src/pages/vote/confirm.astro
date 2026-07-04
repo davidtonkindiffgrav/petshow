@@ -1,0 +1,128 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Vote Confirmed" description="Confirm your vote">
+
+  <div style="background:#F0F7F5;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px">
+
+    <!-- Loading -->
+    <div id="state-loading" style="text-align:center">
+      <div style="width:40px;height:40px;border:3px solid rgba(30,142,126,0.2);border-top-color:#1E8E7E;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px"></div>
+      <p style="font-size:14px;color:#6B7C79;margin:0">Confirming your votes…</p>
+    </div>
+
+    <!-- Success -->
+    <div id="state-success" style="display:none;text-align:center;max-width:420px">
+      <div style="width:72px;height:72px;border-radius:50%;background:#E3F5F2;display:flex;align-items:center;justify-content:center;margin:0 auto 20px">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#1E8E7E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+      <h1 style="font-size:26px;font-weight:800;color:#143A37;margin:0 0 10px">Thank you for voting!</h1>
+      <p style="font-size:15px;color:#6B7C79;margin:0 0 28px;line-height:1.5">
+        Your votes have been confirmed. Results will be announced when voting closes.
+      </p>
+      <a id="link-back-show" href="#"
+        style="display:inline-flex;align-items:center;gap:8px;background:#1E8E7E;color:white;font-weight:700;font-size:14px;padding:13px 26px;border-radius:12px;text-decoration:none">
+        Back to Show
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+        </svg>
+      </a>
+    </div>
+
+    <!-- Already confirmed (idempotent) -->
+    <div id="state-already" style="display:none;text-align:center;max-width:420px">
+      <div style="width:72px;height:72px;border-radius:50%;background:#E3F5F2;display:flex;align-items:center;justify-content:center;margin:0 auto 20px">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#1E8E7E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+      <h1 style="font-size:26px;font-weight:800;color:#143A37;margin:0 0 10px">Your votes are confirmed</h1>
+      <p style="font-size:15px;color:#6B7C79;margin:0 0 28px;line-height:1.5">
+        This voting link has already been used. Your votes are safely recorded.
+      </p>
+      <a id="link-back-show-already" href="#"
+        style="display:inline-flex;align-items:center;gap:8px;background:#1E8E7E;color:white;font-weight:700;font-size:14px;padding:13px 26px;border-radius:12px;text-decoration:none">
+        Back to Show
+      </a>
+    </div>
+
+    <!-- Invalid / expired -->
+    <div id="state-invalid" style="display:none;text-align:center;max-width:420px">
+      <div style="width:72px;height:72px;border-radius:50%;background:#FEF2F2;display:flex;align-items:center;justify-content:center;margin:0 auto 20px">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+        </svg>
+      </div>
+      <h1 style="font-size:26px;font-weight:800;color:#143A37;margin:0 0 10px">This link has expired</h1>
+      <p style="font-size:15px;color:#6B7C79;margin:0 0 28px;line-height:1.5">
+        Voting confirmation links expire after 30 minutes. Please go back to the show page to vote again.
+      </p>
+      <a id="link-try-again" href="#"
+        style="display:inline-flex;align-items:center;gap:8px;background:#1E8E7E;color:white;font-weight:700;font-size:14px;padding:13px 26px;border-radius:12px;text-decoration:none">
+        Go to Show Page
+      </a>
+    </div>
+
+  </div>
+
+  <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+</BaseLayout>
+
+<script>
+  import { supabase } from '../../lib/supabase.js';
+
+  const params  = new URLSearchParams(window.location.search);
+  const token   = params.get('token');
+  const base    = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
+  const showsUrl = base + 'organiser/shows';
+
+  function show(id: string) {
+    document.getElementById('state-loading')!.style.display = 'none';
+    document.getElementById(id)!.style.display = 'block';
+  }
+
+  function setShowLink(elId: string, showId: string | null) {
+    const el = document.getElementById(elId) as HTMLAnchorElement | null;
+    if (!el) return;
+    el.href = showId ? base + 'show?id=' + encodeURIComponent(showId) : base;
+  }
+
+  if (!token) {
+    show('state-invalid');
+    (document.getElementById('link-try-again') as HTMLAnchorElement).href = base;
+  } else {
+    const fnUrl = import.meta.env.PUBLIC_SUPABASE_URL + '/functions/v1/confirm-vote';
+
+    fetch(fnUrl, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', apikey: import.meta.env.PUBLIC_SUPABASE_ANON_KEY },
+      body:    JSON.stringify({ token }),
+    })
+      .then(r => r.json())
+      .then(result => {
+        if (result.success) {
+          // Mark voted in localStorage so the show page can show a soft warning
+          if (result.show_id) {
+            try { localStorage.setItem('ps_voted_' + result.show_id, '1'); } catch {}
+          }
+          setShowLink('link-back-show', result.show_id);
+          show('state-success');
+        } else if (result.error === 'already_confirmed') {
+          setShowLink('link-back-show-already', result.show_id);
+          show('state-already');
+        } else {
+          // invalid_or_expired or other error
+          (document.getElementById('link-try-again') as HTMLAnchorElement).href = base;
+          show('state-invalid');
+        }
+      })
+      .catch(() => {
+        (document.getElementById('link-try-again') as HTMLAnchorElement).href = base;
+        show('state-invalid');
+      });
+  }
+</script>
