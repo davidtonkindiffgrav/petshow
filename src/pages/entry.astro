@@ -91,6 +91,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
 <script>
   import { supabase } from '../lib/supabase.js';
+  import { isVotingOpen } from '../lib/voteWindow.js';
 
   const params  = new URLSearchParams(window.location.search);
   const entryId = params.get('id');
@@ -121,7 +122,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
         // Load show + category in parallel
         const [showRes, catRes] = await Promise.all([
-          supabase.from('shows').select('id, title, is_judged, entry_close_date, results_published_at').eq('id', entry.show_id).single(),
+          supabase.from('shows').select('id, title, is_judged, vote_open_mode, entry_open_date, entry_open_time, entry_close_date, entry_close_time, show_date, show_time, timezone, results_published_at').eq('id', entry.show_id).single(),
           entry.category_id
             ? supabase.from('show_categories').select('id, name').eq('id', entry.category_id).single()
             : Promise.resolve({ data: null }),
@@ -131,12 +132,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         const cat  = catRes.data;
 
         // Is voting open?
-        const now = new Date();
-        const isVoting = show
-          && show.is_judged === false
-          && !show.results_published_at
-          && show.entry_close_date
-          && new Date(show.entry_close_date) <= now;
+        const isVoting = show && isVotingOpen(show);
 
         // Show page URL
         const showUrl = show ? base + 'show?id=' + encodeURIComponent(show.id) : base;

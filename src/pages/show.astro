@@ -151,11 +151,15 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 <script>
   import { getAuth } from '../lib/auth.js';
   import { supabase } from '../lib/supabase.js';
+  import { zonedDateTime } from '../lib/voteWindow.js';
 
   const CURRENCY_SYMBOLS = { GBP: '£', USD: '$', EUR: '€', AUD: 'A$', CAD: 'C$', NZD: 'NZ$', ZAR: 'R', SGD: 'S$' };
   const SHOW_TYPE_LABELS = { beauty_contest: 'Beauty Contest', fun_stakes: 'Fun Stakes', memorial: 'Memorial Show', other: 'Other' };
 
   let show, categories, entries, sponsors, showState, base, showId, sym, totalRaised, displayFee, isPreview;
+  let earlyVoting = false;   // vote show accepting votes while entries are still open
+  let votingActive = false;  // any state where the ballot UI is live
+  let enterBtnVisible = false;
   let voteSelections = {}; // { [category_id]: entry_id }
   let focusCategoryId = null;
   let focusEntryId = null;
@@ -205,6 +209,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     sponsors    = sponsorsRes.data || [];
     sym         = CURRENCY_SYMBOLS[show.currency] || '£';
     showState   = getShowState(show);
+    earlyVoting  = showState === 'entries_open' && show.is_judged === false && show.vote_open_mode === 'on_entries_open';
+    votingActive = showState === 'voting' || earlyVoting;
     totalRaised = entries.length * (show.entry_fee || 0);
 
     const feeLookup = {};
@@ -224,22 +230,26 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     renderBody();
     wireButtons();
     renderStickyCTA();
-    if (showState === 'voting') postRenderVoting();
+    if (votingActive) postRenderVoting();
     if (isPreview) document.getElementById('sticky-cta').style.display = 'none';
   }
 
   function getShowState(s) {
-    const now     = new Date();
+    const now       = new Date();
     if (s.archived_at)          return 'archived';
     if (s.results_published_at) return 'results';
-    const open    = s.entry_open_date  ? new Date(s.entry_open_date)  : null;
-    const close   = s.entry_close_date ? new Date(s.entry_close_date) : null;
-    const showDay = s.show_date        ? new Date(s.show_date)        : null;
+    const open      = zonedDateTime(s.entry_open_date,  s.entry_open_time,  s.timezone);
+    const close     = zonedDateTime(s.entry_close_date, s.entry_close_time, s.timezone);
+    const showStart = zonedDateTime(s.show_date,        s.show_time,        s.timezone);
+    // Public vote shows: voting cuts off the moment the show starts (missing
+    // start time = midnight, i.e. the start of show day).
+    if (s.is_judged === false && showStart && now >= showStart) return 'vote_closed';
     if (!open || open > now) return 'upcoming';
     if (!close || close >= now) return 'entries_open';
-    if (!showDay || showDay > now) return s.is_judged === false ? 'voting' : 'judging';
-    if (showDay.toDateString() === now.toDateString()) return 'show_day';
-    return s.is_judged === false ? 'voting' : 'judging';
+    if (s.is_judged === false) return 'voting';
+    const showDay = s.show_date ? new Date(s.show_date) : null;
+    if (showDay && showDay.toDateString() === now.toDateString()) return 'show_day';
+    return 'judging';
   }
 
   // ── Hero ──────────────────────────────────────────────────────────────────────
@@ -252,18 +262,28 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       entries_open: { label: 'ENTRIES OPEN',           bg: '#1E9E5A' },
       judging:      { label: 'JUDGING UNDERWAY',       bg: '#D97706' },
       voting:       { label: 'VOTING OPEN',            bg: '#5B43C4' },
+      vote_closed:  { label: '🗳️ VOTING CLOSED',       bg: '#D97706' },
       show_day:     { label: '🎉 SHOW DAY!',            bg: '#7c3aed' },
       results:      { label: '🏆 RESULTS PUBLISHED',   bg: '#5B43C4' },
       archived:     { label: '📦 ARCHIVED',             bg: '#92400e' },
     }[showState];
+    if (earlyVoting) statusPills.label = 'ENTRIES & VOTING OPEN';
+
+    const voteCloseLabel = show.show_date
+      ? `🗳️ Voting closes ${fmt(show.show_date)}${show.show_time ? ' at ' + show.show_time : ''}`
+      : '';
 
     const datePill = showState === 'results'
       ? `<span style="color:rgba(255,255,255,0.6);font-size:13px;margin-left:4px">Thank you to everyone who entered!</span>`
       : showState === 'upcoming' && show.entry_open_date
         ? pill(`📅 Expected Open: ${fmt(show.entry_open_date)}`)
-        : show.entry_close_date
-          ? pill(`📅 Closes ${fmt(show.entry_close_date)}`)
-          : '';
+        : showState === 'voting' && voteCloseLabel
+          ? pill(voteCloseLabel)
+          : showState === 'vote_closed'
+            ? pill('Results coming soon')
+            : show.entry_close_date
+              ? pill(`📅 Closes ${fmt(show.entry_close_date)}`)
+              : '';
 
     const activeLogoUrl = show.logo_source === 'club' ? show.org_logo_url : show.logo_url;
     const logoEl = activeLogoUrl
@@ -347,10 +367,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       el.innerHTML = archivedBody();
     } else if (showState === 'results') {
       el.innerHTML = resultsBody();
-    } else if (showState === 'judging') {
+    } else if (showState === 'judging' || showState === 'show_day' || showState === 'vote_closed') {
       el.innerHTML = interimBody();
     } else if (showState === 'voting') {
       el.innerHTML = votingBody();
+    } else if (earlyVoting) {
+      el.innerHTML = state1Body() + `<div style="margin-top:28px">${votingBody()}</div>`;
     } else {
       el.innerHTML = state1Body();
     }
@@ -375,15 +397,16 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   }
 
   function interimBody() {
-    const isVoting = showState === 'voting';
-    const statusMsg = isVoting
-      ? 'Community voting is underway. Results coming soon.'
+    const isVoteClosed = showState === 'vote_closed';
+    const title = isVoteClosed ? 'Voting Closed' : 'Judging Underway';
+    const statusMsg = isVoteClosed
+      ? 'Voting has closed. Results are being finalised and will be published soon.'
       : 'Entries are closed and judging is underway. Results coming soon.';
     return `
       <div style="display:grid;grid-template-columns:1fr 1.6fr 1fr;gap:20px;align-items:start">
         <div style="display:flex;flex-direction:column;gap:16px">
           ${card(`
-            <h3 style="font-size:15px;font-weight:700;color:#143A37;margin:0 0 8px">${isVoting ? 'Voting Underway' : 'Judging Underway'}</h3>
+            <h3 style="font-size:15px;font-weight:700;color:#143A37;margin:0 0 8px">${title}</h3>
             <p style="font-size:13px;color:#6B7C79;margin:0">${statusMsg}</p>
           `)}
           ${entryClassesCard(false)}
@@ -532,7 +555,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const rows = [
       { label: 'Entries Open',  date: show.entry_open_date,  time: show.entry_open_time },
       { label: 'Entries Close', date: show.entry_close_date, time: show.entry_close_time },
-      { label: 'Show Day',      date: show.show_date },
+      { label: 'Show Day',      date: show.show_date,        time: show.show_time },
     ].filter(d => d.date).map((d, i) => {
       const past   = new Date(d.date).getTime() < now;
       const border = i > 0 ? 'border-top:1px solid #F0F4F3;' : '';
@@ -807,9 +830,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   // ── Sticky CTA ────────────────────────────────────────────────────────────────
 
   function renderStickyCTA() {
-    if (showState === 'results' || showState === 'judging' || showState === 'voting' || showState === 'upcoming' || showState === 'archived') return;
+    if (showState !== 'entries_open') return;
     const fee     = displayFee;
-    const ctaEl   = document.getElementById('sticky-cta');
     const textEl  = document.getElementById('sticky-text');
     const feeEl   = document.getElementById('sticky-fee');
     const btnEl   = document.getElementById('sticky-btn');
@@ -819,14 +841,27 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     btnEl.textContent  = 'Enter Now →';
 
     btnEl.addEventListener('click', handleEnterNow);
-    ctaEl.style.display = 'block';
+    syncStickyFooters();
 
     const enterBtn = document.getElementById('btn-enter-now');
     if (enterBtn) {
       new IntersectionObserver(evts => {
-        ctaEl.style.display = evts[0].isIntersecting ? 'none' : 'block';
+        enterBtnVisible = evts[0].isIntersecting;
+        syncStickyFooters();
       }, { threshold: 0.5 }).observe(enterBtn);
     }
+  }
+
+  // One fixed footer at a time: the vote basket wins over the Enter CTA. In
+  // early-voting mode the basket only appears once a favourite is picked.
+  function syncStickyFooters() {
+    const ctaEl  = document.getElementById('sticky-cta');
+    const basket = document.getElementById('vote-basket');
+    const count  = Object.keys(voteSelections).length;
+    const basketShowing = votingActive && (!earlyVoting || count > 0);
+    basket.style.display = basketShowing ? 'block' : 'none';
+    const ctaAllowed = showState === 'entries_open' && !isPreview;
+    ctaEl.style.display = ctaAllowed && !enterBtnVisible && !basketShowing ? 'block' : 'none';
   }
 
   // ── Classes modal ─────────────────────────────────────────────────────────────
@@ -1033,15 +1068,13 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       ${banner}
       <div style="margin-bottom:20px">
         <h2 style="font-size:18px;font-weight:800;color:#143A37;margin:0 0 4px">Vote for Your Favourites</h2>
-        <p style="font-size:13px;color:#6B7C79;margin:0">Pick your favourite pet in each category, then submit your votes to receive a confirmation email.</p>
+        <p style="font-size:13px;color:#6B7C79;margin:0">Pick your favourite pet in each category, then submit your votes to receive a confirmation email.${show.show_date ? ` Voting closes ${fmt(show.show_date)}${show.show_time ? ' at ' + show.show_time : ''}.` : ''}</p>
       </div>
       ${catSections || `<p style="font-size:14px;color:#6B7C79">No entries yet.</p>`}
       <div style="height:72px"></div>`;
   }
 
   function postRenderVoting() {
-    // Show vote basket
-    document.getElementById('vote-basket').style.display = 'block';
     updateVoteBasket();
 
     // Wire card clicks and share buttons
@@ -1109,6 +1142,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     btn.disabled = count === 0;
     btn.style.opacity = count === 0 ? '0.5' : '1';
     btn.style.cursor  = count === 0 ? 'not-allowed' : 'pointer';
+    syncStickyFooters();
   }
 
   function copyEntryLink(entryId) {

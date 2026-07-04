@@ -13,6 +13,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 <script>
   import { getAuth } from '../lib/auth.js';
   import { supabase } from '../lib/supabase.js';
+  import { isVotingOpen } from '../lib/voteWindow.js';
 
   const { session, profile, base } = await getAuth();
   if (!session) { window.location.replace(base + 'login'); throw 0; }
@@ -48,7 +49,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   const catIds     = [...new Set((rawEntries ?? []).map(e => e.category_id).filter(Boolean))];
 
   const [showsRes, catsRes] = await Promise.all([
-    showIds.length ? supabase.from('shows').select('id, title, host_org, show_date, entry_close_date, currency, results_published_at, is_judged').in('id', showIds) : { data: [] },
+    showIds.length ? supabase.from('shows').select('id, title, host_org, show_date, show_time, timezone, vote_open_mode, entry_open_date, entry_open_time, entry_close_date, entry_close_time, currency, results_published_at, is_judged').in('id', showIds) : { data: [] },
     catIds.length  ? supabase.from('show_categories').select('id, name').in('id', catIds) : { data: [] },
   ]);
 
@@ -81,10 +82,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   }
 
   function isVotingNow(entry) {
-    const s = entry.shows;
-    if (!s || s.is_judged !== false || s.results_published_at) return false;
-    const now = new Date();
-    return s.entry_close_date && new Date(s.entry_close_date) <= now;
+    return !!entry.shows && isVotingOpen(entry.shows);
   }
 
   function copyEntryLink(entryId) {

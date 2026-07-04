@@ -6,6 +6,33 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Convert a date value + 'HH:MM' wall time in an IANA timezone to a UTC Date.
+// Mirrors src/lib/voteWindow.js — keep the two in sync.
+function zonedDateTime(dateVal: unknown, timeStr: string | null, timeZone: string | null): Date | null {
+  if (!dateVal) return null;
+  const [y, m, d] = String(dateVal).slice(0, 10).split('-').map(Number);
+  const [hh, mm] = String(timeStr || '0:0').split(':').map(Number);
+  if (!y || !m || !d) return null;
+  if (!timeZone) return new Date(Date.UTC(y, m - 1, d, hh || 0, mm || 0));
+
+  const target = Date.UTC(y, m - 1, d, hh || 0, mm || 0);
+  let guess = target;
+  for (let i = 0; i < 2; i++) {
+    guess += target - wallClockUtc(guess, timeZone);
+  }
+  return new Date(guess);
+}
+
+function wallClockUtc(ts: number, timeZone: string): number {
+  const p: Record<string, string> = {};
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone, year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  }).formatToParts(new Date(ts));
+  for (const { type, value } of parts) p[type] = value;
+  return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second);
+}
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -29,10 +56,10 @@ serve(async (req: Request) => {
     const resendKey = Deno.env.get('RESEND_API_KEY');
     const fromAddr  = Deno.env.get('RESEND_FROM') || 'Fur to Feathers <noreply@furtofeathers.com>';
 
-    // Verify show exists, is public vote, and voting is open (entries closed, not yet published)
+    // Verify show exists, is public vote, and voting is inside its window
     const { data: show, error: showErr } = await adminClient
       .from('shows')
-      .select('id, title, is_judged, entry_close_date, results_published_at')
+      .select('id, title, is_judged, vote_open_mode, entry_open_date, entry_open_time, entry_close_date, entry_close_time, show_date, show_time, timezone, results_published_at')
       .eq('id', show_id)
       .single();
 
@@ -41,8 +68,21 @@ serve(async (req: Request) => {
     if (show.results_published_at) throw new Error('Voting has closed — results are published');
 
     const now = new Date();
-    if (show.entry_close_date && new Date(show.entry_close_date) > now) {
-      throw new Error('Voting has not opened yet — entries are still open');
+
+    // Voting cuts off the moment the show starts (no start time = midnight, start of show day)
+    const showStart = zonedDateTime(show.show_date, show.show_time, show.timezone);
+    if (showStart && now >= showStart) {
+      throw new Error('Voting has closed for this show');
+    }
+
+    // Voting opens with entries, or once they close, per the organiser's setting
+    const opensAt = show.vote_open_mode === 'on_entries_open'
+      ? zonedDateTime(show.entry_open_date, show.entry_open_time, show.timezone)
+      : zonedDateTime(show.entry_close_date, show.entry_close_time, show.timezone);
+    if (opensAt && now < opensAt) {
+      throw new Error(show.vote_open_mode === 'on_entries_open'
+        ? 'Voting has not opened yet'
+        : 'Voting has not opened yet — entries are still open');
     }
 
     // Check for existing vote for this email in this show
