@@ -191,7 +191,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
               <input type="checkbox" id="tog-sponsors" class="cert-toggle w-4 h-4 accent-brand" data-key="show_sponsors" />
             </label>
 
-            <label class="flex items-center justify-between cursor-pointer">
+            <label id="lbl-signature" class="flex items-center justify-between cursor-pointer">
               <div>
                 <span class="text-[13px] font-semibold text-[#1c1626]">Judge Signature</span>
                 <p class="text-[11px] text-[#9b94a8] mt-0.5">Bottom-right corner</p>
@@ -623,6 +623,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       } catch {}
     }
     if (design.image_mode !== 'photo') previewPhotoUrl = null;
+
+    // Public-voting shows have no judge, so no signature option
+    if (show.is_judged === false) {
+      design.show_signature = false;
+      document.getElementById('lbl-signature').style.display = 'none';
+    }
 
     updateLockUI(!!show.cert_design_locked_at);
     syncUI();

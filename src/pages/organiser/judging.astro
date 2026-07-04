@@ -406,18 +406,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
               : disabledReason}
           </p>
           ${alreadyPublished
-            ? `<div class="flex items-center gap-2 shrink-0">
-                 ${show.has_digital_certs
-                   ? `<a href="${base}organiser/cert-designer?id=${esc(show.id)}"
-                        class="text-[12px] font-semibold text-brand border border-brand/30 px-3 py-2 rounded-btn hover:bg-brand/5 transition-colors">
-                        Design Certificate →
-                      </a>`
-                   : ''}
-                 <a href="${base}organiser/results?id=${esc(show.id)}"
-                   class="text-[13px] font-bold px-4 py-2 rounded-btn bg-brand text-white shadow-btn-primary hover:bg-brand-dark transition-colors">
-                   Manage Results →
-                 </a>
-               </div>`
+            ? `<a href="${base}organiser/results?id=${esc(show.id)}"
+                 class="text-[13px] font-bold px-4 py-2 rounded-btn bg-brand text-white shadow-btn-primary hover:bg-brand-dark transition-colors shrink-0">
+                 Manage Results →
+               </a>`
             : `<button class="publish-results-btn shrink-0 text-[13px] font-bold px-4 py-2 rounded-btn transition-colors
                 ${canPublish ? 'bg-brand text-white shadow-btn-primary hover:bg-brand-dark' : 'bg-[#f5f3fa] text-[#c4bed0] cursor-not-allowed'}"
                 data-show-id="${esc(show.id)}"
@@ -534,10 +526,16 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
             </div>
             <p class="text-[13px] text-[#6f6880]">${fmtDate(show.show_date)}</p>
           </div>
-          <a href="${base}organiser/show?id=${esc(show.id)}"
-            class="text-[12px] font-semibold text-brand hover:text-brand-dark transition-colors shrink-0">
-            Show settings →
-          </a>
+          <div class="flex items-center gap-4 shrink-0">
+            <a href="${base}organiser/cert-designer?id=${esc(show.id)}"
+              class="text-[12px] font-semibold text-brand hover:text-brand-dark transition-colors">
+              Design Certificate →
+            </a>
+            <a href="${base}organiser/show?id=${esc(show.id)}"
+              class="text-[12px] font-semibold text-brand hover:text-brand-dark transition-colors">
+              Show settings →
+            </a>
+          </div>
         </div>
         ${bodyHTML}
       </div>`;

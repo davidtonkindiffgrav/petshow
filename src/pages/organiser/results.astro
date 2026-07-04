@@ -424,6 +424,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     _certEnabled = !!show.cert_design_locked_at;
     try { _design = { ...CERT_DEFAULTS, ...JSON.parse(show.cert_design_json || '{}') }; }
     catch { _design = { ...CERT_DEFAULTS }; }
+    if (show.is_judged === false) _design.show_signature = false;
 
     // Page header
     document.getElementById('show-title').textContent = show.title || 'Untitled Show';

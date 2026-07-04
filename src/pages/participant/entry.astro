@@ -54,7 +54,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
   if (!error && entry) {
     const [showRes, catRes, judgeRes] = await Promise.all([
-      entry.show_id     ? supabase.from('shows').select('id, title, host_org, show_date, entry_close_date, currency, results_published_at, cert_design_json, logo_url, org_logo_url').eq('id', entry.show_id).single() : { data: null },
+      entry.show_id     ? supabase.from('shows').select('id, title, host_org, show_date, entry_close_date, currency, results_published_at, cert_design_json, logo_url, org_logo_url, is_judged').eq('id', entry.show_id).single() : { data: null },
       entry.category_id ? supabase.from('show_categories').select('id, name').eq('id', entry.category_id).single() : { data: null },
       entry.show_id     ? supabase.from('show_judges').select('first_name, last_name').eq('show_id', entry.show_id).limit(1).maybeSingle() : { data: null },
     ]);
@@ -254,6 +254,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       try {
         const canvas = document.createElement('canvas');
         const design = { ...CERT_DEFAULTS, ...(show.cert_design_json ? JSON.parse(show.cert_design_json) : {}) };
+        if (show.is_judged === false) design.show_signature = false;
         await renderCertificate(canvas, { show, entry, category: entry.show_categories, sponsors: [], design });
         const PAGE_PT = { a4: [842, 595], letter: [792, 612] };
         const [W, H] = PAGE_PT[design.page_size || 'a4'];
