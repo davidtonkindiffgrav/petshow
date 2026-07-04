@@ -739,8 +739,8 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       const { data } = await supabase.from('shows').select('*').eq('id', override).eq('created_by', uid).single();
       show = data;
     } else {
-      const { data } = await supabase.from('shows').select('*').eq('created_by', uid).eq('status', 'published').is('archived_at', null).maybeSingle();
-      show = data;
+      const { data: showRows } = await supabase.from('shows').select('*').eq('created_by', uid).eq('status', 'published').is('archived_at', null).order('created_at', { ascending: false }).limit(1);
+      show = showRows?.[0] ?? null;
     }
 
     document.getElementById('state-loading').style.display = 'none';
