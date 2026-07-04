@@ -83,12 +83,22 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       </div>
 
       <div class="mb-5">
-        <label for="s1-show-date" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Show Date <span class="text-red-400">*</span> <span class="text-[#9b94a8] font-normal">&amp; start time</span></label>
+        <label for="s1-show-date" class="flex items-center gap-1.5 text-[13px] font-semibold text-[#4a4357] mb-1.5">
+          Show Day / Results Day <span class="text-red-400">*</span> <span class="text-[#9b94a8] font-normal">&amp; start time</span>
+          <button type="button" aria-label="What does this date mean?"
+            onclick="document.getElementById('s1-show-date-info').classList.toggle('hidden')"
+            class="w-[17px] h-[17px] rounded-full border border-[#b8e4e0] text-brand text-[11px] font-bold leading-none inline-flex items-center justify-center hover:bg-brand hover:text-white transition-colors cursor-pointer">?</button>
+        </label>
         <div class="flex gap-2">
           <input type="date" id="s1-show-date"
             class="flex-1 min-w-0 border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
           <input type="time" id="s1-show-time"
             class="shrink-0 border border-[#b8e4e0] rounded-[11px] px-3 py-3 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        </div>
+        <div id="s1-show-date-info" class="hidden mt-2 bg-[#F0F7F5] border border-[#b8e4e0] rounded-[10px] px-3.5 py-3 text-[12px] text-[#4a7a74] leading-relaxed">
+          <p class="font-bold mb-1">This is the day your show wraps up — what happens on it depends on how winners are decided:</p>
+          <p class="mb-1"><strong>Expert judged:</strong> the day judging takes place and results can be published. Entries must close before this date.</p>
+          <p><strong>Public voting:</strong> the moment voting closes (this date at the start time, or midnight if no time is set). You publish the results once voting ends.</p>
         </div>
         <p class="text-[11.5px] text-[#9b94a8] mt-1.5">Start time is optional. For public voting shows, voting closes when the show starts.</p>
       </div>
@@ -614,6 +624,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   import { getAuth } from '../../lib/auth.js';
   import { supabase } from '../../lib/supabase.js';
   import { uploadImage } from '../../lib/storage.js';
+  import { showUploadOverlay, hideUploadOverlay } from '../../lib/uploadOverlay.js';
   import { FUN_STAKES, STANDARD_CLASSES } from '../../lib/show-categories.js';
 
   // ─── Constants ──────────────────────────────────────────────────────────────
@@ -1454,6 +1465,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       async function processJudgePhoto(file) {
         if (!file || file.size > maxUploadMb * 1024 * 1024 || !show.id) return;
         photoBtn.textContent = 'Uploading…';
+        showUploadOverlay('Uploading photo…');
         try {
           const url = await uploadImage(`judges/${show.id}/judge-${i}`, file);
           if (!show.judges[i]) show.judges[i] = {};
@@ -1461,6 +1473,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           photoCircle.innerHTML = `<img src="${url}" class="w-full h-full object-cover" />`;
           photoBtn.textContent = 'Replace photo';
         } catch { photoBtn.textContent = 'Failed — try again'; }
+        finally { hideUploadOverlay(); }
       }
 
       photoBtn.addEventListener('click', () => photoInput.click());
@@ -1584,7 +1597,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         </div>
         <div class="px-5">
           ${reviewRow('Show Name', show.title, 1)}
-          ${reviewRow('Show Date', show.show_date ? `${show.show_date}${show.show_time ? ' at ' + show.show_time : ''}` : '—', 1)}
+          ${reviewRow('Show Day / Results Day', show.show_date ? `${show.show_date}${show.show_time ? ' at ' + show.show_time : ''}` : '—', 1)}
           ${reviewRow('Entries Close', show.entry_close_date ? `${show.entry_close_date}${show.entry_close_time ? ' at ' + show.entry_close_time : ''}` : '—', 1)}
           ${reviewRow('Timezone', show.timezone || '—', 1)}
           ${reviewRow('Organisation', ORG_TYPE_LABELS[show.org_type] || '—', 1)}
@@ -1813,6 +1826,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       const path = getPath();
       if (!path) { label.textContent = 'Save show progress first'; return; }
       label.textContent = 'Uploading…';
+      showUploadOverlay();
       try {
         const url = await uploadImage(path, file);
         preview.src = url;
@@ -1821,6 +1835,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         label.textContent = 'Click to replace';
         onUrl(url);
       } catch { label.textContent = 'Upload failed — try again'; }
+      finally { hideUploadOverlay(); }
     }
 
     trigger.addEventListener('click', () => input.click());

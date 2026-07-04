@@ -181,6 +181,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   import { getAuth }     from '../../lib/auth.js';
   import { supabase }    from '../../lib/supabase.js';
   import { uploadImage } from '../../lib/storage.js';
+  import { showUploadOverlay, hideUploadOverlay } from '../../lib/uploadOverlay.js';
 
   let base = '';
   let uid  = '';
@@ -1056,12 +1057,15 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       const file = photoInput.files?.[0];
       if (!file) return;
       photoBtn.textContent = 'Uploading…';
+      showUploadOverlay('Uploading photo…');
       try {
         const path = `judges/book/${uid}/${currentEditJudge?.id || 'new-' + Date.now()}`;
         const url  = await uploadImage(path, file);
         setDrawerPhoto(url);
       } catch {
         photoBtn.textContent = 'Upload failed — try again';
+      } finally {
+        hideUploadOverlay();
       }
     });
 

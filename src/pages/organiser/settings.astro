@@ -167,6 +167,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   import { supabase } from '../../lib/supabase.js';
   import { getAuth }  from '../../lib/auth.js';
   import { uploadImage } from '../../lib/storage.js';
+  import { showUploadOverlay, hideUploadOverlay } from '../../lib/uploadOverlay.js';
   import { TIMEZONES } from '../../lib/timezones.js';
   import { CURRENCIES } from '../../lib/currencies.js';
 
@@ -306,6 +307,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.getElementById('avatar-status').style.color = '#6f6880';
     document.getElementById('avatar-status').style.display = 'block';
 
+    showUploadOverlay('Uploading photo…');
     try {
       const url = await uploadImage(`profiles/${userId}/avatar`, file);
 
@@ -318,6 +320,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       showStatus('avatar-status', 'Photo updated', false);
     } catch (err) {
       showStatus('avatar-status', err.message || 'Upload failed', true);
+    } finally {
+      hideUploadOverlay();
     }
     e.target.value = '';
   });

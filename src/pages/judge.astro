@@ -450,6 +450,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   import { getAuth }     from '../lib/auth.js';
   import { supabase }    from '../lib/supabase.js';
   import { uploadImage } from '../lib/storage.js';
+  import { showUploadOverlay, hideUploadOverlay } from '../lib/uploadOverlay.js';
   import Sortable        from 'sortablejs';
 
   // ── Helpers ─────────────────────────────────────────────────────────────
@@ -1334,6 +1335,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       if (!file) return;
       const btn = document.getElementById('btn-avatar');
       btn.style.opacity = '0.4';
+      showUploadOverlay('Uploading photo…');
       try {
         const url = await uploadImage(`judges/profile/${state.judgeUserId}`, file);
         state.judgePhoto = url;
@@ -1344,6 +1346,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       } catch {
         // silently fail
       } finally {
+        hideUploadOverlay();
         btn.style.opacity = '1';
         avatarFileInput.value = '';
       }

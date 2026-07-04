@@ -151,12 +151,22 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           </select>
         </div>
         <div>
-          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Show Date <span class="text-red-400">*</span> <span class="text-[#9b94a8] font-normal">&amp; start time</span></label>
+          <label class="flex items-center gap-1.5 text-[13px] font-semibold text-[#4a4357] mb-1.5">
+            Show Day / Results Day <span class="text-red-400">*</span> <span class="text-[#9b94a8] font-normal">&amp; start time</span>
+            <button type="button" aria-label="What does this date mean?"
+              onclick="document.getElementById('mgmt-show-date-info').classList.toggle('hidden')"
+              class="w-[17px] h-[17px] rounded-full border border-[#b8e4e0] text-brand text-[11px] font-bold leading-none inline-flex items-center justify-center hover:bg-brand hover:text-white transition-colors cursor-pointer">?</button>
+          </label>
           <div class="flex gap-2">
             <input type="date" id="mgmt-show-date"
               class="flex-1 min-w-0 border border-[#b8e4e0] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
             <input type="time" id="mgmt-show-time"
               class="shrink-0 border border-[#b8e4e0] rounded-[11px] px-3 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+          </div>
+          <div id="mgmt-show-date-info" class="hidden mt-2 bg-[#F0F7F5] border border-[#b8e4e0] rounded-[10px] px-3.5 py-3 text-[12px] text-[#4a7a74] leading-relaxed">
+            <p class="font-bold mb-1">This is the day your show wraps up — what happens on it depends on how winners are decided:</p>
+            <p class="mb-1"><strong>Expert judged:</strong> the day judging takes place and results can be published. Entries must close before this date.</p>
+            <p><strong>Public voting:</strong> the moment voting closes (this date at the start time, or midnight if no time is set). You publish the results once voting ends.</p>
           </div>
           <p class="text-[11.5px] text-[#9b94a8] mt-1.5">Start time is optional. For public voting shows, voting closes when the show starts.</p>
         </div>
@@ -640,6 +650,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   import { getAuth } from '../../lib/auth.js';
   import { supabase } from '../../lib/supabase.js';
   import { uploadImage } from '../../lib/storage.js';
+  import { showUploadOverlay, hideUploadOverlay } from '../../lib/uploadOverlay.js';
   import { FUN_STAKES, STANDARD_CLASSES } from '../../lib/show-categories.js';
 
   // ── State ────────────────────────────────────────────────────────────────────
@@ -1136,7 +1147,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     setHeader('basics', '#22c55e', 'Configured', 'Show Basics', [
       ['Name',      show.title || '—'],
-      ['Show date', fmtDateTime(show.show_date, show.show_time)],
+      ['Show day / results', fmtDateTime(show.show_date, show.show_time)],
       ...(show.entry_open_date ? [['Opens', fmtDateTime(show.entry_open_date, show.entry_open_time)]] : []),
       ['Closes',    fmtDateTime(show.entry_close_date, show.entry_close_time)],
       ['Org type',  ORG_TYPE_LABELS[show.org_type] || '—'],
@@ -1460,16 +1471,24 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       if (e.target.closest('.cancel-btn')) closeDrawer();
     });
 
-    // Save buttons
-    document.querySelector('#panel-basics .save-btn').addEventListener('click', saveBasics);
-    document.querySelector('#panel-showtype .save-btn').addEventListener('click', saveShowType);
-    document.querySelector('#panel-breed .save-btn').addEventListener('click', saveBreed);
-    document.querySelector('#panel-classes .save-btn').addEventListener('click', saveClasses);
-    document.querySelector('#panel-sponsorship .save-btn').addEventListener('click', saveSponsorship);
-    document.querySelector('#panel-judging .save-btn').addEventListener('click', saveJudging);
-    document.querySelector('#panel-awards .save-btn').addEventListener('click', saveAwards);
-    document.querySelector('#panel-fundraising .save-btn').addEventListener('click', saveFundraising);
-    document.querySelector('#panel-branding .save-btn').addEventListener('click', saveBranding);
+    // Save buttons — published shows get a confirmation first, since changes
+    // go live immediately for entrants and the public
+    const confirmIfPublished = fn => () => {
+      if (show.status === 'published'
+          && !confirm('This show is PUBLISHED — the changes you are about to save will be visible to the public and existing entrants immediately.\n\nSave changes anyway?')) {
+        return;
+      }
+      fn();
+    };
+    document.querySelector('#panel-basics .save-btn').addEventListener('click', confirmIfPublished(saveBasics));
+    document.querySelector('#panel-showtype .save-btn').addEventListener('click', confirmIfPublished(saveShowType));
+    document.querySelector('#panel-breed .save-btn').addEventListener('click', confirmIfPublished(saveBreed));
+    document.querySelector('#panel-classes .save-btn').addEventListener('click', confirmIfPublished(saveClasses));
+    document.querySelector('#panel-sponsorship .save-btn').addEventListener('click', confirmIfPublished(saveSponsorship));
+    document.querySelector('#panel-judging .save-btn').addEventListener('click', confirmIfPublished(saveJudging));
+    document.querySelector('#panel-awards .save-btn').addEventListener('click', confirmIfPublished(saveAwards));
+    document.querySelector('#panel-fundraising .save-btn').addEventListener('click', confirmIfPublished(saveFundraising));
+    document.querySelector('#panel-branding .save-btn').addEventListener('click', confirmIfPublished(saveBranding));
 
     // Org type
     document.getElementById('mgmt-org-type-cards').querySelectorAll('[data-value]').forEach(btn => {
@@ -1647,9 +1666,14 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         logo_source: getSelectedCard('branding-logo-source-cards') || 'show',
         website_url: (document.getElementById('branding-website-url') as HTMLInputElement).value.trim() || null,
       };
-      if (pendingBranding.logo)    updates.logo_url     = await uploadImage(`shows/${showId}/logo`,     pendingBranding.logo);
-      if (pendingBranding.orgLogo) updates.org_logo_url = await uploadImage(`shows/${showId}/org-logo`, pendingBranding.orgLogo);
-      if (pendingBranding.banner)  updates.banner_url   = await uploadImage(`shows/${showId}/banner`,   pendingBranding.banner);
+      if (pendingBranding.logo || pendingBranding.orgLogo || pendingBranding.banner) {
+        showUploadOverlay('Uploading images…');
+        try {
+          if (pendingBranding.logo)    updates.logo_url     = await uploadImage(`shows/${showId}/logo`,     pendingBranding.logo);
+          if (pendingBranding.orgLogo) updates.org_logo_url = await uploadImage(`shows/${showId}/org-logo`, pendingBranding.orgLogo);
+          if (pendingBranding.banner)  updates.banner_url   = await uploadImage(`shows/${showId}/banner`,   pendingBranding.banner);
+        } finally { hideUploadOverlay(); }
+      }
       {
         const { error } = await supabase.from('shows').update(updates).eq('id', showId);
         if (error) throw error;
@@ -2205,12 +2229,14 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       async function processJudgePhoto(file) {
         if (!file || file.size > maxUploadMb * 1024 * 1024) return;
         photoBtn.textContent = 'Uploading…';
+        showUploadOverlay('Uploading photo…');
         try {
           const url = await uploadImage(`judges/${showId}/judge-${i}`, file);
           photoUrlInput.value = url;
           photoCircle.innerHTML = `<img src="${url}" class="w-full h-full object-cover" />`;
           photoBtn.textContent = 'Replace photo';
         } catch { photoBtn.textContent = 'Failed — try again'; }
+        finally { hideUploadOverlay(); }
       }
 
       photoBtn.addEventListener('click', () => photoInput.click());
