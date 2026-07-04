@@ -1048,8 +1048,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       show.entry_close_time = document.getElementById('s1-entry-close-time').value || '';
     }
     if (n === 2) {
+      const prevIsFun  = show.show_type === 'fun_stakes';
       show.show_type   = getSelectedCard('show-type-cards');
       show.animal_type = getSelectedCard('animal-type-cards') || 'dog';
+      const nowIsFun   = show.show_type === 'fun_stakes';
+      // Clear stale classes when switching between incompatible class sets
+      if (prevIsFun !== nowIsFun) show.classes = [];
     }
     if (n === 3) {
       show.breed_scope  = getSelectedCard('breed-scope-cards') || 'all';
