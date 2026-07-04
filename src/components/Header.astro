@@ -141,10 +141,10 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
   async function loadShows() {
     const { supabase } = await import('../lib/supabase.js');
-    const now = new Date().toISOString();
+    const { isVotingOpen } = await import('../lib/voteWindow.js');
     const { data, error } = await supabase
       .from('shows')
-      .select('id, title, host_org, logo_url, banner_url, show_date, entry_open_date, entry_close_date, entry_fee, currency, status, description')
+      .select('id, title, host_org, logo_url, banner_url, show_date, show_time, timezone, entry_open_date, entry_open_time, entry_close_date, entry_close_time, entry_fee, currency, status, description, is_judged, vote_open_mode, results_published_at')
       .order('show_date', { ascending: true });
     if (error) { console.error('[Events panel]', error); eventsList!.innerHTML = `<p style="padding:20px;color:red;">Error: ${error.message}</p>`; return; }
     const now2 = Date.now();
@@ -152,7 +152,10 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       if (s.status === 'draft') return false;
       const openOk  = !s.entry_open_date  || new Date(s.entry_open_date).getTime()  <= now2;
       const closeOk = !s.entry_close_date || new Date(s.entry_close_date).getTime() >= now2;
-      return openOk && closeOk;
+      // Public vote shows stay listed while their voting window is open,
+      // even after entries close — that's when people come to vote.
+      s._votingOpen = isVotingOpen(s);
+      return (openOk && closeOk) || s._votingOpen;
     });
     renderShows(showsCache);
   }
@@ -204,6 +207,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
             <div style="display:flex;align-items:center;gap:8px;margin-top:7px;flex-wrap:wrap;">
               ${show.show_date ? `<span style="font-size:12px;font-weight:600;color:#6f6880;">📅 ${fmtDate(show.show_date)}</span>` : ''}
               <span style="font-size:11.5px;font-weight:700;color:#1ba89a;background:#e3f5f2;padding:2px 9px;border-radius:99px;">${fee}</span>
+              ${show._votingOpen ? `<span style="font-size:11.5px;font-weight:700;color:#5B43C4;background:#efeafd;padding:2px 9px;border-radius:99px;">🗳️ Voting open</span>` : ''}
               ${close ? `<span style="font-size:12px;font-weight:600;color:#b67d12;">${close}</span>` : ''}
             </div>
           </div>
