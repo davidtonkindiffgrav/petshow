@@ -212,7 +212,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       const close = show.entry_close_date ? daysLeft(show.entry_close_date) : '';
       const desc  = show.description ? show.description.slice(0, 100) + (show.description.length > 100 ? '…' : '') : '';
       const banner = show.banner_url
-        ? `<div style="width:96px;height:60px;border-radius:10px;overflow:hidden;flex-shrink:0;"><img src="${esc(show.banner_url)}" style="width:100%;height:100%;object-fit:cover;display:block;" alt="" /></div>`
+        ? `<div style="width:112px;height:48px;border-radius:10px;overflow:hidden;flex-shrink:0;"><img src="${esc(show.banner_url)}" style="width:100%;height:100%;object-fit:cover;object-position:right center;display:block;" alt="" /></div>`
         : '';
       return `
         <button onclick="window.location.href='${base2}show?id=${esc(show.id)}'"
