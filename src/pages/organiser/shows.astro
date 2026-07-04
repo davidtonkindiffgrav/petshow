@@ -170,9 +170,14 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         if (emptyEl) { emptyEl.style.display = 'flex'; emptyEl.querySelector('h2').textContent = 'No archived shows'; emptyEl.querySelector('p')?.remove(); }
       } else {
         const catCounts = {};
+        const confirmedCounts = {};
         await Promise.all(list.map(async s => {
-          const { count } = await supabase.from('show_categories').select('*', { count: 'exact', head: true }).eq('show_id', s.id);
-          catCounts[s.id] = count || 0;
+          const [catRes, entryRes] = await Promise.all([
+            supabase.from('show_categories').select('*', { count: 'exact', head: true }).eq('show_id', s.id),
+            supabase.from('show_entries').select('*', { count: 'exact', head: true }).eq('show_id', s.id).eq('status', 'confirmed'),
+          ]);
+          catCounts[s.id]       = catRes.count  || 0;
+          confirmedCounts[s.id] = entryRes.count || 0;
         }));
         if (listEl) listEl.style.display = 'block';
         const container = document.getElementById('shows-list');
@@ -180,19 +185,24 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         heading.className = 'text-[12px] font-bold text-[#9b94a8] uppercase tracking-wider mb-3';
         heading.textContent = 'Archived Shows';
         container.appendChild(heading);
-        list.forEach(s => container.appendChild(buildRow(s, catCounts[s.id] || 0)));
+        list.forEach(s => container.appendChild(buildRow(s, catCounts[s.id] || 0, confirmedCounts[s.id] || 0)));
       }
     } else if (!shows.length) {
       if (emptyEl) emptyEl.style.display = 'flex';
     } else {
       const catCounts = {};
+      const confirmedCounts = {};
       await Promise.all(shows.map(async s => {
-        const { count } = await supabase.from('show_categories').select('*', { count: 'exact', head: true }).eq('show_id', s.id);
-        catCounts[s.id] = count || 0;
+        const [catRes, entryRes] = await Promise.all([
+          supabase.from('show_categories').select('*', { count: 'exact', head: true }).eq('show_id', s.id),
+          supabase.from('show_entries').select('*', { count: 'exact', head: true }).eq('show_id', s.id).eq('status', 'confirmed'),
+        ]);
+        catCounts[s.id]       = catRes.count  || 0;
+        confirmedCounts[s.id] = entryRes.count || 0;
       }));
       if (listEl) listEl.style.display = 'block';
       const container = document.getElementById('shows-list');
-      shows.forEach(show => container.appendChild(buildRow(show, catCounts[show.id] || 0)));
+      shows.forEach(show => container.appendChild(buildRow(show, catCounts[show.id] || 0, confirmedCounts[show.id] || 0)));
     }
   }
 
@@ -248,7 +258,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     ].join('');
   }
 
-  function buildRow(show, catCount) {
+  function buildRow(show, catCount, confirmedEntryCount = 0) {
     const showUrl    = `${window.location.origin}${base}show?id=${show.id}`;
     const previewUrl = `${base}show?id=${show.id}&preview=1`;
     const status     = showStatus(show);
@@ -264,7 +274,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const isArchived    = !!show.archived_at;
     const isDraft       = show.status === 'draft';
     const archiveReason = !isArchived ? archiveBlockedReason(show) : null;
-    const canDel        = isDraft || isArchived;
+    const hasPaidEntries = confirmedEntryCount > 0;
+    const canDel        = (isDraft || isArchived) && !hasPaidEntries;
 
     const archiveBtnHtml = !isArchived
       ? archiveReason
@@ -272,9 +283,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         : `<button class="btn-archive" style="font-size:13px;font-weight:600;color:#92400e;border:1.5px solid #fde68a;background:#fef3c7;padding:8px 14px;border-radius:8px;cursor:pointer">Archive</button>`
       : '';
 
+    const deleteDisabledTitle = hasPaidEntries
+      ? `Cannot delete: ${confirmedEntryCount} paid entr${confirmedEntryCount === 1 ? 'y has' : 'ies have'} been received. Financial records cannot be removed.`
+      : 'Only draft or archived shows can be deleted.';
+
     const deleteBtnHtml = canDel
       ? `<button class="btn-delete" style="font-size:13px;font-weight:700;color:white;background:#ef4444;border:none;padding:8px 14px;border-radius:8px;cursor:pointer">Delete</button>`
-      : `<button class="btn-delete" disabled title="Only draft or archived shows can be deleted." style="font-size:13px;font-weight:600;color:#c4bed0;background:transparent;border:1.5px solid #e0dce8;padding:8px 14px;border-radius:8px;cursor:not-allowed">Delete</button>`;
+      : `<button class="btn-delete" disabled title="${esc(deleteDisabledTitle)}" style="font-size:13px;font-weight:600;color:#c4bed0;background:transparent;border:1.5px solid #e0dce8;padding:8px 14px;border-radius:8px;cursor:not-allowed">Delete</button>`;
 
     const row = document.createElement('div');
     row.className = 'bg-white rounded-card border border-[#b8e4e0] overflow-hidden';
