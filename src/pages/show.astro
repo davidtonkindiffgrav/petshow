@@ -200,14 +200,13 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     let showQ = supabase.from('shows').select('*').eq('id', showId);
     if (!isPreview) showQ = showQ.eq('status', 'published');
 
-    const [showRes, catsRes, entriesRes, sponsorsRes, feeRes] = await Promise.all([
+    const [showRes, catsRes, entriesRes, sponsorsRes] = await Promise.all([
       showQ.single(),
       supabase.from('show_categories').select('id, name').eq('show_id', showId),
       supabase.from('show_entries')
         .select('id, animal_name, breed, photo_url, category_id, entry_number, exhibitor_name, result_place')
         .eq('show_id', showId).eq('status', 'confirmed').order('entry_number'),
       supabase.from('show_sponsors').select('name, website, logo_url').eq('show_id', showId),
-      supabase.from('platform_settings').select('key, value').like('key', 'service_fee_%'),
     ]);
 
     if (showRes.error || !showRes.data) { showNotFound(); return; }
@@ -232,14 +231,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     votingActive = showState === 'voting' || earlyVoting;
     totalRaised = entries.length * (show.entry_fee || 0);
 
-    const feeLookup = {};
-    (feeRes.data || []).forEach(r => { feeLookup[r.key] = parseFloat(r.value) || 0; });
-    const pct   = feeLookup['service_fee_pct'];
-    const floor = feeLookup[`service_fee_floor_${show.currency}`];
-    const svcFee = (pct != null && floor != null)
-      ? Math.max(floor, (show.entry_fee || 0) * pct / 100)
-      : null;
-    displayFee = svcFee != null ? (show.entry_fee || 0) + svcFee : null;
+    // All-in pricing: entry_fee is the total the entrant pays.
+    displayFee = show.entry_fee > 0 ? Number(show.entry_fee) : null;
 
     document.title = show.title || 'Pet Show';
     document.getElementById('state-loading').style.display = 'none';
@@ -316,7 +309,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       : '';
 
     // Right-side content: fundraising panel for results, otherwise banner photo
-    const showFundraising = showState === 'results' && show.is_fundraising && show.show_fundraising_publicly;
+    const showFundraising = showState === 'results' && show.show_fundraising_publicly;
     // Anchor right: the left edge of the banner sits under the gradient fade
     // and text panel, so any cover-cropping must happen on the left
     const bannerLayer = show.banner_url
@@ -524,7 +517,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div style="background:rgba(255,255,255,0.18);border-radius:12px;padding:14px 12px;text-align:center;flex-shrink:0;min-width:88px">
             <p style="color:rgba(255,255,255,0.7);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 2px">Entry fee</p>
             <p style="color:white;font-size:38px;font-weight:900;margin:0;line-height:1">${fee != null ? sym + fee.toFixed(2) : '—'}</p>
-            <p style="color:rgba(255,255,255,0.65);font-size:10px;margin:0 0 10px">per entry</p>
+            <p style="color:rgba(255,255,255,0.65);font-size:10px;margin:0 0 10px">per entry · incl. all fees</p>
             <div style="border-top:1px solid rgba(255,255,255,0.22);padding-top:10px">
               ${closeDate
                 ? `<p style="color:rgba(255,255,255,0.6);font-size:9px;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 2px">Entries close in</p>
@@ -544,7 +537,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   // ── Fundraising card ──────────────────────────────────────────────────────────
 
   function fundraisingCard() {
-    if (!show.is_fundraising || !show.show_fundraising_publicly) return '';
+    if (!show.show_fundraising_publicly) return '';
     const goal = show.fundraising_goal || 0;
     const pct  = goal > 0 ? Math.round(totalRaised / goal * 100) : 0;
     return card(`

@@ -4,7 +4,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 const raw  = import.meta.env.BASE_URL;
 const base = raw.endsWith('/') ? raw : raw + '/';
 
-const updated = '3 July 2026';
+const updated = '4 July 2026';
 ---
 
 <BaseLayout title="Terms & Conditions — Fur to Feathers" description="Terms of use, refund policy, and platform rules for Fur to Feathers.">
@@ -30,7 +30,7 @@ const updated = '3 July 2026';
     <section style="margin-bottom:40px;">
       <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">2. Fees and Payments</h2>
       <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 10px;">
-        Organisers set their own entry fee per show. At checkout, Exhibitors also pay a platform service fee charged by Fur to Feathers. This service fee is displayed clearly before payment is taken.
+        Organisers set their own all-inclusive entry fee per show, subject to a platform minimum. The price displayed to Exhibitors is the total amount charged — nothing is added at checkout. Fur to Feathers deducts a platform service fee, and our payment processor deducts card processing costs, from each entry before the balance is remitted to the Organiser.
       </p>
       <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 10px;">
         All payments are processed securely by Stripe. By completing a payment you also agree to <a href="https://stripe.com/legal/consumer" target="_blank" rel="noopener" style="color:#1ba89a;font-weight:600;">Stripe's Terms of Service</a>.
@@ -47,9 +47,9 @@ const updated = '3 July 2026';
     <section style="margin-bottom:40px;background:#fff5f5;border:1.5px solid #fecaca;border-radius:14px;padding:24px 24px 20px;">
       <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">3. Refund Policy</h2>
 
-      <p style="font-size:13px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 8px;">Service fees are non-refundable</p>
+      <p style="font-size:13px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 8px;">Platform fees are non-refundable</p>
       <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 16px;">
-        The platform service fee charged by Fur to Feathers is non-refundable under any circumstances. This fee covers payment processing costs that are incurred the moment a transaction is completed and cannot be recovered by us regardless of what happens to the entry or show afterwards.
+        The platform service fee component of each entry is non-refundable under any circumstances. This fee covers payment processing costs that are incurred the moment a transaction is completed and cannot be recovered by us regardless of what happens to the entry or show afterwards.
       </p>
 
       <p style="font-size:13px;font-weight:700;color:#4a4357;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 8px;">Entry fees</p>
@@ -91,7 +91,7 @@ const updated = '3 July 2026';
           'Provide accurate information about themselves and their pet(s).',
           'Only enter animals they own or have the legal right to enter on behalf of the owner.',
           'Submit only photos they own or have the right to use. Photos are made publicly accessible on the internet so that judges can view entries — by uploading a photo you confirm this, grant Fur to Feathers a non-exclusive licence to display it in connection with the relevant show, and take full responsibility for obtaining consent from any identifiable person in the photo (including acting as parent or legal guardian for any child who appears).',
-          'Accept that entry fees and service fees are committed at the point of payment.',
+          'Accept that entry fees (including the platform fee component) are committed at the point of payment.',
         ].map(item => (
           <li style="font-size:14px;color:#4a4357;line-height:1.7;">{item}</li>
         ))}

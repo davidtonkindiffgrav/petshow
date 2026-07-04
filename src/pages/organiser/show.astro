@@ -493,17 +493,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
             <option value="NZD">NZD — NZ$ New Zealand Dollar</option>
           </select>
         </div>
-        <div class="grid grid-cols-2 gap-3 mb-5" id="mgmt-fundraising-yn">
-          <button type="button" data-value="yes" class="yn flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#b8e4e0] bg-white p-3 transition-all cursor-pointer">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-            <span class="text-[12px] font-bold text-[#1c1626]">Fundraising active</span>
-          </button>
-          <button type="button" data-value="no" class="yn flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#b8e4e0] bg-white p-3 transition-all cursor-pointer">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            <span class="text-[12px] font-bold text-[#1c1626]">No fundraising</span>
-          </button>
-        </div>
-        <div id="mgmt-fundraising-form" style="display:none" class="space-y-4 mb-4">
+        <div id="mgmt-fundraising-form" class="space-y-4 mb-4">
           <div>
             <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Fundraising Goal <span class="text-[#9b94a8] font-normal">(optional)</span></label>
             <div class="relative max-w-[200px]">
@@ -524,22 +514,28 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           </div>
         </div>
         <div class="border-t border-[#efebf5] pt-4 mb-4">
-          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Entry Fee per Entry</label>
-          <p id="mgmt-fee-hint" class="text-[12px] text-[#9b94a8] mb-2">Minimum A$3.00. Entry fees are required for all shows.</p>
+          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Entry Fee per Entry <span class="text-[#9b94a8] font-normal">— the total each entrant pays</span></label>
+          <p id="mgmt-fee-hint" class="text-[12px] text-[#9b94a8] mb-2">Minimum A$3. Whole dollars. Includes all fees — nothing is added at checkout.</p>
           <div class="flex items-center gap-4">
-            <div class="relative max-w-[180px]">
-              <span id="mgmt-sym-fee" class="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-[#9b94a8] font-semibold">A$</span>
-              <input type="number" id="mgmt-entry-fee" min="3" step="0.50" value=""
-                class="w-full border border-[#b8e4e0] rounded-[11px] pl-11 pr-4 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+            <div class="flex items-center gap-2">
+              <button type="button" id="mgmt-fee-minus" aria-label="Decrease entry fee"
+                class="w-10 h-10 rounded-[11px] border border-[#b8e4e0] bg-white text-[20px] font-bold text-brand hover:bg-[#f0fafa] transition-colors leading-none disabled:opacity-40 disabled:cursor-not-allowed">−</button>
+              <div class="relative w-[110px]">
+                <span id="mgmt-sym-fee" class="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-[#9b94a8] font-semibold">A$</span>
+                <input type="text" id="mgmt-entry-fee" readonly inputmode="numeric" value=""
+                  class="w-full border border-[#b8e4e0] rounded-[11px] pl-10 pr-3 py-2.5 text-[15px] font-extrabold text-[#1c1626] text-center bg-white cursor-default" />
+              </div>
+              <button type="button" id="mgmt-fee-plus" aria-label="Increase entry fee"
+                class="w-10 h-10 rounded-[11px] border border-[#b8e4e0] bg-white text-[20px] font-bold text-brand hover:bg-[#f0fafa] transition-colors leading-none">+</button>
             </div>
             <div>
-              <p class="text-[10.5px] font-semibold text-[#9b94a8] uppercase tracking-wide mb-0.5">Entrant pays</p>
-              <p id="mgmt-total-charge" class="text-[18px] font-extrabold text-brand leading-none">A$1.10</p>
+              <p class="text-[10.5px] font-semibold text-[#9b94a8] uppercase tracking-wide mb-0.5">You receive</p>
+              <p id="mgmt-net-amount" class="text-[18px] font-extrabold text-brand leading-none">—</p>
+              <p class="text-[10.5px] text-[#9b94a8] mt-0.5">≈ per entry</p>
             </div>
           </div>
-          <div class="mt-3 rounded-[11px] bg-[#f0fafa] border border-[#b8e4e0] p-3 space-y-1.5">
-            <p class="text-[12.5px] text-[#4a4357]">Platform fee: <span id="mgmt-svc-amount" class="font-semibold">A$1.10</span> per entry — please allow for this in your pricing.</p>
-            <p class="text-[12px] text-[#9b94a8] italic"><span id="mgmt-entrant-preview">Entry = A$1.10 (A$0.00 + A$1.10 platform fee)</span></p>
+          <div class="mt-3 rounded-[11px] bg-[#f0fafa] border border-[#b8e4e0] p-3">
+            <p id="mgmt-fee-breakdown" class="text-[12px] text-[#9b94a8]">—</p>
           </div>
         </div>
         <p class="panel-error text-[12px] text-red-500 mt-2" style="display:none"></p>
@@ -652,6 +648,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   import { uploadImage } from '../../lib/storage.js';
   import { showUploadOverlay, hideUploadOverlay } from '../../lib/uploadOverlay.js';
   import { FUN_STAKES, STANDARD_CLASSES } from '../../lib/show-categories.js';
+  import { minEntryFee, platformFee, stripeFeeEstimate, organiserNet, clampFee } from '../../lib/fees.js';
 
   // ── State ────────────────────────────────────────────────────────────────────
   let show        = null;
@@ -674,7 +671,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   const BREED_SCOPE_LABELS = { all: 'All Breeds', breed_specific: 'Breed Specific', group_specific: 'Group Specific' };
   const ORG_TYPE_LABELS   = { non_profit: 'Non-Profit', registered_charity: 'Registered Charity', commercial: 'Commercial' };
   const CURRENCY_SYMBOLS  = { GBP: '£', USD: '$', EUR: '€', AUD: 'A$', CAD: 'C$', NZD: 'NZ$', ZAR: 'R', SGD: 'S$' };
-  const MIN_ENTRY_FEE     = { GBP: 2, USD: 2, EUR: 2, AUD: 3, CAD: 2, NZD: 3, ZAR: 25, SGD: 3 };
+  const getMin = (code) => minEntryFee(code, serviceFees);
 
   const TIMEZONES = [
     { group: 'Australia & New Zealand', zones: [
@@ -835,7 +832,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       supabase.from('show_judges').select('*').eq('show_id', showId),
       supabase.from('show_sponsors').select('*').eq('show_id', showId),
       supabase.from('show_prizes').select('description').eq('show_id', showId),
-      supabase.from('platform_settings').select('key, value').or('key.like.service_fee_%,key.eq.max_upload_mb'),
+      supabase.from('platform_settings').select('key, value').or('key.like.service_fee_%,key.like.min_entry_fee_%,key.like.stripe_fee_%,key.eq.max_upload_mb'),
       supabase.from('saved_judges').select('*').eq('organiser_id', uid).order('first_name'),
     ]);
 
@@ -1247,31 +1244,19 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       ], 'Set Up');
     }
 
-    const sym    = CURRENCY_SYMBOLS[show.currency] || 'A$';
-    const pct    = serviceFees['service_fee_pct'];
-    const floor  = serviceFees[`service_fee_floor_${show.currency || 'AUD'}`];
-    const svcFee = (pct != null && floor != null)
-      ? Math.max(floor, (show.entry_fee || 0) * pct / 100)
-      : null;
-    const feeTotal = svcFee != null ? (show.entry_fee || 0) + svcFee : null;
+    const sym = CURRENCY_SYMBOLS[show.currency] || 'A$';
+    const net = organiserNet(Number(show.entry_fee) || 0, show.currency || 'AUD', serviceFees);
     const feeText = show.entry_fee > 0
-      ? (feeTotal != null ? `${sym}${feeTotal.toFixed(2)} (${sym}${Number(show.entry_fee).toFixed(2)} + ${sym}${svcFee.toFixed(2)} platform fee)` : 'Error')
+      ? `${sym}${Number(show.entry_fee).toFixed(2)} all-in${net != null ? ` (you receive ≈ ${sym}${net.toFixed(2)})` : ''}`
       : 'Not set';
-    if (show.is_fundraising === true) {
+    if (show.entry_fee > 0) {
       setHeader('fundraising', '#22c55e', 'Configured', 'Fundraising & Fees', [
-        ['Status',    'Fundraising active'],
         ['Entry fee', feeText],
         ['Goal',      show.fundraising_goal ? `${sym}${show.fundraising_goal}` : 'Not set'],
         ['Currency',  show.currency || 'AUD'],
       ], 'Edit');
-    } else if (show.is_fundraising === false) {
-      setHeader('fundraising', '#c4bed0', 'No fundraising', 'Fundraising & Fees', [
-        ['Entry fee', feeText],
-        ['Currency',  show.currency || 'AUD'],
-      ], 'Edit');
     } else {
       setHeader('fundraising', '#fbbf24', 'Setup needed', 'Fundraising & Fees', [
-        ['Status',    '—'],
         ['Entry fee', '—'],
       ], 'Set Up');
     }
@@ -1435,17 +1420,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     }
 
     setField('mgmt-currency', show.currency || 'AUD');
+    if (show.fundraising_goal) setField('mgmt-fund-goal', show.fundraising_goal);
+    setToggle('mgmt-public-toggle', show.show_fundraising_publicly === true);
+    setFeeValue(Number(show.entry_fee) || getMin(show.currency || 'AUD') || 3);
     applyCurrencySymbol(show.currency || 'AUD');
-    if (show.is_fundraising === true) {
-      setYN('mgmt-fundraising-yn', 'yes');
-      const fundForm = document.getElementById('mgmt-fundraising-form');
-      if (fundForm) fundForm.style.display = 'block';
-      if (show.fundraising_goal) setField('mgmt-fund-goal', show.fundraising_goal);
-      setToggle('mgmt-public-toggle', show.show_fundraising_publicly === true);
-    } else if (show.is_fundraising === false) {
-      setYN('mgmt-fundraising-yn', 'no');
-    }
-    setField('mgmt-entry-fee', show.entry_fee || 0);
   }
 
   // ── Wire up all handlers ─────────────────────────────────────────────────────
@@ -1566,18 +1544,14 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.getElementById('mgmt-add-prize').addEventListener('click', () => addPrizeRow(''));
 
     // Fundraising
-    setupYN('mgmt-fundraising-yn', val => {
-      document.getElementById('mgmt-fundraising-form').style.display = val === 'yes' ? 'block' : 'none';
-    });
     setupToggle('mgmt-public-toggle', () => {});
     document.getElementById('mgmt-currency').addEventListener('change', e => applyCurrencySymbol(e.target.value));
+    document.getElementById('mgmt-fee-minus').addEventListener('click', () => setFeeValue(getFeeValue() - 1));
+    document.getElementById('mgmt-fee-plus').addEventListener('click', () => setFeeValue(getFeeValue() + 1));
 
     // Branding: logo source toggle
     document.getElementById('branding-logo-source-cards').querySelectorAll('[data-value]').forEach(btn => {
       btn.addEventListener('click', () => selectCard(document.getElementById('branding-logo-source-cards'), btn.dataset.value));
-    });
-    document.getElementById('mgmt-entry-fee')?.addEventListener('input', () => {
-      updateFeeBreakdown(document.getElementById('mgmt-currency')?.value || 'AUD');
     });
   }
 
@@ -1886,21 +1860,18 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   }
 
   async function saveFundraising() {
-    const val      = getYNValue('mgmt-fundraising-yn');
-    if (!val) return showPanelError('fundraising', 'Please make a selection.');
     const currency = document.getElementById('mgmt-currency').value || 'AUD';
-    const entryFee = parseFloat(document.getElementById('mgmt-entry-fee').value) || 0;
-    const payload  = { currency, entry_fee: entryFee };
-    if (val === 'yes') {
-      Object.assign(payload, {
-        is_fundraising: true,
-        fundraising_goal: parseFloat(document.getElementById('mgmt-fund-goal').value) || null,
-        show_fundraising_publicly: document.getElementById('mgmt-public-toggle').dataset.on === 'true',
-      });
-    } else {
-      Object.assign(payload, { is_fundraising: false });
-    }
-    await saveSection('fundraising', payload);
+    const entryFee = getFeeValue();
+    const minFee   = getMin(currency);
+    if (minFee == null) return showPanelError('fundraising', 'Fee settings could not be loaded — please refresh the page.');
+    if (entryFee < minFee) return showPanelError('fundraising', `Entry fee must be at least ${CURRENCY_SYMBOLS[currency] || ''}${minFee}.`);
+    await saveSection('fundraising', {
+      currency,
+      entry_fee: entryFee,
+      is_fundraising: true,
+      fundraising_goal: parseFloat(document.getElementById('mgmt-fund-goal').value) || null,
+      show_fundraising_publicly: document.getElementById('mgmt-public-toggle').dataset.on === 'true',
+    });
   }
 
   // ── UI helpers ────────────────────────────────────────────────────────────────
@@ -2317,25 +2288,35 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     list.appendChild(row);
   }
 
+  function getFeeValue() {
+    return parseInt(document.getElementById('mgmt-entry-fee').value, 10) || 0;
+  }
+
+  function setFeeValue(v) {
+    const code = document.getElementById('mgmt-currency')?.value || 'AUD';
+    const min  = getMin(code);
+    const val  = min != null ? clampFee(v, min) : Math.max(1, Math.round(v) || 1);
+    document.getElementById('mgmt-entry-fee').value = String(val);
+    const minus = document.getElementById('mgmt-fee-minus');
+    if (minus) minus.disabled = (min != null && val <= min);
+    updateFeeBreakdown(code);
+  }
+
   function updateFeeBreakdown(code) {
-    const sym    = CURRENCY_SYMBOLS[code] || code;
-    const entry  = parseFloat(document.getElementById('mgmt-entry-fee')?.value) || 0;
-    const pct    = serviceFees['service_fee_pct'];
-    const floor  = serviceFees[`service_fee_floor_${code}`];
-    const amountEl  = document.getElementById('mgmt-svc-amount');
-    const totalEl   = document.getElementById('mgmt-total-charge');
-    const previewEl = document.getElementById('mgmt-entrant-preview');
-    if (pct == null || floor == null) {
-      if (amountEl)  amountEl.textContent  = 'Error';
-      if (totalEl)   totalEl.textContent   = 'Error';
-      if (previewEl) previewEl.textContent = 'Error';
+    const sym   = CURRENCY_SYMBOLS[code] || code;
+    const total = getFeeValue();
+    const netEl = document.getElementById('mgmt-net-amount');
+    const bdEl  = document.getElementById('mgmt-fee-breakdown');
+    const net   = organiserNet(total, code, serviceFees);
+    if (net == null) {
+      if (netEl) netEl.textContent = 'Error';
+      if (bdEl)  bdEl.textContent  = 'Fee settings unavailable — please refresh or contact support.';
       return;
     }
-    const svcFee = Math.max(floor, entry * pct / 100);
-    const total  = entry + svcFee;
-    if (amountEl)  amountEl.textContent  = `${sym}${svcFee.toFixed(2)}`;
-    if (totalEl)   totalEl.textContent   = `${sym}${total.toFixed(2)}`;
-    if (previewEl) previewEl.textContent = `Entry = ${sym}${total.toFixed(2)} (${sym}${entry.toFixed(2)} + ${sym}${svcFee.toFixed(2)} platform fee)`;
+    const pf = platformFee(total, code, serviceFees);
+    const sf = stripeFeeEstimate(total, code, serviceFees);
+    if (netEl) netEl.textContent = `${sym}${net.toFixed(2)}`;
+    if (bdEl)  bdEl.textContent  = `${sym}${total.toFixed(2)} entry − ${sym}${pf.toFixed(2)} platform fee − ~${sym}${sf.toFixed(2)} card processing (estimate) ≈ ${sym}${net.toFixed(2)} to your organisation per entry.`;
   }
 
   function applyCurrencySymbol(code) {
@@ -2345,11 +2326,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const hintEl = document.getElementById('mgmt-fee-hint');
     if (goalEl) goalEl.textContent = sym;
     if (feeEl)  feeEl.textContent  = sym;
-    const minFee = MIN_ENTRY_FEE[code] || 1;
-    if (hintEl) hintEl.textContent = `Minimum ${sym}${minFee.toFixed(2)}. Entry fees are required for all shows.`;
-    const feeInput = document.getElementById('mgmt-entry-fee') as HTMLInputElement;
-    if (feeInput) feeInput.min = String(minFee);
-    updateFeeBreakdown(code);
+    const minFee = getMin(code);
+    if (hintEl) hintEl.textContent = minFee != null
+      ? `Minimum ${sym}${minFee}. Whole dollars. Includes all fees — nothing is added at checkout.`
+      : 'Error — fee settings unavailable. Please refresh the page.';
+    setFeeValue(getFeeValue());
   }
 
   // ── Shared card / toggle helpers ─────────────────────────────────────────────

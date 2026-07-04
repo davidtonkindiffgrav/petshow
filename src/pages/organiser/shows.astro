@@ -252,8 +252,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       tile('Awards',      (show.has_digital_certs === true || show.has_physical_prizes === true) ? 'ok'
                           : (show.has_digital_certs === false && show.has_physical_prizes === false) ? 'off' : 'pending',
                           (show.has_digital_certs || show.has_physical_prizes) ? 'Configured' : (show.has_digital_certs === false) ? 'No awards' : null),
-      tile('Fundraising', show.is_fundraising === true ? 'ok' : show.is_fundraising === false ? 'off' : 'pending',
-                          show.is_fundraising === true ? 'Active' : show.is_fundraising === false ? 'No fundraising' : null),
+      tile('Fundraising', show.entry_fee > 0 ? 'ok' : 'pending',
+                          show.entry_fee > 0 ? 'Active' : null),
       tile('Branding',    'pending', 'Upload coming soon'),
     ].join('');
   }
@@ -267,9 +267,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       : '—';
     const sym = CURRENCY_SYMBOLS[show.currency] || '£';
 
-    const feeText = show.is_fundraising === true
-      ? `${sym}${show.entry_fee || 0} entry fee`
-      : show.is_fundraising === false ? 'No fundraising' : 'Fees: not set';
+    const feeText = show.entry_fee > 0
+      ? `${sym}${show.entry_fee} entry fee`
+      : 'Fees: not set';
 
     const isArchived    = !!show.archived_at;
     const isDraft       = show.status === 'draft';

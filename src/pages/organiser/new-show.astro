@@ -464,22 +464,28 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       </div>
 
       <div class="mb-6">
-        <label for="s8-entry-fee" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Entry Fee per Entry</label>
-        <p id="s8-fee-hint" class="text-[12px] text-[#9b94a8] mb-2">Minimum A$3.00. Entry fees are required for all shows.</p>
+        <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Entry Fee per Entry <span class="text-[#9b94a8] font-normal">— the total each entrant pays</span></label>
+        <p id="s8-fee-hint" class="text-[12px] text-[#9b94a8] mb-2">Minimum A$3. Whole dollars. Includes all fees — nothing is added at checkout.</p>
         <div class="flex items-center gap-5">
-          <div class="relative max-w-[200px]">
-            <span id="s8-symbol-fee" class="absolute left-4 top-1/2 -translate-y-1/2 text-[15px] text-[#9b94a8] font-semibold">A$</span>
-            <input type="number" id="s8-entry-fee" min="3" step="0.50" value=""
-              class="w-full border border-[#b8e4e0] rounded-[11px] pl-12 pr-4 py-3 text-[15px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+          <div class="flex items-center gap-2">
+            <button type="button" id="s8-fee-minus" aria-label="Decrease entry fee"
+              class="w-11 h-11 rounded-[11px] border border-[#b8e4e0] bg-white text-[22px] font-bold text-brand hover:bg-[#f0fafa] transition-colors leading-none disabled:opacity-40 disabled:cursor-not-allowed">−</button>
+            <div class="relative w-[120px]">
+              <span id="s8-symbol-fee" class="absolute left-3 top-1/2 -translate-y-1/2 text-[15px] text-[#9b94a8] font-semibold">A$</span>
+              <input type="text" id="s8-entry-fee" readonly inputmode="numeric" value=""
+                class="w-full border border-[#b8e4e0] rounded-[11px] pl-10 pr-3 py-3 text-[16px] font-extrabold text-[#1c1626] text-center bg-white cursor-default" />
+            </div>
+            <button type="button" id="s8-fee-plus" aria-label="Increase entry fee"
+              class="w-11 h-11 rounded-[11px] border border-[#b8e4e0] bg-white text-[22px] font-bold text-brand hover:bg-[#f0fafa] transition-colors leading-none">+</button>
           </div>
           <div>
-            <p class="text-[11px] font-semibold text-[#9b94a8] uppercase tracking-wide mb-0.5">Entrant pays</p>
-            <p id="s8-total-charge" class="text-[20px] font-extrabold text-brand leading-none">A$1.10</p>
+            <p class="text-[11px] font-semibold text-[#9b94a8] uppercase tracking-wide mb-0.5">You receive</p>
+            <p id="s8-net-amount" class="text-[20px] font-extrabold text-brand leading-none">—</p>
+            <p class="text-[11px] text-[#9b94a8] mt-0.5">≈ per entry</p>
           </div>
         </div>
-        <div class="mt-3 rounded-[13px] bg-[#f0fafa] border border-[#b8e4e0] p-4 space-y-2">
-          <p class="text-[13px] text-[#4a4357]">Platform fee: <span id="s8-svc-amount" class="font-semibold">A$1.10</span> per entry — please allow for this in your pricing.</p>
-          <p class="text-[12px] text-[#9b94a8] italic"><span id="s8-entrant-preview">Entry = A$1.10 (A$0.00 + A$1.10 platform fee)</span></p>
+        <div class="mt-3 rounded-[13px] bg-[#f0fafa] border border-[#b8e4e0] p-4">
+          <p id="s8-fee-breakdown" class="text-[12px] text-[#9b94a8]">—</p>
         </div>
       </div>
 
@@ -626,6 +632,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   import { uploadImage } from '../../lib/storage.js';
   import { showUploadOverlay, hideUploadOverlay } from '../../lib/uploadOverlay.js';
   import { FUN_STAKES, STANDARD_CLASSES } from '../../lib/show-categories.js';
+  import { minEntryFee, platformFee, stripeFeeEstimate, organiserNet, clampFee } from '../../lib/fees.js';
 
   // ─── Constants ──────────────────────────────────────────────────────────────
   const STEP_NAMES = [
@@ -731,7 +738,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   };
 
   const CURRENCY_SYMBOLS  = { GBP: '£', USD: '$', EUR: '€', AUD: 'A$', CAD: 'C$', NZD: 'NZ$', ZAR: 'R', SGD: 'S$' };
-  const MIN_ENTRY_FEE     = { GBP: 2, USD: 2, EUR: 2, AUD: 3, CAD: 2, NZD: 3, ZAR: 25, SGD: 3 };
+  const getMin = (code) => minEntryFee(code, serviceFees);
 
   const TIMEZONES = [
     { group: 'Australia & New Zealand', zones: [
@@ -852,7 +859,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     }
 
     const { data: feeSettings } = await supabase
-      .from('platform_settings').select('key, value').or('key.like.service_fee_%,key.eq.max_upload_mb');
+      .from('platform_settings').select('key, value').or('key.like.service_fee_%,key.like.min_entry_fee_%,key.like.stripe_fee_%,key.eq.max_upload_mb');
     (feeSettings || []).forEach(r => {
       if (r.key === 'max_upload_mb') maxUploadMb = parseFloat(r.value) || 5;
       else serviceFees[r.key] = parseFloat(r.value) || 0;
@@ -1047,10 +1054,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       return true;
     }
     if (n === 8) {
-      const fee = parseFloat(document.getElementById('s8-entry-fee').value);
+      const fee = getFeeValue();
       const currency = document.getElementById('s8-currency')?.value || 'AUD';
-      const minFee = MIN_ENTRY_FEE[currency] || 1;
-      if (isNaN(fee) || fee < minFee) return showError(`Please enter a valid entry fee (minimum ${CURRENCY_SYMBOLS[currency] || ''}${minFee.toFixed(2)}).`), false;
+      const minFee = getMin(currency);
+      if (minFee == null) return showError('Fee settings could not be loaded — please refresh the page.'), false;
+      if (fee < minFee) return showError(`Please set a valid entry fee (minimum ${CURRENCY_SYMBOLS[currency] || ''}${minFee}).`), false;
       return true;
     }
     return true;
@@ -1133,7 +1141,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       show.is_fundraising            = true;
       show.show_fundraising_publicly = document.getElementById('s8-public-toggle').dataset.on === 'true';
       show.currency                  = document.getElementById('s8-currency').value || 'AUD';
-      show.entry_fee                 = parseFloat(document.getElementById('s8-entry-fee').value) || 0;
+      show.entry_fee                 = getFeeValue();
     }
     if (n === 9) {
       show.logo_source = getSelectedCard('s9-logo-source-cards') || 'show';
@@ -1656,7 +1664,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         </div>
         <div class="px-5">
           ${reviewRow('Currency', show.currency || 'AUD', 8)}
-          ${reviewRow('Entry Fee', show.entry_fee > 0 ? `${CURRENCY_SYMBOLS[show.currency] || show.currency}${show.entry_fee}` : 'Not set', 8)}
+          ${reviewRow('Entry Fee', show.entry_fee > 0 ? `${CURRENCY_SYMBOLS[show.currency] || show.currency}${show.entry_fee} (all-in — includes all fees)` : 'Not set', 8)}
           ${reviewRow('Public Progress', show.show_fundraising_publicly ? 'Visible' : 'Hidden', 8)}
         </div>
       </div>`;
@@ -1826,12 +1834,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     }
 
     // Step 8 — fees
-    document.getElementById('s8-entry-fee').value = String(show.entry_fee || '');
     setToggle('s8-public-toggle', !!show.show_fundraising_publicly);
-    if (show.currency) {
-      document.getElementById('s8-currency').value = show.currency;
-      applyCurrencySymbol(show.currency);
-    }
+    if (show.currency) document.getElementById('s8-currency').value = show.currency;
+    setFeeValue(Number(show.entry_fee) || getMin(show.currency || 'AUD') || 3);
+    applyCurrencySymbol(show.currency || 'AUD');
 
     goToStep(Math.min(data.wizard_step || 1, 10));
   }
@@ -2050,14 +2056,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.addEventListener('click', () => {
       document.querySelectorAll('.judge-picker-dropdown').forEach(d => { d.style.display = 'none'; });
     });
-    // Step 8: public toggle + currency selector
+    // Step 8: public toggle + currency selector + fee stepper
     setupToggle('s8-public-toggle', on => { show.show_fundraising_publicly = on; });
     document.getElementById('s8-currency').addEventListener('change', e => {
       applyCurrencySymbol(e.target.value);
     });
-    document.getElementById('s8-entry-fee').addEventListener('input', () => {
-      updateFeeBreakdown(document.getElementById('s8-currency')?.value || 'AUD');
-    });
+    document.getElementById('s8-fee-minus').addEventListener('click', () => setFeeValue(getFeeValue() - 1));
+    document.getElementById('s8-fee-plus').addEventListener('click', () => setFeeValue(getFeeValue() + 1));
     // Step 5: sponsor logo
     initUploadWidget(
       document.getElementById('s5-logo-widget'),
@@ -2090,35 +2095,45 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     );
   }
 
+  function getFeeValue() {
+    return parseInt(document.getElementById('s8-entry-fee').value, 10) || 0;
+  }
+
+  function setFeeValue(v) {
+    const code = document.getElementById('s8-currency')?.value || 'AUD';
+    const min  = getMin(code);
+    const val  = min != null ? clampFee(v, min) : Math.max(1, Math.round(v) || 1);
+    document.getElementById('s8-entry-fee').value = String(val);
+    const minus = document.getElementById('s8-fee-minus');
+    if (minus) minus.disabled = (min != null && val <= min);
+    updateFeeBreakdown(code);
+  }
+
   function updateFeeBreakdown(code) {
-    const sym    = CURRENCY_SYMBOLS[code] || code;
-    const entry  = parseFloat(document.getElementById('s8-entry-fee')?.value) || 0;
-    const pct    = serviceFees['service_fee_pct'];
-    const floor  = serviceFees[`service_fee_floor_${code}`];
-    const amountEl  = document.getElementById('s8-svc-amount');
-    const totalEl   = document.getElementById('s8-total-charge');
-    const previewEl = document.getElementById('s8-entrant-preview');
-    if (pct == null || floor == null) {
-      if (amountEl)  amountEl.textContent  = 'Error';
-      if (totalEl)   totalEl.textContent   = 'Error';
-      if (previewEl) previewEl.textContent = 'Error';
+    const sym   = CURRENCY_SYMBOLS[code] || code;
+    const total = getFeeValue();
+    const netEl = document.getElementById('s8-net-amount');
+    const bdEl  = document.getElementById('s8-fee-breakdown');
+    const net   = organiserNet(total, code, serviceFees);
+    if (net == null) {
+      if (netEl) netEl.textContent = 'Error';
+      if (bdEl)  bdEl.textContent  = 'Fee settings unavailable — please refresh or contact support.';
       return;
     }
-    const svcFee = Math.max(floor, entry * pct / 100);
-    const total  = entry + svcFee;
-    if (amountEl)  amountEl.textContent  = `${sym}${svcFee.toFixed(2)}`;
-    if (totalEl)   totalEl.textContent   = `${sym}${total.toFixed(2)}`;
-    if (previewEl) previewEl.textContent = `Entry = ${sym}${total.toFixed(2)} (${sym}${entry.toFixed(2)} + ${sym}${svcFee.toFixed(2)} platform fee)`;
+    const pf = platformFee(total, code, serviceFees);
+    const sf = stripeFeeEstimate(total, code, serviceFees);
+    if (netEl) netEl.textContent = `${sym}${net.toFixed(2)}`;
+    if (bdEl)  bdEl.textContent  = `${sym}${total.toFixed(2)} entry − ${sym}${pf.toFixed(2)} platform fee − ~${sym}${sf.toFixed(2)} card processing (estimate) ≈ ${sym}${net.toFixed(2)} to your organisation per entry.`;
   }
 
   function applyCurrencySymbol(code) {
     const sym = CURRENCY_SYMBOLS[code] || code;
     document.getElementById('s8-symbol-fee').textContent = sym;
-    const minFee2 = MIN_ENTRY_FEE[code] || 1;
-    document.getElementById('s8-fee-hint').textContent   = `Minimum ${sym}${minFee2.toFixed(2)}. Entry fees are required for all shows.`;
-    const feeInput = document.getElementById('s8-entry-fee') as HTMLInputElement;
-    if (feeInput) feeInput.min = String(minFee2);
-    updateFeeBreakdown(code);
+    const minFee2 = getMin(code);
+    document.getElementById('s8-fee-hint').textContent = minFee2 != null
+      ? `Minimum ${sym}${minFee2}. Whole dollars. Includes all fees — nothing is added at checkout.`
+      : 'Error — fee settings unavailable. Please refresh the page.';
+    setFeeValue(getFeeValue());
   }
 
   function setupEventListeners() {

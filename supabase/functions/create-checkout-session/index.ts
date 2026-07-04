@@ -53,15 +53,21 @@ serve(async (req: Request) => {
       throw new Error("You're the assigned judge for this show, so you can't enter it");
     }
 
-    // 4. Service fee & grand total
-    const { data: feeRows } = await supabase
+    // 4. All-in pricing: the entrant pays exactly show.entry_fee per entry.
+    //    Validate against the platform minimum — no fallbacks, no free shows.
+    const { data: minRow } = await supabase
       .from('platform_settings')
-      .select('key, value')
-      .eq('key', `service_fee_${show.currency}`);
-    const svcFee     = parseFloat(feeRows?.[0]?.value ?? '1.10') || 1.10;
-    const perEntryFee = (show.entry_fee || 0) + svcFee;
-    const entryCount  = entries.length;
-    const grandTotal  = perEntryFee * entryCount;
+      .select('value')
+      .eq('key', `min_entry_fee_${show.currency}`)
+      .maybeSingle();
+    const minFee = parseFloat(minRow?.value ?? '');
+    if (!isFinite(minFee)) throw new Error(`Entry fees are not configured for currency ${show.currency}`);
+
+    const perEntryFee = Number(show.entry_fee) || 0;
+    if (perEntryFee < minFee) {
+      throw new Error(`This show's entry fee (${perEntryFee.toFixed(2)} ${show.currency}) is below the platform minimum of ${minFee.toFixed(2)} ${show.currency}. Please contact the organiser.`);
+    }
+    const entryCount = entries.length;
 
     // 5. Clean up any previous pending entries for this user/show (abandoned checkouts)
     await supabase
@@ -104,19 +110,7 @@ serve(async (req: Request) => {
     const entryIds = inserted.map((e: any) => e.id);
     const siteUrl  = Deno.env.get('SITE_URL') || 'https://www.furtofeathers.com';
 
-    // 7. Free show — confirm all immediately
-    if (grandTotal <= 0) {
-      await supabase
-        .from('show_entries')
-        .update({ status: 'confirmed', entry_fee_paid: 0 })
-        .in('id', entryIds);
-      return new Response(
-        JSON.stringify({ redirect: `${siteUrl}/participant` }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
-    }
-
-    // 8. Paid show — create one Stripe Checkout Session for the grand total
+    // 8. Create one Stripe Checkout Session for all entries
     const catIds = entries.map((e: any) => e.category_id).filter(Boolean);
     const catMap: Record<string, string> = {};
     if (catIds.length) {

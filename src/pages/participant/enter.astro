@@ -76,12 +76,11 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
   }
 
   // ── Load show data ────────────────────────────────────────────────────────────
-  const [showRes, catsRes, feeRes] = await Promise.all([
+  const [showRes, catsRes] = await Promise.all([
     supabase.from('shows')
       .select('id,title,host_org,entry_fee,currency,animal_type,breed_scope,breed_filter,entry_close_date,has_digital_certs,has_physical_prizes,logo_url,status')
       .eq('id', showId).single(),
     supabase.from('show_categories').select('id,name').eq('show_id', showId),
-    supabase.from('platform_settings').select('key,value').like('key', 'service_fee_%'),
   ]);
 
   const show = showRes.data;
@@ -107,17 +106,8 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
 
   const categories = catsRes.data || [];
   const sym = SYMS[show.currency] || '£';
-  const feeLookup: Record<string,number> = {};
-  (feeRes.data || []).forEach((r: any) => { feeLookup[r.key] = parseFloat(r.value) || 0; });
-  const pct   = feeLookup['service_fee_pct'];
-  const floor = feeLookup[`service_fee_floor_${show.currency}`];
-  if (pct == null || floor == null) {
-    root.innerHTML = `<div style="text-align:center;padding:60px 0;"><p style="font-size:15px;color:#ef4444;font-weight:700;">Error</p></div>`;
-    throw 0;
-  }
-  const svcFee   = Math.max(floor, (show.entry_fee || 0) * pct / 100);
-  const totalFee = (show.entry_fee || 0) + svcFee;
-  const isFree   = totalFee <= 0;
+  // All-in pricing: entry_fee is the total the entrant pays — nothing added.
+  const totalFee = Number(show.entry_fee) || 0;
 
   // ── Breed list ────────────────────────────────────────────────────────────────
   const DOG_BREEDS = [
@@ -383,7 +373,7 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
           <button id="btn-back" style="${backBtnStyle}">← Back</button>
         </div>`;
     }
-    const feeLabel = isFree ? 'Free' : `${sym}${totalFee.toFixed(2)}`;
+    const feeLabel = `${sym}${totalFee.toFixed(2)}`;
     return `
       <div style="background:white;border-radius:16px;border:1px solid #e7eef0;box-shadow:0 4px 16px rgba(10,31,68,0.06);padding:28px;">
         <h2 style="font-size:20px;font-weight:800;color:#1c1626;margin:0 0 4px;">Choose your class</h2>
@@ -476,7 +466,7 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
     return `
       <div style="background:white;border-radius:16px;border:1px solid #e7eef0;box-shadow:0 4px 16px rgba(10,31,68,0.06);padding:28px;">
         <h2 style="font-size:20px;font-weight:800;color:#1c1626;margin:0 0 4px;">Review ${currentLabel}</h2>
-        <p style="font-size:14px;color:#6b7c89;margin:0 0 22px;">Check everything looks right${totalEntries > 1 ? ` (${totalEntries} entries total)` : ''} before ${isFree ? 'submitting' : 'paying'}.</p>
+        <p style="font-size:14px;color:#6b7c89;margin:0 0 22px;">Check everything looks right${totalEntries > 1 ? ` (${totalEntries} entries total)` : ''} before paying.</p>
 
         ${pendingSummary}
 
@@ -484,30 +474,17 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
 
         ${exhibitorName ? `<p style="font-size:13px;color:#6b7c89;margin:0 0 16px;">Exhibitor: <strong style="color:#1c1626;">${esc(exhibitorName)}</strong></p>` : ''}
 
-        ${!isFree ? `
-          <div style="border-top:1px solid #e7eef0;padding-top:16px;margin-bottom:16px;">
-            ${totalEntries > 1 ? `
-            <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-              <span style="font-size:14px;color:#6b7c89;">${totalEntries} × entry fee</span>
-              <span style="font-size:14px;color:#1c1626;font-weight:600;">${sym}${((show.entry_fee || 0) * totalEntries).toFixed(2)}</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
-              <span style="font-size:14px;color:#6b7c89;">${totalEntries} × service fee</span>
-              <span style="font-size:14px;color:#1c1626;font-weight:600;">${sym}${(svcFee * totalEntries).toFixed(2)}</span>
-            </div>` : `
-            <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-              <span style="font-size:14px;color:#6b7c89;">Entry fee</span>
-              <span style="font-size:14px;color:#1c1626;font-weight:600;">${sym}${(show.entry_fee || 0).toFixed(2)}</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
-              <span style="font-size:14px;color:#6b7c89;">Service fee</span>
-              <span style="font-size:14px;color:#1c1626;font-weight:600;">${sym}${svcFee.toFixed(2)}</span>
-            </div>`}
-            <div style="display:flex;justify-content:space-between;border-top:1px solid #e7eef0;padding-top:12px;">
-              <span style="font-size:15px;font-weight:800;color:#1c1626;">Total</span>
-              <span style="font-size:15px;font-weight:800;color:#1ba89a;">${sym}${grandTotal.toFixed(2)}</span>
-            </div>
-          </div>` : ''}
+        <div style="border-top:1px solid #e7eef0;padding-top:16px;margin-bottom:16px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
+            <span style="font-size:14px;color:#6b7c89;">${totalEntries > 1 ? `${totalEntries} × entry fee` : 'Entry fee'}</span>
+            <span style="font-size:14px;color:#1c1626;font-weight:600;">${sym}${totalFee.toFixed(2)}${totalEntries > 1 ? ' each' : ''}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;border-top:1px solid #e7eef0;padding-top:12px;">
+            <span style="font-size:15px;font-weight:800;color:#1c1626;">Total</span>
+            <span style="font-size:15px;font-weight:800;color:#1ba89a;">${sym}${grandTotal.toFixed(2)}</span>
+          </div>
+          <p style="font-size:11.5px;color:#9b94a8;margin:6px 0 0;text-align:right;">Includes all fees</p>
+        </div>
 
         <button id="btn-add-another" style="${backBtnStyle}width:100%;margin-bottom:10px;border:1.5px dashed #b8e4e0;" ${submitting ? 'disabled' : ''}>
           + Add another entry
@@ -520,14 +497,14 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
 
         <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;cursor:pointer;">
           <input id="chk-terms" type="checkbox" style="margin-top:2px;width:16px;height:16px;accent-color:#1ba89a;flex-shrink:0;" />
-          <span style="font-size:13px;color:#4a4357;line-height:1.5;">I agree to the <a href="${base}terms" target="_blank" style="color:#1ba89a;font-weight:600;">Terms &amp; Conditions</a> and <a href="${base}privacy" target="_blank" style="color:#1ba89a;font-weight:600;">Privacy Policy</a>, including that service fees are non-refundable.</span>
+          <span style="font-size:13px;color:#4a4357;line-height:1.5;">I agree to the <a href="${base}terms" target="_blank" style="color:#1ba89a;font-weight:600;">Terms &amp; Conditions</a> and <a href="${base}privacy" target="_blank" style="color:#1ba89a;font-weight:600;">Privacy Policy</a>, including the refund policy.</span>
         </label>
 
         ${errorEl()}
         <div style="display:flex;gap:10px;">
           <button id="btn-back" style="${backBtnStyle}" ${submitting ? 'disabled' : ''}>← Back</button>
           <button id="btn-submit" style="${nextBtnStyle}opacity:0.5;cursor:not-allowed;" disabled>
-            ${isFree ? `Submit ${totalEntries > 1 ? totalEntries + ' entries' : 'entry'} →` : `Pay ${sym}${grandTotal.toFixed(2)} →`}
+            Pay ${sym}${grandTotal.toFixed(2)} →
           </button>
         </div>
       </div>`;
@@ -657,11 +634,9 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
         const chk  = document.getElementById('chk-terms') as HTMLInputElement;
         if (!chkP?.checked || !chk?.checked) return;
         submitting = true;
-        const totalEntries = pendingEntries.length + 1;
-        const grandTotal   = totalFee * totalEntries;
         const btn = document.getElementById('btn-submit') as HTMLButtonElement;
-        if (btn) { btn.textContent = isFree ? 'Submitting…' : 'Redirecting to payment…'; btn.disabled = true; }
-        if (!isFree) showModal('Redirecting to payment…', "Please don't close this window.");
+        if (btn) { btn.textContent = 'Redirecting to payment…'; btn.disabled = true; }
+        showModal('Redirecting to payment…', "Please don't close this window.");
         await new Promise(r => setTimeout(r, 80));
 
         try {
@@ -676,14 +651,13 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
           });
           const json = await resp.json();
           if (!resp.ok) throw new Error(json.error || 'Submission failed. Please try again.');
-          if (json.redirect)          window.location.href = json.redirect;
-          else if (json.checkout_url) window.location.href = json.checkout_url;
+          if (json.checkout_url) window.location.href = json.checkout_url;
         } catch (err: any) {
           hideModal();
           submitting = false;
           showErr(err.message);
           const totalEntries2 = pendingEntries.length + 1;
-          if (btn) { btn.textContent = isFree ? `Submit ${totalEntries2 > 1 ? totalEntries2 + ' entries' : 'entry'} →` : `Pay ${sym}${(totalFee * totalEntries2).toFixed(2)} →`; btn.disabled = false; }
+          if (btn) { btn.textContent = `Pay ${sym}${(totalFee * totalEntries2).toFixed(2)} →`; btn.disabled = false; }
         }
       });
     }

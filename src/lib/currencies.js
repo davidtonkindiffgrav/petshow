@@ -3,11 +3,6 @@ export const CURRENCY_SYMBOLS = {
   CAD: 'C$', NZD: 'NZ$', ZAR: 'R', SGD: 'S$',
 };
 
-export const MIN_ENTRY_FEE = {
-  GBP: 2, USD: 2, EUR: 2, AUD: 3,
-  CAD: 2, NZD: 3, ZAR: 25, SGD: 3,
-};
-
 export const CURRENCIES = [
   { code: 'AUD', label: 'AUD — A$ Australian Dollar' },
   { code: 'NZD', label: 'NZD — NZ$ New Zealand Dollar' },
