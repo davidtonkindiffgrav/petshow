@@ -290,15 +290,23 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       typeBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#f5f3fa] text-[#9b94a8]">Judging not configured</span>`;
     }
 
+    const certBtn = `<a href="${base}organiser/cert-designer?id=${esc(show.id)}"
+        class="text-[13px] font-bold text-brand border border-brand/30 px-4 py-2 rounded-btn hover:bg-brand/5 transition-colors shrink-0" style="text-decoration:none">
+        Design Certificate →
+      </a>`;
+
     let bodyHTML = '';
 
     if (isUnset) {
       bodyHTML = `
-        <div class="mt-3 pt-3 border-t border-[#f5f3fa]">
-          <p class="text-[13px] text-[#9b94a8]">No judging type has been set for this show yet.</p>
-          <a href="${base}organiser/show?id=${esc(show.id)}" class="inline-block mt-1.5 text-[12px] font-semibold text-brand hover:text-brand-dark transition-colors">
-            Configure judging in show settings →
-          </a>
+        <div class="mt-3 pt-3 border-t border-[#f5f3fa] flex items-center justify-between gap-4">
+          <div class="min-w-0">
+            <p class="text-[13px] text-[#9b94a8]">No judging type has been set for this show yet.</p>
+            <a href="${base}organiser/show?id=${esc(show.id)}" class="inline-block mt-1.5 text-[12px] font-semibold text-brand hover:text-brand-dark transition-colors">
+              Configure judging in show settings →
+            </a>
+          </div>
+          ${certBtn}
         </div>`;
 
     } else if (isExpert) {
@@ -405,18 +413,21 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
               ? `<span style="color:#16a34a;font-weight:600">Published ${fmtDate(show.results_published_at)}</span>`
               : disabledReason}
           </p>
-          ${alreadyPublished
-            ? `<a href="${base}organiser/results?id=${esc(show.id)}"
-                 class="text-[13px] font-bold px-4 py-2 rounded-btn bg-brand text-white shadow-btn-primary hover:bg-brand-dark transition-colors shrink-0">
-                 Manage Results →
-               </a>`
-            : `<button class="publish-results-btn shrink-0 text-[13px] font-bold px-4 py-2 rounded-btn transition-colors
-                ${canPublish ? 'bg-brand text-white shadow-btn-primary hover:bg-brand-dark' : 'bg-[#f5f3fa] text-[#c4bed0] cursor-not-allowed'}"
-                data-show-id="${esc(show.id)}"
-                ${!canPublish ? 'disabled' : ''}>
-                Publish Results
-              </button>`
-          }
+          <div class="flex items-center gap-2 shrink-0">
+            ${certBtn}
+            ${alreadyPublished
+              ? `<a href="${base}organiser/results?id=${esc(show.id)}"
+                   class="text-[13px] font-bold px-4 py-2 rounded-btn bg-brand text-white shadow-btn-primary hover:bg-brand-dark transition-colors shrink-0">
+                   Manage Results →
+                 </a>`
+              : `<button class="publish-results-btn shrink-0 text-[13px] font-bold px-4 py-2 rounded-btn transition-colors
+                  ${canPublish ? 'bg-brand text-white shadow-btn-primary hover:bg-brand-dark' : 'bg-[#f5f3fa] text-[#c4bed0] cursor-not-allowed'}"
+                  data-show-id="${esc(show.id)}"
+                  ${!canPublish ? 'disabled' : ''}>
+                  Publish Results
+                </button>`
+            }
+          </div>
         </div>`;
 
     } else if (isPublic) {
@@ -499,18 +510,21 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
               ? `<span style="color:#16a34a;font-weight:600">Published ${fmtDate(show.results_published_at)}</span>`
               : disabledReason}
           </p>
-          ${alreadyPublished
-            ? `<a href="${base}organiser/results?id=${esc(show.id)}"
-                 class="text-[13px] font-bold px-4 py-2 rounded-btn bg-brand text-white shadow-btn-primary hover:bg-brand-dark transition-colors shrink-0">
-                 Manage Results →
-               </a>`
-            : `<button class="publish-votes-btn shrink-0 text-[13px] font-bold px-4 py-2 rounded-btn transition-colors
-                ${canPublish ? 'bg-[#7c3aed] text-white hover:bg-[#6d28d9]' : 'bg-[#f5f3fa] text-[#c4bed0] cursor-not-allowed'}"
-                data-show-id="${esc(show.id)}"
-                ${!canPublish ? 'disabled' : ''}>
-                Publish Results
-              </button>`
-          }
+          <div class="flex items-center gap-2 shrink-0">
+            ${certBtn}
+            ${alreadyPublished
+              ? `<a href="${base}organiser/results?id=${esc(show.id)}"
+                   class="text-[13px] font-bold px-4 py-2 rounded-btn bg-brand text-white shadow-btn-primary hover:bg-brand-dark transition-colors shrink-0">
+                   Manage Results →
+                 </a>`
+              : `<button class="publish-votes-btn shrink-0 text-[13px] font-bold px-4 py-2 rounded-btn transition-colors
+                  ${canPublish ? 'bg-[#7c3aed] text-white hover:bg-[#6d28d9]' : 'bg-[#f5f3fa] text-[#c4bed0] cursor-not-allowed'}"
+                  data-show-id="${esc(show.id)}"
+                  ${!canPublish ? 'disabled' : ''}>
+                  Publish Results
+                </button>`
+            }
+          </div>
         </div>`;
     }
 
@@ -526,16 +540,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
             </div>
             <p class="text-[13px] text-[#6f6880]">${fmtDate(show.show_date)}</p>
           </div>
-          <div class="flex items-center gap-4 shrink-0">
-            <a href="${base}organiser/cert-designer?id=${esc(show.id)}"
-              class="text-[12px] font-semibold text-brand hover:text-brand-dark transition-colors">
-              Design Certificate →
-            </a>
-            <a href="${base}organiser/show?id=${esc(show.id)}"
-              class="text-[12px] font-semibold text-brand hover:text-brand-dark transition-colors">
-              Show settings →
-            </a>
-          </div>
+          <a href="${base}organiser/show?id=${esc(show.id)}"
+            class="text-[12px] font-semibold text-brand hover:text-brand-dark transition-colors shrink-0">
+            Show settings →
+          </a>
         </div>
         ${bodyHTML}
       </div>`;
