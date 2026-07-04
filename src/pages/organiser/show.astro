@@ -949,11 +949,14 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     publishBtn.onclick = handlePublish;
 
     const actionLinks = document.getElementById('show-action-links');
-    const previewUrl  = `${mgmtBase}show?id=${showId}&preview=1`;
-    let linksHtml = `<a href="${previewUrl}" target="_blank" class="text-[13px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-3 py-2 rounded-btn hover:bg-[#f0fafa] transition-colors" style="text-decoration:none">Preview →</a>`;
+    // One status-dependent button: drafts get a preview (with the unpublished
+    // warning banner); anything else links to the real public page
+    const isDraft = show.status === 'draft';
+    const viewUrl = isDraft
+      ? `${mgmtBase}show?id=${showId}&preview=1`
+      : `${window.location.origin}${mgmtBase}show?id=${showId}`;
+    let linksHtml = `<a href="${viewUrl}" target="_blank" class="text-[13px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-3 py-2 rounded-btn hover:bg-[#f0fafa] transition-colors" style="text-decoration:none">${isDraft ? 'Preview Show →' : 'View Show ↗'}</a>`;
     if (show.status === 'published') {
-      const showUrl = `${window.location.origin}${mgmtBase}show?id=${showId}`;
-      linksHtml += `<a href="${showUrl}" target="_blank" class="text-[13px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-3 py-2 rounded-btn hover:bg-[#f0fafa] transition-colors" style="text-decoration:none">View Show ↗</a>`;
       linksHtml += `<button id="btn-copy-url" class="text-[13px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-3 py-2 rounded-btn hover:bg-[#f0fafa] transition-colors">Copy URL</button>`;
     }
     actionLinks.innerHTML = linksHtml;

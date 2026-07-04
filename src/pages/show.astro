@@ -213,6 +213,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     show = showRes.data;
 
+    // A published show never needs preview mode — a stale ?preview=1 link
+    // should show the real page, warning-free
+    if (isPreview && show.status === 'published') isPreview = false;
+
     if (isPreview) {
       const auth = await getAuth();
       if (!auth.session) { window.location.replace(base + 'login'); return; }
