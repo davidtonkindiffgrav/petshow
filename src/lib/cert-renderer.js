@@ -28,6 +28,8 @@ const FRAME_URLS = {
   frame2: '/images/fancyframe2.svg',
   frame3: '/images/fancyframe3.svg',
 };
+// Extra content inset (px) per frame so text clears each frame's border thickness.
+const FRAME_INSET = { frame1: 46, frame2: 16, frame3: 40 };
 const ACCENT      = '#1ba89a';
 const TEXT_DARK   = '#143A37';
 const TEXT_MID    = '#4A6663';
@@ -241,7 +243,9 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
                    : d.image_mode === 'photo'  ? photoImg
                    : null;
 
-  const PAD = 36;
+  // Inset all content further when a decorative frame is active so nothing
+  // (title, date, signature, footer) sits on top of the frame's border.
+  const PAD = 36 + (frameImg ? (FRAME_INSET[d.border_style] ?? 24) : 0);
   let y = PAD;
 
   // ── Header row ────────────────────────────────────────────────────────────
