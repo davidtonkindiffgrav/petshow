@@ -325,18 +325,23 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
   if (contentImg) {
     // Fixed 2-column layout: image LEFT, text RIGHT. The image column width is the
     // split fraction (0.25–0.50, default 0.33 → 33/67), driven by the size slider.
+    // EDGE keeps the image off the left border and the text off the right border;
+    // a tighter centre gap balances against those outer buffers.
     const imgFrac  = Math.min(Math.max(d.photo_size ?? 0.33, 0.25), 0.50);
-    const colGap   = 24;
-    const imgColW  = Math.round(contentW * imgFrac);
-    const textColX = PAD + imgColW + colGap;
-    const textColW = W - PAD - textColX;
+    const EDGE     = 18;
+    const colGap   = 18;
+    const zoneX    = PAD + EDGE;
+    const zoneW    = contentW - EDGE * 2;
+    const imgColW  = Math.round(zoneW * imgFrac);
+    const textColX = zoneX + imgColW + colGap;
+    const textColW = zoneX + zoneW - textColX;
 
     // Scale the image to fit its column box, preserving aspect, centred both axes.
     const aspect = contentImg.naturalWidth / contentImg.naturalHeight;
     let iw = imgColW, ih = Math.round(iw / aspect);
     if (ih > contentH) { ih = contentH; iw = Math.round(ih * aspect); }
     photoW = iw; photoH = ih;
-    photoX = PAD + Math.round((imgColW - iw) / 2);
+    photoX = zoneX + Math.round((imgColW - iw) / 2);
     photoY = y + Math.round((contentH - ih) / 2);
 
     textDrawX  = textColX + textColW / 2;
