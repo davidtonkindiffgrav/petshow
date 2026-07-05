@@ -8,12 +8,13 @@ const PAGE_SIZES = { a4: [842, 595], letter: [792, 612] };
 
 export const CERT_DEFAULTS = {
   border_style:  'classic',
-  image_mode:    'photo',   // 'none' | 'photo' | 'ribbon'
+  image_mode:    'none',    // 'none' | 'photo' | 'ribbon'
+  text_font:     'Playfair Display',
   show_logo:     true,
   show_sponsors:  false,
   show_signature: false,
   bg_color:      '#ffffff',
-  photo_size:    0.45,   // fraction 0.20–0.70
+  photo_size:    0.33,   // image column width fraction 0.25–0.50 (default 33/67 split)
   page_size:     'a4',   // 'a4' | 'letter'
   fields:        ['animal_name', 'breed', 'exhibitor_name', 'category', 'place', 'show_date'],
 };
@@ -26,6 +27,25 @@ const TEXT_DARK   = '#143A37';
 const TEXT_MID    = '#4A6663';
 const TEXT_LIGHT  = '#9BB4AF';
 const FONT        = '"Plus Jakarta Sans", system-ui, sans-serif';
+
+// Selectable main-text fonts (the judge signature font is separate — always Homemade Apple).
+const MAIN_FONTS = {
+  'Playfair Display':   { stack: '"Playfair Display", Georgia, serif',   gf: 'Playfair+Display:wght@400;700;800;900' },
+  'Cormorant Garamond': { stack: '"Cormorant Garamond", Georgia, serif', gf: 'Cormorant+Garamond:wght@400;500;600;700' },
+  'Merriweather':       { stack: '"Merriweather", Georgia, serif',       gf: 'Merriweather:wght@300;400;700;900' },
+  'Plus Jakarta Sans':  { stack: FONT,                                   gf: null }, // loaded globally in layouts
+};
+
+// Lazily inject a Google Fonts stylesheet (once) and await the face before drawing to canvas.
+async function ensureGoogleFont(id, href, loadSpec) {
+  if (href && !document.getElementById(id)) {
+    const lnk = document.createElement('link');
+    lnk.id = id; lnk.rel = 'stylesheet'; lnk.href = href;
+    document.head.appendChild(lnk);
+    await new Promise(r => { lnk.onload = r; lnk.onerror = r; setTimeout(r, 3000); });
+  }
+  await document.fonts.load(loadSpec).catch(() => {});
+}
 
 function rrect(ctx, x, y, w, h, r) {
   ctx.beginPath();
@@ -168,18 +188,18 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
   const ctx = canvas.getContext('2d');
   ctx.scale(SCALE, SCALE);
 
-  // Wait for fonts before drawing text
+  // Resolve the selected main-text font (falls back to the default).
+  const mainFont = MAIN_FONTS[d.text_font] || MAIN_FONTS['Playfair Display'];
+  const MAIN = mainFont.stack;
+
+  // Wait for fonts before drawing text.
   await document.fonts.load(`700 18px ${FONT}`).catch(() => {});
+  if (mainFont.gf) {
+    const gfId = 'gf-' + d.text_font.replace(/\s+/g, '-').toLowerCase();
+    await ensureGoogleFont(gfId, `https://fonts.googleapis.com/css2?family=${mainFont.gf}&display=swap`, `700 24px "${d.text_font}"`);
+  }
   if (d.show_signature) {
-    if (!document.getElementById('gf-homemade-apple')) {
-      const lnk = document.createElement('link');
-      lnk.id   = 'gf-homemade-apple';
-      lnk.rel  = 'stylesheet';
-      lnk.href = 'https://fonts.googleapis.com/css2?family=Homemade+Apple&display=swap';
-      document.head.appendChild(lnk);
-      await new Promise(r => { lnk.onload = r; lnk.onerror = r; setTimeout(r, 3000); });
-    }
-    await document.fonts.load('400 26px "Homemade Apple"').catch(() => {});
+    await ensureGoogleFont('gf-homemade-apple', 'https://fonts.googleapis.com/css2?family=Homemade+Apple&display=swap', '400 26px "Homemade Apple"');
   }
 
   // ── Background ────────────────────────────────────────────────────────────
@@ -223,7 +243,7 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
 
   ctx.textAlign    = 'center';
   ctx.fillStyle    = TEXT_DARK;
-  ctx.font         = `700 17px ${FONT}`;
+  ctx.font         = `700 20px ${MAIN}`;
   ctx.fillText(show?.title || 'Pet Show', W / 2, y + 14);
 
   if (show?.host_org) {
@@ -254,7 +274,7 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
 
   ctx.textAlign = 'center';
   if (d.fields.includes('place')) {
-    ctx.font      = `700 26px ${FONT}`;
+    ctx.font      = `700 30px ${MAIN}`;
     ctx.fillStyle = ACCENT;
     if (ribbonImg && d.image_mode !== 'ribbon') {
       // Small ribbon icon inline with place text
@@ -273,10 +293,10 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
     }
   }
   if (d.fields.includes('category')) {
-    ctx.font      = `500 13px ${FONT}`;
+    ctx.font      = `500 18px ${MAIN}`;
     ctx.fillStyle = TEXT_MID;
-    ctx.fillText(catName, W / 2, y + 14);
-    y += 22;
+    ctx.fillText(catName, W / 2, y + 15);
+    y += 26;
   }
 
   y += 10;
@@ -291,66 +311,48 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
   const footerH = d.show_sponsors && sponsorImgs.some(Boolean) ? 56 : 36;
   const contentH = H - y - footerH - PAD;
   const contentW = W - 2 * PAD;
-  const photoSize = Math.min(Math.max(d.photo_size ?? 0.45, 0.20), 0.70);
 
-  // Layout depends on photo aspect ratio:
-  //   Portrait (< 0.80)  → photo left column, text right (side-by-side)
-  //   Landscape or square → photo centred at top, text centred below
+  // Text-block height (for vertical centring) — matches the per-line advances below.
+  const NAME_H = 44, BREED_H = 26, OWNER_H = 30;
+  let blockH = 0;
+  if (d.fields.includes('animal_name')) blockH += NAME_H;
+  if (d.fields.includes('breed') && entry?.breed) blockH += BREED_H;
+  if (d.fields.includes('exhibitor_name') && entry?.exhibitor_name) blockH += OWNER_H;
+
   let photoW = 0, photoH = 0, photoX = PAD, photoY = y;
-  let textDrawX = PAD, textStartY = y + 4, textCentered = false;
+  let textDrawX, textStartY, textMaxW;
 
   if (contentImg) {
+    // Fixed 2-column layout: image LEFT, text RIGHT. The image column width is the
+    // split fraction (0.25–0.50, default 0.33 → 33/67), driven by the size slider.
+    const imgFrac  = Math.min(Math.max(d.photo_size ?? 0.33, 0.25), 0.50);
+    const colGap   = 24;
+    const imgColW  = Math.round(contentW * imgFrac);
+    const textColX = PAD + imgColW + colGap;
+    const textColW = W - PAD - textColX;
+
+    // Scale the image to fit its column box, preserving aspect, centred both axes.
     const aspect = contentImg.naturalWidth / contentImg.naturalHeight;
+    let iw = imgColW, ih = Math.round(iw / aspect);
+    if (ih > contentH) { ih = contentH; iw = Math.round(ih * aspect); }
+    photoW = iw; photoH = ih;
+    photoX = PAD + Math.round((imgColW - iw) / 2);
+    photoY = y + Math.round((contentH - ih) / 2);
 
-    if (aspect < 0.80) {
-      // Portrait: photo left column, text centred both axes in the remaining column.
-      photoW = Math.round(90 + ((photoSize - 0.20) / 0.50) * 120);
-      // Preserve natural aspect ratio and centre vertically in the column
-      photoH = Math.min(Math.round(photoW / aspect), contentH);
-      photoX = PAD;
-      photoY = y + Math.round((contentH - photoH) / 2);
-
-      // Pre-calculate text block height for vertical centering
-      let totalTextH = 0;
-      if (d.fields.includes('animal_name')) totalTextH += 34;
-      if (d.fields.includes('breed') && entry?.breed) totalTextH += 24;
-      if (d.fields.includes('exhibitor_name') && entry?.exhibitor_name) totalTextH += 26;
-
-      const colLeft    = PAD + photoW + 24;
-      const colCenterX = colLeft + (W - PAD - colLeft) / 2;
-      const vertOffset = Math.max(0, Math.round((contentH - totalTextH) / 2));
-
-      textDrawX    = colCenterX;
-      textStartY   = y + vertOffset;
-      textCentered = true;
-    } else {
-      // Landscape / square: centred photo, text centred below.
-      let pW = Math.round(contentW * photoSize);
-      let pH = Math.round(pW / aspect);
-      // Cap height at 58% of contentH so text always has breathing room.
-      if (pH > contentH * 0.58) { pH = Math.round(contentH * 0.58); pW = Math.round(pH * aspect); }
-      photoW = pW; photoH = pH;
-      photoX = PAD + Math.round((contentW - pW) / 2);
-      photoY = y;
-      textDrawX  = W / 2;
-      textStartY = y + pH + 14;
-      textCentered = true;
-    }
+    textDrawX  = textColX + textColW / 2;
+    textStartY = y + Math.max(0, Math.round((contentH - blockH) / 2));
+    textMaxW   = textColW - 8;
   } else {
-    // No photo: center text block both axes in the full content zone
-    let totalTextH = 0;
-    if (d.fields.includes('animal_name')) totalTextH += 34;
-    if (d.fields.includes('breed') && entry?.breed) totalTextH += 24;
-    if (d.fields.includes('exhibitor_name') && entry?.exhibitor_name) totalTextH += 26;
-    textDrawX    = W / 2;
-    textStartY   = y + Math.max(0, Math.round((contentH - totalTextH) / 2));
-    textCentered = true;
+    // No image: text fully centred across the whole content zone.
+    textDrawX  = W / 2;
+    textStartY = y + Math.max(0, Math.round((contentH - blockH) / 2));
+    textMaxW   = contentW - 40;
   }
 
-  // Photo
+  // Image (left column)
   if (contentImg && photoW > 0 && photoH > 0) {
     if (d.image_mode === 'ribbon') {
-      // Draw ribbon PNG at computed size — no crop, no clipping, no border stroke
+      // Draw ribbon PNG as-is — no crop, no clipping, no border stroke
       ctx.drawImage(contentImg, photoX, photoY, photoW, photoH);
     } else {
       fitImage(ctx, contentImg, photoX, photoY, photoW, photoH, 10);
@@ -361,29 +363,42 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
     }
   }
 
-  // Text fields
+  // Text fields — always centred within their region, auto-shrunk to fit width.
   let ty = textStartY;
-  ctx.textAlign = textCentered ? 'center' : 'left';
+  ctx.textAlign = 'center';
 
   if (d.fields.includes('animal_name')) {
     const name = entry?.animal_name || 'Animal Name';
-    ctx.font      = `800 24px ${FONT}`;
+    let px = 36;
+    ctx.font = `700 ${px}px ${MAIN}`;
+    while (ctx.measureText(name).width > textMaxW && px > 18) {
+      px--; ctx.font = `700 ${px}px ${MAIN}`;
+    }
     ctx.fillStyle = TEXT_DARK;
-    ctx.fillText(name, textDrawX, ty + 22);
-    ty += 34;
+    ctx.fillText(name, textDrawX, ty + 30);
+    ty += NAME_H;
   }
   if (d.fields.includes('breed') && entry?.breed) {
-    ctx.font      = `500 13px ${FONT}`;
+    let px = 18;
+    ctx.font = `500 ${px}px ${MAIN}`;
+    while (ctx.measureText(entry.breed).width > textMaxW && px > 11) {
+      px--; ctx.font = `500 ${px}px ${MAIN}`;
+    }
     ctx.fillStyle = TEXT_MID;
-    ctx.fillText(entry.breed, textDrawX, ty + 14);
-    ty += 24;
+    ctx.fillText(entry.breed, textDrawX, ty + 18);
+    ty += BREED_H;
   }
   if (d.fields.includes('exhibitor_name') && entry?.exhibitor_name) {
     ty += 6;
-    ctx.font      = `500 12px ${FONT}`;
+    const owner = `Owner: ${entry.exhibitor_name}`;
+    let px = 16;
+    ctx.font = `500 ${px}px ${MAIN}`;
+    while (ctx.measureText(owner).width > textMaxW && px > 10) {
+      px--; ctx.font = `500 ${px}px ${MAIN}`;
+    }
     ctx.fillStyle = TEXT_LIGHT;
-    ctx.fillText(`Owner: ${entry.exhibitor_name}`, textDrawX, ty + 12);
-    ty += 20;
+    ctx.fillText(owner, textDrawX, ty + 14);
+    ty += 24;
   }
 
   // ── Footer ────────────────────────────────────────────────────────────────

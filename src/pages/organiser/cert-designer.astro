@@ -106,6 +106,18 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
             </div>
           </div>
 
+          <!-- Text Font -->
+          <div class="bg-white rounded-card border border-[#b8e4e0] p-4">
+            <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider mb-3">Text Font</p>
+            <div class="grid grid-cols-2 gap-2" id="font-opts">
+              <button data-val="Playfair Display"   class="font-opt text-[13px] font-semibold py-2 rounded-[8px] border transition-colors" style="font-family:'Playfair Display',Georgia,serif">Playfair</button>
+              <button data-val="Cormorant Garamond" class="font-opt text-[13px] font-semibold py-2 rounded-[8px] border transition-colors" style="font-family:'Cormorant Garamond',Georgia,serif">Cormorant</button>
+              <button data-val="Merriweather"       class="font-opt text-[13px] font-semibold py-2 rounded-[8px] border transition-colors" style="font-family:'Merriweather',Georgia,serif">Merriweather</button>
+              <button data-val="Plus Jakarta Sans"  class="font-opt text-[13px] font-semibold py-2 rounded-[8px] border transition-colors" style="font-family:'Plus Jakarta Sans',sans-serif">Jakarta Sans</button>
+            </div>
+            <p class="text-[10px] text-[#9b94a8] mt-2">Applies to the certificate text. Judge signature font is unchanged.</p>
+          </div>
+
           <!-- Background -->
           <div class="bg-white rounded-card border border-[#b8e4e0] p-4">
             <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider mb-3">Background</p>
@@ -126,7 +138,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
               <div class="relative group">
                 <button type="button" class="w-4 h-4 rounded-full bg-[#e8e4f0] text-[#9b94a8] text-[10px] font-bold flex items-center justify-center leading-none hover:bg-[#d4cfe3] transition-colors" aria-label="Image mode info">?</button>
                 <div class="absolute right-0 bottom-full mb-2 w-56 bg-[#1c1626] text-white text-[11px] leading-relaxed rounded-[8px] px-3 py-2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" style="z-index:9999">
-                  The preview uses a sample image to show approximate layout. The actual certificate will adapt to each winner's photo — portrait, square, or landscape images will each adjust the layout automatically.
+                  The preview uses a sample image. On the real certificate the image sits in a fixed left column, sized to fit — portrait, square, and landscape photos all use the same layout. The ratio buttons just preview how each shape fills that column.
                   <span class="absolute right-2 top-full border-4 border-transparent border-t-[#1c1626]"></span>
                 </div>
               </div>
@@ -146,9 +158,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
               <div class="space-y-1.5">
                 <div class="flex items-center justify-between">
                   <span class="text-[12px] text-[#6f6880]">Image Size</span>
-                  <span id="photo-size-val" class="text-[12px] font-bold text-brand">45%</span>
+                  <span id="photo-size-val" class="text-[12px] font-bold text-brand">33%</span>
                 </div>
-                <input type="range" id="photo-size-slider" min="20" max="70" step="1" value="45"
+                <input type="range" id="photo-size-slider" min="25" max="50" step="1" value="33"
                   class="w-full accent-brand h-1.5 cursor-pointer" />
                 <div class="flex justify-between text-[10px] text-[#c4bed0]">
                   <span>Smaller</span><span>Larger</span>
@@ -407,6 +419,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         active ? 'border-brand bg-brand/10 text-brand' : 'border-[#efebf5] text-[#6f6880] hover:border-brand/40'
       }`;
     });
+    // Font buttons (className reset keeps the inline font-family preview style)
+    document.querySelectorAll('.font-opt').forEach(btn => {
+      const active = btn.dataset.val === design.text_font;
+      btn.className = `font-opt text-[13px] font-semibold py-2 rounded-[8px] border transition-colors ${
+        active ? 'border-brand bg-brand/10 text-brand' : 'border-[#efebf5] text-[#6f6880] hover:border-brand/40'
+      }`;
+    });
     // BG buttons
     document.querySelectorAll('.bg-opt').forEach(btn => {
       btn.style.borderColor = btn.dataset.val === design.bg_color ? '#1ba89a' : '#efebf5';
@@ -453,7 +472,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const panel = document.getElementById('left-panel');
     if (panel) panel.style.opacity = isLocked ? '0.45' : '1';
     document.querySelectorAll('.cert-toggle, .field-tog').forEach(el => el.disabled = isLocked);
-    document.querySelectorAll('.border-opt, .bg-opt, .img-mode-opt, .ratio-opt, .page-size-opt').forEach(el => el.disabled = isLocked);
+    document.querySelectorAll('.border-opt, .font-opt, .bg-opt, .img-mode-opt, .ratio-opt, .page-size-opt').forEach(el => el.disabled = isLocked);
     const slider = document.getElementById('photo-size-slider');
     if (slider) slider.disabled = isLocked;
     const togPhoto = document.getElementById('btn-toggle-photo');
@@ -713,6 +732,14 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       const btn = e.target.closest('.border-opt');
       if (!btn) return;
       design.border_style = btn.dataset.val;
+      syncUI(); redraw();
+    });
+
+    // Font buttons
+    document.getElementById('font-opts').addEventListener('click', e => {
+      const btn = e.target.closest('.font-opt');
+      if (!btn) return;
+      design.text_font = btn.dataset.val;
       syncUI(); redraw();
     });
 
