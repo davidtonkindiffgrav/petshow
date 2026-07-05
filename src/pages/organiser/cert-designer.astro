@@ -96,13 +96,25 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           <!-- Border style -->
           <div class="bg-white rounded-card border border-[#b8e4e0] p-4">
             <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider mb-3">Border Style</p>
-            <div class="grid grid-cols-2 gap-2" id="border-opts">
-              <button data-val="none"     class="border-opt text-[12px] font-semibold py-2 rounded-[8px] border transition-colors">None</button>
-              <button data-val="classic"  class="border-opt text-[12px] font-semibold py-2 rounded-[8px] border transition-colors">Classic</button>
-              <button data-val="elegant"  class="border-opt text-[12px] font-semibold py-2 rounded-[8px] border transition-colors">Elegant</button>
-              <button data-val="playful"  class="border-opt text-[12px] font-semibold py-2 rounded-[8px] border transition-colors">Playful</button>
-              <button data-val="gallery"  class="border-opt text-[12px] font-semibold py-2 rounded-[8px] border transition-colors">Gallery</button>
-              <button data-val="rainbow"  class="border-opt text-[12px] font-semibold py-2 rounded-[8px] border transition-colors">Rainbow</button>
+            <div id="border-opts">
+              <div class="grid grid-cols-2 gap-2">
+                <button data-val="none"     class="border-opt text-[12px] font-semibold py-2 rounded-[8px] border transition-colors">None</button>
+                <button data-val="classic"  class="border-opt text-[12px] font-semibold py-2 rounded-[8px] border transition-colors">Classic</button>
+                <button data-val="elegant"  class="border-opt text-[12px] font-semibold py-2 rounded-[8px] border transition-colors">Elegant</button>
+                <button data-val="playful"  class="border-opt text-[12px] font-semibold py-2 rounded-[8px] border transition-colors">Playful</button>
+                <button data-val="gallery"  class="border-opt text-[12px] font-semibold py-2 rounded-[8px] border transition-colors">Gallery</button>
+                <button data-val="rainbow"  class="border-opt text-[12px] font-semibold py-2 rounded-[8px] border transition-colors">Rainbow</button>
+              </div>
+              <div class="flex items-center gap-2 my-3">
+                <div class="h-px flex-1 bg-[#efebf5]"></div>
+                <span class="text-[10px] font-semibold text-[#9b94a8] uppercase tracking-wider">Decorative Frames</span>
+                <div class="h-px flex-1 bg-[#efebf5]"></div>
+              </div>
+              <div class="grid grid-cols-3 gap-2">
+                <button data-val="frame1" class="frame-opt border rounded-[8px] transition-shadow overflow-hidden aspect-[7/5] bg-center bg-no-repeat" style="background-image:url('/images/fancyframe1.svg');background-size:88%;border-color:#efebf5" title="Frame 1" aria-label="Frame 1"></button>
+                <button data-val="frame2" class="frame-opt border rounded-[8px] transition-shadow overflow-hidden aspect-[7/5] bg-center bg-no-repeat" style="background-image:url('/images/fancyframe2.svg');background-size:88%;border-color:#efebf5" title="Frame 2" aria-label="Frame 2"></button>
+                <button data-val="frame3" class="frame-opt border rounded-[8px] transition-shadow overflow-hidden aspect-[7/5] bg-center bg-no-repeat" style="background-image:url('/images/fancyframe3.svg');background-size:88%;border-color:#efebf5" title="Frame 3" aria-label="Frame 3"></button>
+              </div>
             </div>
           </div>
 
@@ -419,6 +431,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         active ? 'border-brand bg-brand/10 text-brand' : 'border-[#efebf5] text-[#6f6880] hover:border-brand/40'
       }`;
     });
+    // Decorative frame buttons — style active state without rebuilding className
+    // (which would wipe their thumbnail/aspect classes).
+    document.querySelectorAll('.frame-opt').forEach(btn => {
+      const active = btn.dataset.val === design.border_style;
+      btn.style.borderColor = active ? '#1ba89a' : '#efebf5';
+      btn.style.boxShadow   = active ? '0 0 0 2px #1ba89a' : 'none';
+    });
     // Font buttons (className reset keeps the inline font-family preview style)
     document.querySelectorAll('.font-opt').forEach(btn => {
       const active = btn.dataset.val === design.text_font;
@@ -472,7 +491,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const panel = document.getElementById('left-panel');
     if (panel) panel.style.opacity = isLocked ? '0.45' : '1';
     document.querySelectorAll('.cert-toggle, .field-tog').forEach(el => el.disabled = isLocked);
-    document.querySelectorAll('.border-opt, .font-opt, .bg-opt, .img-mode-opt, .ratio-opt, .page-size-opt').forEach(el => el.disabled = isLocked);
+    document.querySelectorAll('.border-opt, .frame-opt, .font-opt, .bg-opt, .img-mode-opt, .ratio-opt, .page-size-opt').forEach(el => el.disabled = isLocked);
     const slider = document.getElementById('photo-size-slider');
     if (slider) slider.disabled = isLocked;
     const togPhoto = document.getElementById('btn-toggle-photo');
@@ -727,9 +746,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       redraw();
     });
 
-    // Border buttons
+    // Border buttons (includes the decorative frame thumbnails)
     document.getElementById('border-opts').addEventListener('click', e => {
-      const btn = e.target.closest('.border-opt');
+      const btn = e.target.closest('.border-opt, .frame-opt');
       if (!btn) return;
       design.border_style = btn.dataset.val;
       syncUI(); redraw();

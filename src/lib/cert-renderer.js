@@ -22,6 +22,12 @@ export const CERT_DEFAULTS = {
 const PLACE_LABEL = { 1: '1st Place', 2: '2nd Place', 3: '3rd Place' };
 const RIBBON_URLS    = { 1: '/images/1st.png',    2: '/images/2nd.png',    3: '/images/3rd.png' };
 const RIBBON_URLS_NZ = { 1: '/images/1st_nz.png', 2: '/images/2nd_nz.png', 3: '/images/3rd.png' };
+// Decorative full-page frame borders (drawn as an image over the background).
+const FRAME_URLS = {
+  frame1: '/images/fancyframe1.svg',
+  frame2: '/images/fancyframe2.svg',
+  frame3: '/images/fancyframe3.svg',
+};
 const ACCENT      = '#1ba89a';
 const TEXT_DARK   = '#143A37';
 const TEXT_MID    = '#4A6663';
@@ -216,13 +222,19 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
   const ribbonMap   = show?.currency === 'NZD' ? RIBBON_URLS_NZ : RIBBON_URLS;
   const ribbonUrl   = ribbonMap[place] ?? ribbonMap[1];
   const sponsorUrls = d.show_sponsors ? sponsors.slice(0, 4).map(s => s.logo_url) : [];
+  const frameUrl    = FRAME_URLS[d.border_style] || null;
 
-  const [logoImg, photoImg, ribbonImg, ...sponsorImgs] = await Promise.all([
+  const [logoImg, photoImg, ribbonImg, frameImg, ...sponsorImgs] = await Promise.all([
     loadImg(logoUrl),
     loadImg(photoUrl),
     loadImg(ribbonUrl),
+    loadImg(frameUrl),
     ...sponsorUrls.map(loadImg),
   ]);
+
+  // Decorative frame: draw full-page over the background, under all content.
+  // (drawBorder above is a no-op for frame styles, so there is no double border.)
+  if (frameImg) ctx.drawImage(frameImg, 0, 0, W, H);
 
   // contentImg drives the main image zone; ribbonImg always used for banner icon
   const contentImg = d.image_mode === 'ribbon' ? ribbonImg
