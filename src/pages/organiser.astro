@@ -165,11 +165,13 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 <script>
   import { getAuth } from '../lib/auth.js';
   import { supabase } from '../lib/supabase.js';
+  import { organiserNet } from '../lib/fees.js';
 
   // Module-level state so all helpers can close over these
   let show          = null;
   let entryCount    = 0;
   let totalRaised   = 0;
+  let netPerEntry   = 0;   // organiser's take-home per entry (net of platform + Stripe fees)
   let categories    = [];
   let recentEntries = [];
   let trendData     = [];
@@ -552,7 +554,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   }
 
   function trendDayValue(day) {
-    return chartMetric === 'entries' ? day.count : day.count * (show.entry_fee || 0);
+    return chartMetric === 'entries' ? day.count : day.count * netPerEntry;
   }
 
   function trendFmtVal(val) {
@@ -626,7 +628,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     const sym  = CURRENCY_SYMBOLS[show.currency] || '$';
 
     const totalEntries = days.reduce((s, d) => s + d.count, 0);
-    const totalRev     = totalEntries * (show.entry_fee || 0);
+    const totalRev     = totalEntries * netPerEntry;
     const summaryText  = chartMetric === 'entries'
       ? `${totalEntries} entr${totalEntries === 1 ? 'y' : 'ies'} in last 5 days`
       : `${sym}${Number.isInteger(totalRev) ? totalRev : totalRev.toFixed(2)} raised in last 5 days`;
@@ -750,16 +752,22 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       document.getElementById(count === 0 ? 'state-no-shows' : 'state-no-published').style.display = 'flex';
     } else {
       const sevenDaysAgo = new Date(Date.now() - 5 * 86400000).toISOString();
-      const [countRes, catsRes, catCountRes, recentRes, trendRes, judgeRes] = await Promise.all([
+      const [countRes, catsRes, catCountRes, recentRes, trendRes, judgeRes, feesRes] = await Promise.all([
         supabase.from('show_entries').select('*', { count: 'exact', head: true }).eq('show_id', show.id).eq('status', 'confirmed'),
         supabase.from('show_categories').select('id, name').eq('show_id', show.id),
         supabase.from('show_entries').select('category_id').eq('show_id', show.id).eq('status', 'confirmed'),
         supabase.from('show_entries').select('id, animal_name, exhibitor_name, breed, photo_url, category_id, created_at').eq('show_id', show.id).eq('status', 'confirmed').order('created_at', { ascending: false }).limit(3),
         supabase.from('show_entries').select('created_at').eq('show_id', show.id).eq('status', 'confirmed').gte('created_at', sevenDaysAgo),
         supabase.from('show_judges').select('first_name, last_name, photo_url').eq('show_id', show.id).limit(1).maybeSingle(),
+        supabase.from('platform_settings').select('key, value').or('key.like.service_fee_%,key.like.stripe_fee_%'),
       ]);
       entryCount  = countRes.count ?? 0;
-      totalRaised = entryCount * (show.entry_fee || 0);
+      // "Raised" figures show the organiser's take-home (net of platform + Stripe
+      // fees), never the all-in amount exhibitors paid.
+      const serviceFees = {};
+      for (const r of (feesRes.data || [])) serviceFees[r.key] = parseFloat(r.value) || 0;
+      netPerEntry = organiserNet(show.entry_fee || 0, show.currency || 'AUD', serviceFees) ?? 0;
+      totalRaised = entryCount * netPerEntry;
       categories  = catsRes.data || [];
       judge       = judgeRes.data || null;
 

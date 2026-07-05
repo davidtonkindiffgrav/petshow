@@ -184,6 +184,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   import { getAuth } from '../lib/auth.js';
   import { supabase } from '../lib/supabase.js';
   import { zonedDateTime } from '../lib/voteWindow.js';
+  import { organiserNet } from '../lib/fees.js';
 
   const CURRENCY_SYMBOLS = { GBP: '£', USD: '$', EUR: '€', AUD: 'A$', CAD: 'C$', NZD: 'NZ$', ZAR: 'R', SGD: 'S$' };
   const SHOW_TYPE_LABELS = { beauty_contest: 'Beauty Contest', fun_stakes: 'Fun Stakes', memorial: 'Memorial Show', other: 'Other' };
@@ -213,13 +214,14 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     let showQ = supabase.from('shows').select('*').eq('id', showId);
     if (!isPreview) showQ = showQ.eq('status', 'published');
 
-    const [showRes, catsRes, entriesRes, sponsorsRes] = await Promise.all([
+    const [showRes, catsRes, entriesRes, sponsorsRes, feesRes] = await Promise.all([
       showQ.single(),
       supabase.from('show_categories').select('id, name').eq('show_id', showId),
       supabase.from('show_entries')
         .select('id, animal_name, breed, photo_url, category_id, entry_number, exhibitor_name, result_place')
         .eq('show_id', showId).eq('status', 'confirmed').order('entry_number'),
       supabase.from('show_sponsors').select('name, website, logo_url').eq('show_id', showId),
+      supabase.from('platform_settings').select('key, value').or('key.like.service_fee_%,key.like.stripe_fee_%'),
     ]);
 
     if (showRes.error || !showRes.data) { showNotFound(); return; }
@@ -246,7 +248,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     showState   = getShowState(show);
     earlyVoting  = showState === 'entries_open' && show.is_judged === false && show.vote_open_mode === 'on_entries_open';
     votingActive = showState === 'voting' || earlyVoting;
-    totalRaised = entries.length * (show.entry_fee || 0);
+    // "Total raised" is what the organiser actually receives — the all-in fee
+    // the exhibitor paid, minus the platform + Stripe fees. Never show gross.
+    const serviceFees = {};
+    for (const r of (feesRes.data || [])) serviceFees[r.key] = parseFloat(r.value) || 0;
+    const netPerEntry = organiserNet(show.entry_fee || 0, show.currency || 'AUD', serviceFees) ?? 0;
+    totalRaised = entries.length * netPerEntry;
 
     // All-in pricing: entry_fee is the total the entrant pays.
     displayFee = show.entry_fee > 0 ? Number(show.entry_fee) : null;
