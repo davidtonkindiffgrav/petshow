@@ -1110,7 +1110,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       const choice = getYNAValue('sponsor-choice');
       show.has_sponsor = choice === 'yes' ? true : choice === 'no' ? false : null;
       if (choice === 'yes') {
-        show.sponsors = [{ name: document.getElementById('s5-sponsor-name').value.trim(), website: document.getElementById('s5-sponsor-website').value.trim() }];
+        show.sponsors = [{ name: document.getElementById('s5-sponsor-name').value.trim(), website: document.getElementById('s5-sponsor-website').value.trim(), logo_url: show.sponsors[0]?.logo_url || null }];
       }
     }
     if (n === 6) {
