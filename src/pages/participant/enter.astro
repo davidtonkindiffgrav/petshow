@@ -376,7 +376,7 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
     const feeLabel = `${sym}${totalFee.toFixed(2)}`;
     return `
       <div style="background:white;border-radius:16px;border:1px solid #e7eef0;box-shadow:0 4px 16px rgba(10,31,68,0.06);padding:28px;">
-        <h2 style="font-size:20px;font-weight:800;color:#1c1626;margin:0 0 4px;">Choose your class</h2>
+        <h2 style="font-size:20px;font-weight:800;color:#1c1626;margin:0 0 4px;">Choose a Class</h2>
         <p style="font-size:14px;color:#6b7c89;margin:0 0 20px;">Select the class you'd like to enter.</p>
 
         <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px;">
@@ -487,7 +487,7 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
         </div>
 
         <button id="btn-add-another" style="${backBtnStyle}width:100%;margin-bottom:10px;border:1.5px dashed #b8e4e0;" ${submitting ? 'disabled' : ''}>
-          + Add another entry
+          + Add another Class or Pet
         </button>
 
         <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;cursor:pointer;">
