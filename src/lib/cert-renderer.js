@@ -352,13 +352,15 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
     const textColX = zoneX + imgColW + colGap;
     const textColW = zoneX + zoneW - textColX;
 
-    // Scale the image to fit its column box, preserving aspect, centred both axes.
-    const aspect = contentImg.naturalWidth / contentImg.naturalHeight;
-    let iw = imgColW, ih = Math.round(iw / aspect);
-    if (ih > contentH) { ih = contentH; iw = Math.round(ih * aspect); }
-    photoW = iw; photoH = ih;
-    photoX = zoneX + Math.round((imgColW - iw) / 2);
-    photoY = y + Math.round((contentH - ih) / 2);
+    // Contain the image in a box that scales with the slider in BOTH dimensions
+    // (width = the column; height scales with the same fraction) so tall images
+    // like ribbons shrink with the slider too — not just landscape photos.
+    const boxH  = contentH * Math.min(1, imgFrac / 0.50);
+    const scale = Math.min(imgColW / contentImg.naturalWidth, boxH / contentImg.naturalHeight);
+    photoW = Math.round(contentImg.naturalWidth  * scale);
+    photoH = Math.round(contentImg.naturalHeight * scale);
+    photoX = zoneX + Math.round((imgColW - photoW) / 2);
+    photoY = y + Math.round((contentH - photoH) / 2);
 
     textDrawX  = textColX + textColW / 2;
     textStartY = y + Math.max(0, Math.round((contentH - blockH) / 2));
