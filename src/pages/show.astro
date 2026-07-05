@@ -325,7 +325,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       ? `<span style="background:rgba(255,255,255,0.15);color:white;font-size:11px;font-weight:700;padding:4px 12px;border-radius:999px;letter-spacing:0.03em">${esc(SHOW_TYPE_LABELS[show.show_type])}</span>`
       : '';
 
-    // Right-side content: fundraising panel for results, otherwise banner photo
+    // Banner photo fills the right side in every state. Fundraising totals render
+    // as a card in the body (fundraisingCard) rather than overlaying the banner.
     const showFundraising = showState === 'results' && show.show_fundraising_publicly;
     // Anchor right: the left edge of the banner sits under the gradient fade
     // and text panel, so any cover-cropping must happen on the left
@@ -333,11 +334,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       ? `<img src="${esc(show.banner_url)}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:right center;display:block">`
       : `<div style="position:absolute;inset:0;background:linear-gradient(135deg,#1E8E7E,#0E2A2A)"></div>`;
 
-    const rightOverlay = showFundraising
-      ? `<div style="position:absolute;top:16px;right:16px;bottom:16px;width:calc(100% - 32px);background:white;border-radius:14px;padding:18px 22px;z-index:2;display:flex;flex-direction:column;justify-content:center">
-           ${heroFundraisingContent()}
-         </div>`
-      : '';
 
     el.innerHTML = `
       <div style="position:relative;height:300px;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(14,42,42,0.18)">
@@ -349,7 +345,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           ${bannerLayer}
           <!-- Gradient fade from dark into photo -->
           <div style="position:absolute;inset:0;background:linear-gradient(to right,#0E2A2A 0%,rgba(14,42,42,0.4) 35%,transparent 65%);pointer-events:none"></div>
-          ${rightOverlay}
         </div>
 
         <!-- Left: text panel -->
@@ -373,21 +368,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           </div>
         </div>
       </div>`;
-  }
-
-  function heroFundraisingContent() {
-    const goal = show.fundraising_goal || 0;
-    const pct  = goal > 0 ? Math.round(totalRaised / goal * 100) : 0;
-    return `
-      <p style="font-size:13px;font-weight:800;color:#143A37;margin:0 0 10px">${pct >= 100 ? 'We Reached Our Goal! 🎉' : '❤️ Thank You!'}</p>
-      <p style="font-size:30px;font-weight:900;color:#1E8E7E;margin:0 0 2px">${sym}${totalRaised.toLocaleString()}</p>
-      ${goal > 0 ? `<p style="font-size:12px;color:#6B7C79;margin:0 0 10px">raised of ${sym}${goal.toLocaleString()} goal</p>` : ''}
-      <div style="height:10px;border-radius:999px;background:#E6EEEC;overflow:hidden;margin-bottom:4px">
-        <div style="height:100%;border-radius:999px;width:${Math.min(pct, 100)}%;background:linear-gradient(to right,#A6D84A,#5FB23E)"></div>
-      </div>
-      <p style="font-size:12px;font-weight:700;color:#5FB23E;margin:0 0 8px">${pct}%</p>
-      ${show.description ? `<p style="font-size:11px;color:#6B7C79;margin:0 0 4px">${esc(show.description)}</p>` : ''}
-      ${show.website_url ? `<a href="${esc(absUrl(show.website_url))}" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:#1E8E7E;font-weight:600;text-decoration:none">Learn more →</a>` : ''}`;
   }
 
   // ── Body dispatcher ───────────────────────────────────────────────────────────
@@ -477,6 +457,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <div>${entryClassesCard(true)}</div>
         <div>${winnersCard()}</div>
         <div style="display:flex;flex-direction:column;gap:16px">
+          ${fundraisingCard()}
           ${sponsorsCard()}
           ${digitalCertCard()}
         </div>
