@@ -950,11 +950,17 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       return;
     }
 
-    const sortedCats = [...state.categories].sort((a, b) => {
-      const aComplete = getCategoryStatus(a.id).type === 'complete' ? 1 : 0;
-      const bComplete = getCategoryStatus(b.id).type === 'complete' ? 1 : 0;
-      return aComplete - bComplete;
-    });
+    // Order by how much the judge needs to act: classes that still need
+    // judging float to the top, then classes with no entries, then completed
+    // classes at the bottom. (Array.sort is stable, so original order holds
+    // within each tier.)
+    const catRank = (catId) => {
+      const t = getCategoryStatus(catId).type;
+      if (t === 'complete') return 2;  // done → bottom
+      if (t === 'empty')    return 1;  // no entries → below anything still to judge
+      return 0;                        // not-started / in-progress / final-round → top
+    };
+    const sortedCats = [...state.categories].sort((a, b) => catRank(a.id) - catRank(b.id));
 
     const afterShowDay = isAfterShowDay();
     el.innerHTML = sortedCats.map(cat => {
