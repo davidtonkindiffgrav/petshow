@@ -19,6 +19,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 <script>
   import { getAuth } from '../../lib/auth.js';
   import { supabase } from '../../lib/supabase.js';
+  import { zonedDateTime } from '../../lib/voteWindow.js';
   import { renderCertificate, CERT_DEFAULTS } from '../../lib/cert-renderer.js';
 
   const { session, profile, base } = await getAuth();
@@ -54,7 +55,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
   if (!error && entry) {
     const [showRes, catRes, judgeRes] = await Promise.all([
-      entry.show_id     ? supabase.from('shows').select('id, title, host_org, show_date, entry_close_date, currency, results_published_at, cert_design_json, logo_url, org_logo_url, is_judged').eq('id', entry.show_id).single() : { data: null },
+      entry.show_id     ? supabase.from('shows').select('id, title, host_org, show_date, entry_close_date, entry_close_time, timezone, currency, results_published_at, cert_design_json, logo_url, org_logo_url, is_judged').eq('id', entry.show_id).single() : { data: null },
       entry.category_id ? supabase.from('show_categories').select('id, name').eq('id', entry.category_id).single() : { data: null },
       entry.show_id     ? supabase.from('show_judges').select('first_name, last_name').eq('show_id', entry.show_id).limit(1).maybeSingle() : { data: null },
     ]);
@@ -86,7 +87,8 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   function entryKind(e) {
     if (e.shows?.results_published_at) return e.result_place ? 'won' : 'noplace';
     const now = new Date();
-    if (e.shows?.entry_close_date && new Date(e.shows.entry_close_date) > now) return 'open';
+    const closeAt = e.shows && zonedDateTime(e.shows.entry_close_date, e.shows.entry_close_time, e.shows.timezone);
+    if (closeAt && closeAt > now) return 'open';
     return 'judging';
   }
 

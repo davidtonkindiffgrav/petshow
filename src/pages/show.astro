@@ -503,7 +503,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
   function enterCard() {
     const fee       = displayFee;
-    const closeDate = show.entry_close_date ? new Date(show.entry_close_date) : null;
+    const closeDate = zonedDateTime(show.entry_close_date, show.entry_close_time, show.timezone);
     const countdown = closeDate ? getCountdown(closeDate) : null;
     const isUpcoming = showState === 'upcoming';
 

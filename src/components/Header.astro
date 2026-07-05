@@ -141,7 +141,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
   async function loadShows() {
     const { supabase } = await import('../lib/supabase.js');
-    const { isVotingOpen } = await import('../lib/voteWindow.js');
+    const { isVotingOpen, zonedDateTime } = await import('../lib/voteWindow.js');
     const { data, error } = await supabase
       .from('shows')
       .select('id, title, host_org, logo_url, banner_url, show_date, show_time, timezone, entry_open_date, entry_open_time, entry_close_date, entry_close_time, entry_fee, currency, status, description, is_judged, vote_open_mode, results_published_at')
@@ -150,8 +150,10 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     const now2 = Date.now();
     showsCache = (data || []).filter(s => {
       if (s.status === 'draft') return false;
-      const openOk  = !s.entry_open_date  || new Date(s.entry_open_date).getTime()  <= now2;
-      const closeOk = !s.entry_close_date || new Date(s.entry_close_date).getTime() >= now2;
+      const openAt  = zonedDateTime(s.entry_open_date,  s.entry_open_time,  s.timezone);
+      const closeAt = zonedDateTime(s.entry_close_date, s.entry_close_time, s.timezone);
+      const openOk  = !openAt  || openAt.getTime()  <= now2;
+      const closeOk = !closeAt || closeAt.getTime() >= now2;
       // Public vote shows stay listed while their voting window is open,
       // even after entries close — that's when people come to vote.
       s._votingOpen = isVotingOpen(s);

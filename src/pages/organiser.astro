@@ -165,6 +165,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 <script>
   import { getAuth } from '../lib/auth.js';
   import { supabase } from '../lib/supabase.js';
+  import { zonedDateTime } from '../lib/voteWindow.js';
   import { organiserNet } from '../lib/fees.js';
 
   // Module-level state so all helpers can close over these
@@ -188,9 +189,12 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   function derivedStatus() {
     if (!show || show.status !== 'published') return { label: 'Draft', color: '#6f6880', bg: '#f5f3fa' };
     const now       = Date.now();
-    const openTime  = show.entry_open_date  ? new Date(show.entry_open_date).getTime()  : null;
-    const closeTime = show.entry_close_date ? new Date(show.entry_close_date).getTime() : null;
-    const showTime  = show.show_date        ? new Date(show.show_date).getTime()        : null;
+    const openAt    = zonedDateTime(show.entry_open_date,  show.entry_open_time,  show.timezone);
+    const closeAt   = zonedDateTime(show.entry_close_date, show.entry_close_time, show.timezone);
+    const showAt    = zonedDateTime(show.show_date,        show.show_time,        show.timezone);
+    const openTime  = openAt  ? openAt.getTime()  : null;
+    const closeTime = closeAt ? closeAt.getTime() : null;
+    const showTime  = showAt  ? showAt.getTime()  : null;
     if (openTime && openTime > now)     return { label: 'Scheduled',        color: '#2563eb', bg: '#eff6ff' };
     if (!closeTime || closeTime >= now) return { label: 'Open for Entries', color: '#16a34a', bg: '#f0fdf4' };
     if (showTime && showTime > now)     return { label: 'Entries Closed',   color: '#d97706', bg: '#fffbeb' };
@@ -471,9 +475,9 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
   function renderTimeline() {
     const el        = document.getElementById('dash-timeline');
-    const openDate  = show.entry_open_date  ? new Date(show.entry_open_date)  : null;
-    const closeDate = show.entry_close_date ? new Date(show.entry_close_date) : null;
-    const showDate  = show.show_date        ? new Date(show.show_date)        : null;
+    const openDate  = zonedDateTime(show.entry_open_date,  show.entry_open_time,  show.timezone);
+    const closeDate = zonedDateTime(show.entry_close_date, show.entry_close_time, show.timezone);
+    const showDate  = zonedDateTime(show.show_date,        show.show_time,        show.timezone);
     const today     = new Date();
 
     // Build steps with timestamps for proportion calculation

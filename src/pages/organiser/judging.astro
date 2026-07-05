@@ -239,7 +239,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   import { supabase }    from '../../lib/supabase.js';
   import { uploadImage } from '../../lib/storage.js';
   import { showUploadOverlay, hideUploadOverlay } from '../../lib/uploadOverlay.js';
-  import { isVotingOpen, getVoteWindow } from '../../lib/voteWindow.js';
+  import { isVotingOpen, getVoteWindow, zonedDateTime } from '../../lib/voteWindow.js';
 
   let base = '';
   let uid  = '';
@@ -279,9 +279,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   function derivedStatus(show) {
     if (show.status !== 'published') return { label: 'Draft', color: '#6f6880', bg: '#f5f3fa' };
     const now       = Date.now();
-    const openTime  = show.entry_open_date  ? new Date(show.entry_open_date).getTime()  : null;
-    const closeTime = show.entry_close_date ? new Date(show.entry_close_date).getTime() : null;
-    const showTime  = show.show_date        ? new Date(show.show_date).getTime()        : null;
+    const openAt    = zonedDateTime(show.entry_open_date,  show.entry_open_time,  show.timezone);
+    const closeAt   = zonedDateTime(show.entry_close_date, show.entry_close_time, show.timezone);
+    const showAt    = zonedDateTime(show.show_date,        show.show_time,        show.timezone);
+    const openTime  = openAt  ? openAt.getTime()  : null;
+    const closeTime = closeAt ? closeAt.getTime() : null;
+    const showTime  = showAt  ? showAt.getTime()  : null;
     if (openTime && openTime > now)     return { label: 'Scheduled',        color: '#2563eb', bg: '#eff6ff' };
     if (!closeTime || closeTime >= now) return { label: 'Open for Entries', color: '#16a34a', bg: '#f0fdf4' };
     if (showTime && showTime >= now)    return { label: 'Entries Closed',   color: '#d97706', bg: '#fffbeb' };
@@ -631,7 +634,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         : `<p class="text-[13px] text-[#9b94a8]">No classes configured for this show.</p>`;
 
       const nowMs          = Date.now();
-      const showDayArrived = show.show_date && new Date(show.show_date).getTime() <= nowMs;
+      const showAt         = zonedDateTime(show.show_date, show.show_time, show.timezone);
+      const showDayArrived = showAt && showAt.getTime() <= nowMs;
       const allJudgingDone = cats.every(c => {
         if ((entryCounts[c.id] || 0) === 0) return true;
         return judgeTotal > 0 && judgeEmails.filter(e => catRankings[c.id]?.has(e)).length >= judgeTotal;

@@ -104,6 +104,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 <script>
   import { getAuth } from '../../lib/auth.js';
   import { supabase } from '../../lib/supabase.js';
+  import { zonedDateTime } from '../../lib/voteWindow.js';
 
   const SHOW_TYPE_LABELS   = { beauty_contest: 'Beauty Contest', fun_stakes: 'Fun Stakes', memorial: 'Memorial Show', other: 'Other' };
   const BREED_SCOPE_LABELS = { all: 'All Breeds', breed_specific: 'Breed Specific', group_specific: 'Group Specific' };
@@ -212,8 +213,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (s.archived_at)        return { label: 'Archived',          color: '#92400e', bg: '#fef3c7' };
     if (s.status === 'draft') return { label: 'Draft',             color: '#6f6880', bg: '#f5f3fa' };
     const now = Date.now();
-    if (s.entry_open_date  && new Date(s.entry_open_date).getTime()  > now) return { label: 'Scheduled',        color: '#2563eb', bg: '#eff6ff' };
-    if (s.entry_close_date && new Date(s.entry_close_date).getTime() >= now) return { label: 'Open for Entries', color: '#16a34a', bg: '#f0fdf4' };
+    const openAt  = zonedDateTime(s.entry_open_date,  s.entry_open_time,  s.timezone);
+    const closeAt = zonedDateTime(s.entry_close_date, s.entry_close_time, s.timezone);
+    if (openAt  && openAt.getTime()  > now)  return { label: 'Scheduled',        color: '#2563eb', bg: '#eff6ff' };
+    if (closeAt && closeAt.getTime() >= now) return { label: 'Open for Entries', color: '#16a34a', bg: '#f0fdf4' };
     return { label: 'Closed', color: '#6b7280', bg: '#f9fafb' };
   }
 
