@@ -428,7 +428,7 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
   ctx.font      = `400 9px ${FONT}`;
   ctx.fillStyle = TEXT_LIGHT;
   ctx.textAlign = d.show_signature ? 'left' : 'right';
-  ctx.fillText('fur to feathers', d.show_signature ? PAD : W - PAD, fy - 14);
+  ctx.fillText('FurToFeathers.com', d.show_signature ? PAD : W - PAD, fy - 14);
 
   // ── Judge signature ───────────────────────────────────────────────────────
   if (d.show_signature) {
