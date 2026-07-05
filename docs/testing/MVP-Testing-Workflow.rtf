@@ -1,0 +1,322 @@
+{\rtf1\ansi\ansicpg1252\deff0\nouicompat{\fonttbl{\f0\fswiss Segoe UI;}{\f1\fmodern Consolas;}{\f2\fnil\fcharset1 Segoe UI Symbol;}{\f3\fswiss\fcharset0 Segoe UI;}}
+{\colortbl ;\red13\green115\blue119;\red0\green0\blue0;\red110\green110\blue110;\red0\green0\blue255;\red200\green100\blue0;\red20\green130\blue60;\red180\green30\blue30;\red0\green176\blue80;}
+{\*\generator Riched20 10.0.19041}\viewkind4\uc1 
+\pard\sa60\cf1\b\f0\fs44\lang9 Fur to Feathers \emdash  MVP Testing Workflow\cf2\b0\fs22\par
+
+\pard\sa40 {\cf3\fs24{\field{\*\fldinst{HYPERLINK www.furtofeathers.com }}{\fldrslt{www.furtofeathers.com\ul0\cf0}}}}\cf3\f0\fs24  \bullet  Version 1.0 \bullet  4 July 2026 \bullet  Stripe: TEST MODE\cf2\fs22\par
+
+\pard\sb200\sa120 This document walks a tester through every feature of the site in the order a real show unfolds: set-up, create a show, enter and pay, judge or vote, publish results, send certificates, archive. Work through the parts in order the first time \emdash  later parts depend on data created in earlier ones.\par
+
+\pard\sb200\sa80\cf1\b\fs26 How to use this document\cf2\b0\fs22\par
+
+\pard\fi-270\li720\sa50\bullet\tab Each test line is \b [ ] Action \emdash  Expected result\b0 . Tick the box (print, or edit in Word) when the expected result is observed. Anything different = log a bug with the test line's wording.\par
+\bullet\tab\cf5\b [NEG]\cf2\b0  marks a \b negative test\b0  \emdash  you are deliberately doing something that should be \b refused or blocked\b0 . A pass means you see the error/block described.\par
+\bullet\tab\cf6\b TIP:\cf2\b0  lines make testing faster \emdash  they are not tests.\par
+\bullet\tab\cf7\b Part 7\cf2\b0  lists issues already found by code analysis. Do not re-report those \emdash  but do confirm them if you like.\par
+
+\pard\sb300\sa100\cf1\b\fs32 Part 0 \emdash  Pre-flight setup (do once, before any testing)\cf2\b0\fs22\par
+
+\pard\sb120\sa80\b\fs24 Test accounts\b0\fs22\par
+
+\pard\fi-270\li720\sa50\bullet\tab\b Organiser A\b0  \emdash  main organiser account (runs the shows).\par
+\bullet\tab\b Organiser B\b0  \emdash  second organiser (for "can't see other people's shows" checks).\par
+\bullet\tab\b Participant P\b0  \emdash  enters shows and pays.\par
+\bullet\tab\b Judge J\b0  \emdash  an email address that has \b never\b0  been used on the site (tests the new-user invite path).\par
+\bullet\tab\b Voters\b0  \emdash  at least 3 extra email addresses for public voting.\par
+
+\pard\li720\sa80\cf6\b TIP:\cf2\b0  Gmail ignores everything after a plus sign, so \f1 yourname+org1@gmail.com\f0 , \f1 yourname+judge@gmail.com\f0 , \f1 yourname+vote1@gmail.com\f0  etc. all arrive in one inbox but count as different accounts. Unlimited free test identities.\par
+\cf6\b TIP:\cf2\b0  Use a separate browser profile (or incognito window) per role so Organiser A, Participant P and Judge J can all stay logged in at the same time.\par
+
+\pard\sb120\sa80\b\fs24 Configuration checklist (server side)\b0\fs22\par
+
+\pard\fi-330\li720\sa50 [ ]\tab\b Platform fee settings seeded.\b0  Run the all-in pricing SQL (Part A of \f1 supabase/manual-sql/2026-07-04_allin_pricing_settings.sql\f0 ) in the Supabase SQL editor. Without it, checkout fails with "Entry fees are not configured".\par
+[ ]\tab\b Storage update policies applied\b0  (\f1 2026-07-04_storage_update_policies.sql\f0 ). Without them, re-uploading a logo/photo or re-sending a certificate fails with a row-level security error.\par
+[ ]\tab\b Vote-window migration applied and Edge Functions redeployed\b0  (\f1 20260704_vote_window.sql\f0  \emdash  adds show_time and vote_open_mode). This was pending at time of writing.\par
+[ ]\tab\b All 6 Edge Functions deployed:\b0  create-checkout-session, stripe-webhook, send-vote-magic-link, confirm-vote, invite-judges, send-certificate.\par
+[ ]\tab\b Supabase function secrets set:\b0  \f1 STRIPE_SECRET_KEY\f0 , \f1 STRIPE_WEBHOOK_SECRET\f0 , \f1 RESEND_API_KEY\f0 , \f1 RESEND_FROM\f0 , \f1 SITE_URL\f0 . Set \f1 RESEND_FROM\f0  and \f1 SITE_URL\f0  explicitly \emdash  some functions fall back to \f1 noreply@example.com\f0  or a non-www URL if unset (see Part 7).\par
+[ ]\tab\b Stripe webhook endpoint registered\b0  in the Stripe dashboard, pointing at the stripe-webhook function URL and subscribed to the \f1 checkout.session.completed\f0  event. This is the single mechanism that confirms paid entries \emdash  if it is missing, every payment succeeds but no entry ever appears.\par
+[ ]\tab\b Supabase Auth SMTP configured\b0  \emdash  judge invitation emails go through Supabase Auth's SMTP, not Resend. Both email systems must work.\par
+[ ]\tab\b Resend domain verified\b0  (SPF/DKIM for furtofeathers.com) so vote and certificate emails don't land in spam.\par
+
+\pard\sb120\sa80\b\fs24 Stripe test cards (test mode only)\b0\fs22\par
+
+\pard\fi-270\li720\sa50\bullet\tab Success: \f1 4242 4242 4242 4242\f0\par
+\bullet\tab Declined: \f1 4000 0000 0000 0002\f0\par
+\bullet\tab 3-D Secure challenge: \f1 4000 0025 0000 3155\f0\par
+
+\pard\li720\sa80 Any future expiry date, any 3-digit CVC, any postcode.\par
+
+\pard\sb120\sa80\b\fs24 Making testing easier\b0\fs22\par
+
+\pard\li720\sa60\cf6\b TIP: Time-travel instead of waiting.\cf2\b0  Almost every state (Entries Open, Voting, Show Day, Results) is derived from the show's dates, not a stored status. To force a state, edit the show's Entries Open/Close dates and Show Day in Show Settings (or directly in the Supabase table editor). E.g. set the close date to yesterday to test "entries closed"; set the show date to today to test show day / voting cutoff.\par
+\cf6\b TIP: Debugging a stuck entry.\cf2\b0  If a payment succeeded but the entry never appears: check the Stripe dashboard's \b Developers > Events\b0  log (did \f1 checkout.session.completed\f0  fire and get delivered?), then the Supabase \b Edge Function logs\b0  for stripe-webhook. Those two logs explain nearly every payment problem.\par
+\cf6\b TIP: Resetting between runs.\cf2\b0  Safe to delete between test rounds: \f1 show_entries\f0  rows with status \f1 pending\f0 , all \f1 public_votes\f0  / \f1 public_vote_picks\f0  rows, and localStorage keys starting \f1 ps_voted_\f0  / \f1 ps_fp_\f0  (browser DevTools > Application > Local Storage). Do \b not\b0  bulk-delete confirmed entries \emdash  they simulate financial records and a DB trigger protects shows that have them.\par
+\cf6\b TIP:\cf2\b0  Give each tester their own copy of this file, or add a column of initials next to the boxes.\par
+
+\pard\sb300\sa100\cf1\b\fs32 Part 1 \emdash  Public site & authentication (logged out)\cf2\b0\fs22\par
+
+\pard\sb120\sa80\b\fs24 1.1 Landing page\b0\fs22\par
+
+\pard\fi-330\li720\sa50 [\cf8\f2\u10004?\cf2\f0 ]\f3\lang1033\tab L\f0\lang9 oad the home page \emdash  hero, "Fundraising", "How It Works" and stats \f3\lang1033\tab\f0\lang9 sections render; no broken images.\par
+[\cf8\f2\u10004?\cf2\f0 ]\f3\lang1033\tab\f0\lang9 Reload several times on a desktop-width window \emdash  the hero photo \f3\lang1033\tab\f0\lang9 alternates between two images.\par
+[\cf8\f2\u10004?\cf2\f0 ]\tab "Create a Show" \emdash  goes to the \b login\b0  page. "Get Started Free" (\f3\lang1033\tab\f0\lang9 bottom) \emdash  goes to \b signup\b0 .\par
+[\cf8\f2\u10004?\cf2\f0 ]\tab "Browse Events" \emdash  opens the Events panel (bottom sheet) without \f3\lang1033\tab\f0\lang9 leaving the page.\par
+
+\pard\sb120\sa80\b\fs24 1.2 Events browse panel (header "Events" or any Browse button)\b0\fs22\par
+
+\pard\fi-330\li720\sa50 [ ]\tab\f3\lang1033\tab\f0\lang9 With no open shows \emdash  panel says "No open shows right now".\par
+[\cf8\f2\u10004?\cf2\f0 ]\tab A \b published\b0  show whose entry window is open appears with: \f3\lang1033\tab\f0\lang9 logo/initial, title, host, description, show date, fee badge, and "X days [\cf8\f2\u10004?\cf2\f3\lang1033\tab\f0\lang9 left" when a close date is near.\par
+[ ]\tab A public-voting show whose entries have closed but voting is open still appears, with a purple "Voting open" badge.\par
+[\cf8\f2\u10004?\cf2\f0 ]\tab A \b draft\b0  show never appears in the panel.\par
+[\cf8\f2\u10004?\cf2\f0 ]\tab Clicking a card opens that show's public page. Escape key and clicking the dark overlay both close the panel.\par
+
+\pard\sb120\sa80\b\fs24 1.3 Static pages\b0\fs22\par
+
+\pard\fi-330\li720\sa50 [ ]\tab Pricing page \emdash  fee example table is arithmetically right: platform fee = greater of A$1 or 8%; card fee = 1.75% + A$0.30; "you receive" = entry minus both. Rows at the A$1 floor are tagged "(minimum)".\par
+[ ]\tab Terms and Privacy load; email links use \f1 hello@furtofeathers.com\f0 ; Terms highlights that the platform fee is non-refundable.\par
+
+\pard\sb120\sa80\b\fs24 1.4 Sign up\b0\fs22\par
+
+\pard\fi-330\li720\sa50 [\cf8\f2\u10004?\cf2\f0 ]\tab Submit with missing names, then missing email/password, then a 5-\f3\lang1033\tab\f0\lang9 character password, then mismatched passwords \emdash  each shows its \f3\lang1033\tab\f0\lang9 specific inline error, in that order.\par
+[\cf8\f2\u10004?\cf2\f0 ]\tab Participant signup with valid details \emdash  either goes straight to the app (email confirmation off) or shows the "Check your inbox!" card; the confirmation email arrives and its link leads to login.\par
+[ ]\tab Organiser signup: choosing "Organiser" reveals Individual/Club choice; choosing Club reveals a required club name field; blank club name is blocked with an inline error.\par
+[ ]\tab Visiting signup with \f1 ?role=organiser\f0  in the URL preselects Organiser.\par
+\cf5 [NEG]\cf2\tab Signing up with an email that already has an account \emdash  error message shown, button re-enabled.\par
+
+\pard\sb120\sa80\b\fs24 1.5 Log in / log out\b0\fs22\par
+
+\pard\fi-330\li720\sa50 [ ]\tab Wrong password \emdash  inline error; correct password \emdash  lands on the hub matching your role (participant hub, organiser dashboard, or the "choose role" page if you have several roles).\par
+[ ]\tab Password show/hide eye icon toggles the field.\par
+[ ]\tab Sign out (from any hub) returns to login; browsing back to a protected page redirects to login.\par
+
+\pard\li720\sa60\cf3\i Known issue: logging in via a link that carried a redirect (e.g. after clicking Enter Now while logged out) does NOT return you to the entry flow \emdash  you land on your hub. See Part 7, item 1.\cf2\i0\par
+
+\pard\sb120\sa80\b\fs24 1.6 Forgot / reset password\b0\fs22\par
+
+\pard\fi-330\li720\sa50 [ ]\tab Request a reset \emdash  page always says "If an account exists for <email>..." (it must not reveal whether the account exists).\par
+[ ]\tab Open the reset email link \emdash  "Verifying..." then the new-password form showing your account email. Set a new password (6+ chars, must match) \emdash  redirected to your hub; old password no longer works.\par
+\cf5 [NEG]\cf2\tab Open the same reset link a second time (or a stale one) \emdash  "This link has expired or is invalid" card with a "Request New Link" button.\par
+
+\pard\sb300\sa100\cf1\b\fs32 Part 2 \emdash  Organiser: create and publish a show\cf2\b0\fs22\par
+
+\pard\sa80 Log in as \b Organiser A\b0 . You will create at least two shows during testing: one \b expert-judged\b0  (Part 4A) and one \b public-voting\b0  (Part 4B).\par
+
+\pard\sb120\sa80\b\fs24 2.1 New Show wizard \emdash  step validation\b0\fs22\par
+
+\pard\fi-330\li720\sa50 [ ]\tab\b Step 1 Basics:\b0  Continue blocked until show name, entries-close date, show date and organisation type are filled; contact email must contain @. Choosing Non-profit/Charity makes the charity number required. "Commercial" is disabled ("Coming soon").\par
+[ ]\tab\b Step 2 Type:\b0  must pick Beauty Contest / Fun Stakes / Memorial ("Other" disabled). Animal type: only Dog selectable.\par
+[ ]\tab\b Step 3 Breed:\b0  "Specific breed" requires picking from the breed autocomplete; "Breed group" requires a group; "All breeds" needs nothing.\par
+[ ]\tab\b Step 4 Classes:\b0  at least one class required. Beauty/Memorial shows offer the standard age classes; Fun Stakes offers fun categories; custom classes can be added. Switching type to/from Fun Stakes clears class selections.\par
+[ ]\tab\b Step 5 Sponsorship:\b0  "Yes" requires a sponsor name; logo upload works and shows the uploading overlay.\par
+[ ]\tab\b Step 6 Judging:\b0  Expert Judge with "Set up now" requires judge first/last/email; Public Voting reveals the two vote-timing options (voting opens when entries close \emdash  default \emdash  or as soon as entries open).\par
+[ ]\tab\b Step 7 Awards:\b0  Digital certificates and physical prizes toggles; physical prizes reveal prize source and description rows.\par
+[ ]\tab\b Step 8 Fees:\b0  currency limited to AUD/NZD; the +/- stepper won't go below the platform minimum; the "You receive approx." breakdown updates live as the fee changes.\par
+[ ]\tab\b Step 9 Branding:\b0  show logo, org logo and banner upload; oversize files rejected; template downloads work.\par
+[ ]\tab\b Step 10 Review:\b0  every section summarised with working "Edit" jump links; unset optional sections flagged "Add Later". Buttons: Publish Now, Save as Draft (Schedule is disabled).\par
+\cf5 [NEG]\cf2\tab In step 6, enter a judge email belonging to someone who has already entered this show \emdash  save is blocked with an "exhibitor... can't be assigned as a judge" error. (Easier to test later, after Part 3 \emdash  come back to it.)\par
+
+\pard\sb120\sa80\b\fs24 2.2 Drafts\b0\fs22\par
+
+\pard\fi-330\li720\sa50 [ ]\tab Leave the wizard partway, return to New Show \emdash  a "resume draft" banner offers Continue (reopens at your step) or Start fresh.\par
+[ ]\tab Save as Draft \emdash  show appears in My Shows as Draft with "Continue in Wizard" and "Preview Show" actions.\par
+
+\pard\sb120\sa80\b\fs24 2.3 Preview mode (drafts only)\b0\fs22\par
+
+\pard\fi-330\li720\sa50 [ ]\tab Preview Show \emdash  public page renders with an amber "not published yet \emdash  only you can see this" banner and a Settings link; no sticky Enter footer.\par
+\cf5 [NEG]\cf2\tab Copy the preview URL into a logged-out window and into Organiser B's browser \emdash  both get "Show not found" / login, never the show.\par
+
+\pard\sb120\sa80\b\fs24 2.4 Publishing rules (Show Settings page)\b0\fs22\par
+
+\pard\fi-330\li720\sa50 [ ]\tab Publish from Show Settings \emdash  status flips to Published; "View Show" and "Copy URL" appear; Copy URL puts the public link on the clipboard and flashes "Copied!".\par
+\cf5 [NEG]\cf2\tab A charity/non-profit show with no charity number cannot be published from Settings \emdash  specific error shown.\par
+\cf5 [NEG]\cf2\tab With one show already published, publishing a second from Settings is blocked ("Unpublish it before publishing this show").\par
+[ ]\tab Unpublish \emdash  confirmation dialog, then the show disappears from the public Events panel (direct URL shows "Show not found").\par
+
+\pard\li720\sa60\cf3\i Known issue: the wizard's own "Publish Now" button skips the charity-number and one-published-show checks above. Verify, then see Part 7, item 2.\cf2\i0\par
+
+\pard\sb120\sa80\b\fs24 2.5 Show Settings panels (all nine)\b0\fs22\par
+
+\pard\fi-330\li720\sa50 [ ]\tab Each section card (Basics, Show Type, Breed, Classes, Sponsorship, Judging, Awards, Fundraising, Branding) opens a drawer, saves, and its status dot/summary updates.\par
+[ ]\tab While the show is \b published\b0 , every panel save first shows the "This show is PUBLISHED... Save changes anyway?" confirmation; cancelling makes no change.\par
+[ ]\tab Branding: replace and remove logo/banner \emdash  public page reflects it; re-upload does not error (needs the storage policy from Part 0).\par
+
+\pard\sb120\sa80\b\fs24 2.6 My Shows list & Dashboard\b0\fs22\par
+
+\pard\fi-330\li720\sa50 [ ]\tab My Shows: each row expands to show status tiles and the right action set (Published: Dashboard / View / Copy URL; Draft: Continue in Wizard / Preview; plus Settings and Design Certificate always).\par
+[ ]\tab Dashboard (with a published show): entry count, "Total Raised", judge card, recent entries, category donut with tooltips, date timeline, and the 5-day entry trend with Bar/Line and Entries/Revenue toggles (Revenue disabled while fee is 0).\par
+[ ]\tab With no shows at all \emdash  "Let's get your first show set up!"; with only drafts \emdash  "No show published yet".\par
+
+\pard\sb300\sa100\cf1\b\fs32 Part 3 \emdash  Participant: entering and paying (Stripe)\cf2\b0\fs22\par
+
+\pard\sa80 Use \b Participant P\b0  against Organiser A's published show.\par
+
+\pard\sb120\sa80\b\fs24 3.1 Public show page states\b0\fs22\par
+
+\pard\fi-330\li720\sa50 [ ]\tab Entries-open show: green ENTRIES OPEN pill, countdown to close, "Enter Now" button; scrolling past the enter card brings up a sticky Enter Now footer.\par
+[ ]\tab Set the entries-open date to the future \emdash  pill reads ENTRIES OPENING SOON and the button becomes a non-clickable "Entries Opening Soon" chip.\par
+[ ]\tab Entry Classes card lists up to 3 classes with fees and live entry counts; "View All Classes" modal shows the rest. Meet Our Entrants, Sponsors and Key Dates cards render (with sensible empty states before any entries/sponsors exist).\par
+[ ]\tab All modals close via X, clicking the backdrop, and the Escape key.\par
+
+\pard\sb120\sa80\b\fs24 3.2 Entry wizard (Enter Now)\b0\fs22\par
+
+\pard\fi-330\li720\sa50 [ ]\tab Logged out, click Enter Now \emdash  sent to login. (Known issue: after logging in you are NOT returned to the entry \emdash  navigate back to the show and click Enter Now again.)\par
+[ ]\tab\b Step 1:\b0  pet name required. Breed field matches the show's scope: free breed search (all-breeds show), locked read-only breed (breed-specific), or locked group (group show).\par
+[ ]\tab\b Step 2:\b0  must pick a class; classes show their fees.\par
+[ ]\tab\b Step 3:\b0  photo optional; JPG/PNG/WebP accepted; preview and Remove work. \cf5 [NEG]\cf2  a file over 5 MB is rejected with "Photo must be under 5 MB".\par
+[ ]\tab\b Step 4:\b0  review shows pet, class, photo, fee ("Includes all fees" \emdash  the fee is the whole price, nothing added). \b Pay stays disabled until BOTH checkboxes (photo consent + terms) are ticked.\b0\par
+[ ]\tab "+ Add another entry" loops back to step 1; the review then lists both entries and the total is fee x entries.\par
+
+\pard\sb120\sa80\b\fs24 3.3 Payment outcomes\b0\fs22\par
+
+\pard\fi-330\li720\sa50 [ ]\tab\b Success\b0  (\f1 4242...\f0 ): redirected to My Show Hub; the entry appears there as confirmed with an entry number; it also appears in Organiser A's Entries table and dashboard counts; multi-entry purchases confirm every entry with sequential numbers.\par
+[ ]\tab\b Cancel\b0  (back arrow on the Stripe page): returned to the entry wizard with an amber "Payment cancelled" banner; \b no\b0  entry appears anywhere.\par
+\cf5 [NEG]\cf2\tab\b Declined card\b0  (\f1 4000...0002\f0 ): Stripe shows the decline and lets you retry; after abandoning, no confirmed entry ever appears in the hub or organiser views.\par
+[ ]\tab\b 3-D Secure card\b0  (\f1 4000 0025 0000 3155\f0 ): complete the challenge \emdash  entry confirms normally.\par
+
+\pard\li720\sa60\cf3\i If a successful payment does not produce a confirmed entry within ~30 seconds, the webhook is misconfigured \emdash  see the debugging TIP in Part 0.\cf2\i0\par
+
+\pard\sb120\sa80\b\fs24 3.4 Entry guards\b0\fs22\par
+
+\pard\fi-330\li720\sa50\cf5 [NEG]\cf2\tab Set the show's entries-close date to yesterday, then try to enter \emdash  "Entries are closed" screen; the Enter flow is unreachable.\par
+\cf5 [NEG]\cf2\tab Log in with the show's judge's email and try to enter \emdash  blocked with "You're judging this show!".\par
+\cf5 [NEG]\cf2\tab Try to enter a draft/unpublished show by URL \emdash  "Show not available".\par
+
+\pard\sb120\sa80\b\fs24 3.5 My Show Hub (participant)\b0\fs22\par
+
+\pard\fi-330\li720\sa50 [ ]\tab Stat tiles (Entered / Active / Results) match reality; filters All / Active / Results work; entries group by show in collapsible sections.\par
+[ ]\tab Entry detail page: photo, breed, class, entry ID, "Paid" amount matching what was charged, and a status timeline (Submitted, Judging, Results). Edit button is disabled ("Coming soon").\par
+[ ]\tab With no entries: friendly empty state whose Browse Shows button opens the Events panel.\par
+[ ]\tab "Want to run your own show?" banner: clicking Start a Show adds the organiser role and opens the organiser dashboard; afterwards the hub shows an "Organiser View" switch instead of the banner.\par
+
+\pard\sb300\sa100\cf1\b\fs32 Part 4A \emdash  Expert judging path\cf2\b0\fs22\par
+
+\pard\sa80 Use the expert-judged show, with confirmed entries from Part 3 in at least two classes.\par
+
+\pard\sb120\sa80\b\fs24 4A.1 Inviting the judge\b0\fs22\par
+
+\pard\fi-330\li720\sa50 [ ]\tab Judging & Results page: the show card lists the judge with a "Not Invited" pill and an enabled \b Send Invitations\b0  button. (Invites are sent from here \emdash  publishing the show does NOT send them, whatever the wizard copy implies.)\par
+[ ]\tab Send Invitations \emdash  success toast; pill flips to Invited; the email arrives at Judge J's address.\par
+[ ]\tab\b New user path\b0  (Judge J): the invite link lands on the judge-accept page, offers Set Password (6+ chars) or "Skip for now", then opens the Judge portal.\par
+[ ]\tab\b Existing user path\b0 : invite a judge whose email already has an account \emdash  they gain the judge role and receive a notification email instead; logging in, they can reach the Judge portal.\par
+\cf5 [NEG]\cf2\tab Judge Book > Assign: assigning a judge whose email matches an exhibitor of that show is blocked.\par
+
+\pard\sb120\sa80\b\fs24 4A.2 Judge portal (as Judge J)\b0\fs22\par
+
+\pard\fi-330\li720\sa50 [ ]\tab Only assigned shows appear; the category grid shows per-class status (Not started / X of Y scored / Final round ready / Complete); classes with no entries are disabled.\par
+[ ]\tab\b Round 1:\b0  each entry shows its photo with zoom/pan and fullscreen; the 0\endash 100 slider must be moved before Next ("Move the slider to score this entry first"); progress pills navigate between entries.\par
+[ ]\tab Reload mid-scoring \emdash  scores persist and you resume where you left off.\par
+[ ]\tab\b Final round:\b0  the top-scored entries appear in a drag-to-rank list (top = 1st); Confirm Rankings locks them ("Rankings Locked"); "Change rankings" reopens them \emdash  but is hidden once show day has passed.\par
+[ ]\tab All classes ranked \emdash  the "all done" screen appears.\par
+
+\pard\sb120\sa80\b\fs24 4A.3 Publishing results (as Organiser A)\b0\fs22\par
+
+\pard\fi-330\li720\sa50\cf5 [NEG]\cf2\tab Before show day, or while any class is unranked, Publish Results is disabled and the reason is spelled out ("Available on show day" / "Judging not yet complete...").\par
+[ ]\tab With show day reached (time-travel the show date) and judging complete \emdash  Publish Results succeeds; the card shows "Published <date>" and a "Manage Results" link.\par
+[ ]\tab Public show page now shows RESULTS PUBLISHED: winners per class, "View All Results" modal with 1st/2nd/3rd, and (if enabled) the public fundraising panel.\par
+[ ]\tab Participant P's hub shows the placing on their entry (RESULTS IN, place badge).\par
+
+\pard\sb300\sa100\cf1\b\fs32 Part 4B \emdash  Public voting path\cf2\b0\fs22\par
+
+\pard\sa80 Use the public-voting show. Voting opens when entries close (default) or when entries open, and \b always closes at the show's start time\b0  on show day.\par
+
+\pard\sb120\sa80\b\fs24 4B.1 Vote window\b0\fs22\par
+
+\pard\fi-330\li720\sa50\cf5 [NEG]\cf2\tab Default mode, entries still open \emdash  the show page shows no voting UI, and the page states voting has not opened.\par
+[ ]\tab Switch the show to "voting opens with entries" \emdash  the page shows ENTRIES & VOTING OPEN with the entry card AND the voting grid together.\par
+[ ]\tab After entries close (default mode) \emdash  VOTING OPEN state with "Voting closes <date> at <time>".\par
+\cf5 [NEG]\cf2\tab Set show date/time to the past \emdash  VOTING CLOSED / "Results coming soon"; vote submission is refused server-side ("Voting has closed"). The cutoff is exclusive: a vote at the exact start minute is rejected.\par
+
+\pard\sb120\sa80\b\fs24 4B.2 Voting UI\b0\fs22\par
+
+\pard\fi-330\li720\sa50 [ ]\tab Entry order within each class is shuffled on each reload.\par
+[ ]\tab One pick per class: selecting a second entry replaces the first; clicking the selected entry deselects; selected cards show a teal border and "Voted".\par
+[ ]\tab Tapping a photo opens a lightbox with a Vote button that toggles the same selection.\par
+[ ]\tab The basket footer counts "X of Y categories voted"; Submit is disabled at zero selections.\par
+[ ]\tab An entry's share button copies a public entry link; opening it shows the entry with a "Browse & Vote" button that deep-links back with that entry pre-selected.\par
+
+\pard\sb120\sa80\b\fs24 4B.3 Magic-link confirmation\b0\fs22\par
+
+\pard\fi-330\li720\sa50 [ ]\tab Submit votes with Voter 1's email \emdash  "Check your inbox!"; the email arrives; its link shows "Thank you for voting!".\par
+[ ]\tab Organiser's Judging page (vote counts panel) now shows 1 confirmed; before clicking the link it counted as pending.\par
+[ ]\tab Clicking the same link again \emdash  "Your votes are confirmed" (calm, idempotent \emdash  not an error).\par
+\cf5 [NEG]\cf2\tab Wait 30+ minutes before clicking a fresh link \emdash  "This link has expired". (Or expire the token in the DB to avoid waiting.)\par
+\cf5 [NEG]\cf2\tab Same email submits again \emdash  "You have already voted in this show." Submitting again while a link is pending \emdash  "already sent you a confirmation link".\par
+\cf5 [NEG]\cf2\tab\b The important one:\b0  clear localStorage (or use a different browser/device) and vote with the \b same\b0  email \emdash  the server must still block it. The "you've already voted from this device" banner is only a soft client hint.\par
+[ ]\tab Cast confirmed votes from Voters 2 and 3 for different entries so there are rankable results.\par
+
+\pard\sb120\sa80\b\fs24 4B.4 Publishing vote results\b0\fs22\par
+
+\pard\fi-330\li720\sa50\cf5 [NEG]\cf2\tab With zero confirmed votes, Publish Results is disabled.\par
+[ ]\tab Publish Results \emdash  "This cannot be undone" confirmation, then results appear on the public page; placings match the vote counts.\par
+[ ]\tab\b Tie check:\b0  engineer a tie for 1st (two entries, one confirmed vote each) \emdash  note how places display; ties share a rank, so 1st/1st/3rd is possible. Record whatever you see.\par
+\cf5 [NEG]\cf2\tab After results are published, voting links/pages refuse further votes.\par
+
+\pard\sb300\sa100\cf1\b\fs32 Part 5 \emdash  Certificates, archiving, deleting\cf2\b0\fs22\par
+
+\pard\sb120\sa80\b\fs24 5.1 Certificate designer\b0\fs22\par
+
+\pard\fi-330\li720\sa50 [ ]\tab Open Design Certificate for a show \emdash  live preview updates as you change page size, border, background, image mode (None/Photo/Ribbon) and size, logo, sponsor logos, and the field checkboxes.\par
+[ ]\tab On a \b public-voting\b0  show, the Judge Signature option is absent; on a judged show it renders a handwritten-style signature.\par
+[ ]\tab Sample JPG and PDF downloads open correctly.\par
+[ ]\tab\b Save Design\b0  keeps it editable. \b Lock & Activate\b0  greys the controls and shows "Design Locked". \b Unlock to Edit\b0  warns that certificate sending is disabled until re-locked.\par
+
+\pard\sb120\sa80\b\fs24 5.2 Sending certificates (Manage Results page \emdash  needs published results)\b0\fs22\par
+
+\pard\fi-330\li720\sa50\cf5 [NEG]\cf2\tab With the design \b not\b0  locked \emdash  amber notice and every Send button disabled ("Design and lock a certificate template first").\par
+[ ]\tab Lock the design, then Send Certificate for a winner \emdash  "Certificate sent!" toast, "Sent <date>" pill, Download JPG link; the winner's email contains working JPG and PDF links; place, class, pet name and design match the designer.\par
+[ ]\tab Send Again re-sends without error.\par
+[ ]\tab As the winning \b participant\b0 : the entry page now has a certificate section with Download JPG and Download PDF (the PDF is generated in the browser \emdash  check it opens).\par
+
+\pard\sb120\sa80\b\fs24 5.3 Archiving\b0\fs22\par
+
+\pard\fi-330\li720\sa50\cf5 [NEG]\cf2\tab Archive is disabled (with a tooltip) until the show is published AND results are published AND the show date has passed.\par
+[ ]\tab Archive an eligible show \emdash  the modal states how many non-winning photos will be permanently deleted and that winners' photos are kept; after confirming, the show moves to the Archived list, its public page shows the amber "archived" notice with winners and sponsors, and non-winning entry photos are gone.\par
+
+\pard\sb120\sa80\b\fs24 5.4 Deleting\b0\fs22\par
+
+\pard\fi-330\li720\sa50\cf5 [NEG]\cf2\tab Delete is disabled for any show with confirmed (paid) entries \emdash  tooltip cites financial records. It is also disabled for published shows.\par
+[ ]\tab Delete a draft with no paid entries \emdash  confirmation modal lists what will be removed; the show and its classes/sponsors/judges disappear.\par
+
+\pard\sb300\sa100\cf1\b\fs32 Part 6 \emdash  Cross-cutting checks\cf2\b0\fs22\par
+
+\pard\fi-330\li720\sa50 [ ]\tab\b Role switching:\b0  organiser sidebar > "My Show Hub" opens the participant hub (adding the participant role if needed); the hub's "Organiser View" link goes back. Multi-role login shows the choose-role page.\par
+[ ]\tab\b Account settings:\b0  avatar upload/remove updates the sidebar immediately; names/bio save; default timezone and currency prefill the next new show; club organisers can edit the organisation name; password change requires 8+ characters and matching confirmation, and the new password works.\par
+[ ]\tab\b All email types delivered\b0  (check spam too): signup confirmation, password reset, judge invitation, judge notification (existing user), vote magic link, certificate. Sender shows "Fur to Feathers" at furtofeathers.com \emdash  not example.com.\par
+[ ]\tab\b Mobile (or narrow window):\b0  hamburger menu, Events panel, show page, entry wizard, voting grid + basket, judge portal, and organiser sidebar all usable; sticky footers don't overlap content.\par
+[ ]\tab\b Currency:\b0  an NZD show displays NZ$ on the show page and entry flow, and NZD certificates use the NZ ribbon artwork. (Known: the participant entry-detail page shows plain $ \emdash  Part 7, item 10.)\par
+[ ]\tab\b Timezones:\b0  set a show timezone different from your computer's \emdash  Key Dates show the show's timezone abbreviation and the voting cutoff honours the show's local time.\par
+[ ]\tab\b Data isolation:\b0  Organiser B sees none of Organiser A's shows, entries or dashboards; Participant P cannot open another user's entry detail by URL.\par
+
+\pard\sb300\sa100\cf7\b\fs32 Part 7 \emdash  Known issues (found by code analysis \emdash  do not re-report)\cf2\b0\fs22\par
+
+\pard\sa80 These are already logged. Treat as a pre-launch fix list; items 1\endash 5 are the ones most worth fixing before external testers see the site.\par
+
+\pard\fi-330\li720\sa50\b 1.\b0\tab Login ignores the redirect parameter \emdash  "Enter Now" while logged out never returns the user to the entry flow after login.\par
+\b 2.\b0\tab The wizard's "Publish Now" bypasses the charity-number and one-published-show checks that the Settings page enforces.\par
+\b 3.\b0\tab Re-saving the Classes panel deletes and recreates all class records \emdash  doing this after judging starts can orphan judges' scores/rankings. Needs a hard block once scores exist (currently only soft warnings).\par
+\b 4.\b0\tab The Stripe webhook returns success to Stripe even when its database update fails, so Stripe never retries \emdash  a transient DB error could leave a paid entry stuck as pending with no automatic recovery.\par
+\b 5.\b0\tab invite-judges defaults its sender to \f1 noreply@example.com\f0  and send-certificate defaults its site URL to the non-www domain \emdash  both must be overridden by secrets (\f1 RESEND_FROM\f0 , \f1 SITE_URL\f0 ) in production.\par
+\b 6.\b0\tab No handling of Stripe refunds, disputes, or expired checkout sessions; declined/abandoned payments just leave pending rows until the user retries.\par
+\b 7.\b0\tab The vote-confirm step checks only the 30-minute token, not the vote window \emdash  a link requested just before the show starts can be confirmed just after.\par
+\b 8.\b0\tab Password minimum is 6 characters at signup/judge-accept but 8 in account settings.\par
+\b 9.\b0\tab Footer: email link is \f1 hello@petshowonline.com\f0  (should be furtofeathers.com), copyright says 2025, and Help Center / Contact Us / social icons are dead links.\par
+\b 10.\b0\tab Currency symbols inconsistent: participant entry-detail shows plain $ where other pages show A$ / NZ$.\par
+\b 11.\b0\tab Dashboard "Total Raised" is entries x fee (not actual payment data), and the entry-trend chart never highlights "today" (off-by-index bug).\par
+\b 12.\b0\tab Status labels for the same show differ across pages (e.g. "Closed" vs "Ended" vs "Results Live").\par
+\b 13.\b0\tab Judge invites are sent manually from the Judging page although wizard copy says they go out on publish.\par
+\b 14.\b0\tab Hall of Fame carousel is hard-coded placeholder data and currently disabled on the landing page.\par
+\b 15.\b0\tab A published show past its close date (non-voting) disappears from the Events panel but stays reachable by direct URL \emdash  by design, but worth knowing.\par
+
+\pard\sb300\sa100\cf1\b\fs32 Part 8 \emdash  Go-live checklist (Stripe test mode to live)\cf2\b0\fs22\par
+
+\pard\fi-330\li720\sa50 [ ]\tab Swap \f1 STRIPE_SECRET_KEY\f0  to the live key in Supabase function secrets.\par
+[ ]\tab Create a \b new\b0  webhook endpoint in Stripe \b live mode\b0  (test-mode endpoints and secrets do not carry over), subscribed to \f1 checkout.session.completed\f0 , and set its signing secret as \f1 STRIPE_WEBHOOK_SECRET\f0 .\par
+[ ]\tab Confirm the Stripe account is fully activated for live charges and payouts (AUD/NZD).\par
+[ ]\tab Re-verify all Part 0 configuration in the production project (\f1 platform_settings\f0  seed, storage policies, \f1 RESEND_FROM\f0 , \f1 SITE_URL\f0 ).\par
+[ ]\tab Make one small \b real-card\b0  entry end to end: pay, entry confirms, amount and Stripe fee look right in the Stripe dashboard.\par
+[ ]\tab Refund that charge from the Stripe dashboard and note the site does not react (no automatic un-confirm \emdash  handle manually; see Part 7, item 6).\par
+[ ]\tab Remove or clearly separate all test-mode shows/entries before announcing.\par
+
+\pard\sb300\sa60\cf3\i\fs20 Generated from code analysis of the Fur to Feathers repository, 4 July 2026. Source references: src/pages, supabase/functions, supabase/migrations.\cf2\i0\fs22\par
+}
+ 
