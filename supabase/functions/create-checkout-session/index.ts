@@ -7,6 +7,33 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Combine a date value + 'HH:MM' wall time in an IANA timezone into a UTC Date.
+// Mirrors src/lib/voteWindow.js — keep the two in sync.
+function zonedDateTime(dateVal: string | null, timeStr: string | null, timeZone: string | null): Date | null {
+  if (!dateVal) return null;
+  const [y, m, d] = String(dateVal).slice(0, 10).split('-').map(Number);
+  const [hh, mm] = String(timeStr || '0:0').split(':').map(Number);
+  if (!y || !m || !d) return null;
+  if (!timeZone) return new Date(Date.UTC(y, m - 1, d, hh || 0, mm || 0));
+
+  const target = Date.UTC(y, m - 1, d, hh || 0, mm || 0);
+  let guess = target;
+  for (let i = 0; i < 2; i++) {
+    guess += target - wallClockUtc(guess, timeZone);
+  }
+  return new Date(guess);
+}
+
+function wallClockUtc(ts: number, timeZone: string): number {
+  const p: Record<string, string> = {};
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone, year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  }).formatToParts(new Date(ts));
+  for (const { type, value } of parts) p[type] = value;
+  return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second);
+}
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -36,12 +63,13 @@ serve(async (req: Request) => {
     // 3. Verify show is open
     const { data: show, error: showErr } = await supabase
       .from('shows')
-      .select('id, title, entry_fee, currency, status, entry_close_date')
+      .select('id, title, entry_fee, currency, status, entry_close_date, entry_close_time, timezone')
       .eq('id', show_id)
       .single();
     if (showErr || !show) throw new Error('Show not found');
     if (show.status !== 'published') throw new Error('Show is not published');
-    if (show.entry_close_date && new Date(show.entry_close_date) < new Date()) throw new Error('Entries are closed');
+    const closeAt = zonedDateTime(show.entry_close_date, show.entry_close_time, show.timezone);
+    if (closeAt && closeAt < new Date()) throw new Error('Entries are closed');
 
     // Judges can't enter the show they're judging
     const { data: judgeRows } = await supabase
