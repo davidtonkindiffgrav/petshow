@@ -179,6 +179,59 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
   </div>
 
+  <!-- Publish Results confirmation modal -->
+  <div id="publish-modal" style="display:none"
+    class="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4"
+    role="dialog" aria-modal="true" aria-labelledby="publish-modal-title">
+    <div class="bg-white rounded-[20px] w-full max-w-[520px] shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="p-6">
+
+        <div class="flex items-start gap-3 mb-4">
+          <div class="w-11 h-11 rounded-full bg-brand-tint flex items-center justify-center shrink-0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+          </div>
+          <div class="min-w-0">
+            <h2 id="publish-modal-title" class="text-[18px] font-extrabold text-[#1c1626]">Publish Results</h2>
+            <p id="publish-modal-subtitle" class="text-[13px] text-[#6f6880] mt-0.5"></p>
+          </div>
+        </div>
+
+        <div class="rounded-[12px] bg-[#f0fafa] border border-brand/15 p-4 mb-4">
+          <p class="text-[11px] font-bold text-[#4a4357] uppercase tracking-wider mb-2">What happens when you publish</p>
+          <ul class="space-y-1.5 text-[13px] text-[#4a4357] leading-snug">
+            <li class="flex gap-2"><span class="text-brand font-bold shrink-0">•</span><span>Winners' placements (1st, 2nd, 3rd) are finalised.</span></li>
+            <li class="flex gap-2"><span class="text-brand font-bold shrink-0">•</span><span>Results become <strong>public</strong> on the show's results page.</span></li>
+            <li class="flex gap-2"><span class="text-brand font-bold shrink-0">•</span><span>Certificates are <strong>not</strong> emailed automatically — you send them afterward from Manage Results, one per winner.</span></li>
+            <li class="flex gap-2"><span style="color:#d97706" class="font-bold shrink-0">•</span><span style="color:#92400e"><strong>This cannot be undone.</strong></span></li>
+          </ul>
+        </div>
+
+        <div id="publish-email-warning" style="display:none"
+          class="rounded-[10px] p-3 mb-4 text-[13px] leading-snug bg-[#fffbeb] border border-[#fde68a] text-[#92400e]"></div>
+
+        <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider mb-2">Confirm before publishing</p>
+        <div id="publish-check-list" class="space-y-2 mb-4"></div>
+
+        <div id="publish-modal-error" style="display:none"
+          class="rounded-[10px] p-3 mb-4 text-[13px] bg-[#fef2f2] border border-[#fecaca] text-[#b91c1c]"></div>
+
+        <div class="flex gap-3">
+          <button id="publish-modal-cancel"
+            class="flex-1 text-[14px] font-semibold text-[#4a4357] border border-[#e0dce8] rounded-[10px] py-2.5 hover:bg-[#f7f5fb] transition-colors">
+            Cancel
+          </button>
+          <button id="publish-modal-cta" disabled
+            class="flex-1 text-[14px] font-bold rounded-[10px] py-2.5 transition-colors bg-[#f5f3fa] text-[#c4bed0] cursor-not-allowed">
+            Publish Results
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
 </DashboardLayout>
 
 <script>
@@ -186,6 +239,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   import { supabase }    from '../../lib/supabase.js';
   import { uploadImage } from '../../lib/storage.js';
   import { showUploadOverlay, hideUploadOverlay } from '../../lib/uploadOverlay.js';
+  import { isVotingOpen, getVoteWindow } from '../../lib/voteWindow.js';
 
   let base = '';
   let uid  = '';
@@ -198,6 +252,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   let voteCountsByShow  = {}; // [show_id][category_id][entry_id] = { confirmed, pending }
   let currentEditJudge = null;
   let drawerPhotoUrl   = null;
+  let pendingPublish   = null;  // { showId, isPublic } while the publish modal is open
+  let listenersAttached = false;
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -249,6 +305,214 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     toast.style.opacity = '1';
     clearTimeout(toast._t);
     toast._t = setTimeout(() => { toast.style.opacity = '0'; }, 3000);
+  }
+
+  function fmtDateTime(d) {
+    return d ? new Date(d).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+  }
+
+  // Judging completion for a show (classes with entries that every judge has ranked).
+  function judgingStatus(show) {
+    const cats        = catsByShow[show.id]        || [];
+    const judges      = judgesByShow[show.id]      || [];
+    const catRankings = rankingsByShow[show.id]    || {};
+    const entryCounts = entryCountsByShow[show.id] || {};
+    const judgeEmails = judges.map(j => (j.email || '').toLowerCase());
+    const judgeTotal  = judgeEmails.length;
+    const relevant    = cats.filter(c => (entryCounts[c.id] || 0) > 0);
+    const doneCount   = relevant.filter(c =>
+      judgeTotal > 0 && judgeEmails.filter(e => catRankings[c.id]?.has(e)).length >= judgeTotal).length;
+    const total   = relevant.length;
+    const pending = total - doneCount;
+    return { done: judgeTotal > 0 && pending === 0, total, pending };
+  }
+
+  // ── Publish Results confirmation modal ────────────────────────────────────────
+
+  function publishCheckRow({ label, hint, hintOk, link, linkText }) {
+    const hintHTML = hint
+      ? `<span class="block text-[12px] mt-0.5" style="color:${hintOk ? '#16a34a' : '#b45309'}">${hintOk ? '✓' : '⚠'} ${esc(hint)}</span>`
+      : '';
+    const linkHTML = link
+      ? `<a href="${esc(link)}" target="_blank" rel="noopener" class="inline-block text-[12px] font-semibold text-brand hover:text-brand-dark mt-1">${esc(linkText)} →</a>`
+      : '';
+    return `
+      <label class="flex items-start gap-3 p-3 rounded-[10px] border border-[#efebf5] cursor-pointer hover:border-brand/40 transition-colors">
+        <input type="checkbox" class="publish-check mt-0.5 w-4 h-4 accent-brand shrink-0" />
+        <span class="min-w-0">
+          <span class="block text-[13px] font-semibold text-[#1c1626]">${esc(label)}</span>
+          ${hintHTML}
+          ${linkHTML}
+        </span>
+      </label>`;
+  }
+
+  function openPublishModal(show) {
+    const isPublic = show.is_judged === false;
+    pendingPublish = { showId: show.id, isPublic };
+
+    document.getElementById('publish-modal-subtitle').textContent = show.title || 'Untitled Show';
+    document.getElementById('publish-modal-error').style.display = 'none';
+    document.getElementById('publish-email-warning').style.display = 'none';
+
+    // First check differs by show type
+    let firstRow;
+    if (isPublic) {
+      const open     = isVotingOpen(show);
+      const closesAt = getVoteWindow(show).closesAt;
+      firstRow = publishCheckRow({
+        label: 'Voting has closed',
+        hint: open
+          ? `Voting is still open${closesAt ? ' until ' + fmtDateTime(closesAt) : ''} — publishing now closes it immediately`
+          : 'Voting closed',
+        hintOk: !open,
+        link: `${base}organiser/show?id=${show.id}`,
+        linkText: 'Edit show date & voting',
+      });
+    } else {
+      const js = judgingStatus(show);
+      firstRow = publishCheckRow({
+        label: 'Judging is complete — all classes have been scored',
+        hint: js.done
+          ? `All ${js.total} ${js.total === 1 ? 'class' : 'classes'} scored`
+          : `${js.pending} of ${js.total} ${js.total === 1 ? 'class' : 'classes'} still pending`,
+        hintOk: js.done,
+        link: `${base}organiser/show?id=${show.id}`,
+        linkText: 'Manage judges & settings',
+      });
+    }
+
+    const certLocked = !!show.cert_design_locked_at;
+    const certRow = publishCheckRow({
+      label: 'The certificate is designed, saved & locked',
+      hint: certLocked ? 'Locked' : 'Not locked yet — required before you can send certificates',
+      hintOk: certLocked,
+      link: `${base}organiser/cert-designer?id=${show.id}`,
+      linkText: 'Open certificate designer',
+    });
+
+    const ackRow = publishCheckRow({
+      label: 'I understand results will be public and this cannot be undone',
+      hint: '', hintOk: true, link: '', linkText: '',
+    });
+
+    document.getElementById('publish-check-list').innerHTML = firstRow + certRow + ackRow;
+    updatePublishCta();
+
+    document.getElementById('publish-modal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    checkWinnerEmails(show).catch(() => {});
+  }
+
+  function updatePublishCta() {
+    const boxes = [...document.querySelectorAll('#publish-check-list .publish-check')];
+    const allChecked = boxes.length > 0 && boxes.every(b => b.checked);
+    const cta = document.getElementById('publish-modal-cta');
+    cta.disabled = !allChecked;
+    cta.className = 'flex-1 text-[14px] font-bold rounded-[10px] py-2.5 transition-colors ' +
+      (allChecked
+        ? 'bg-brand text-white shadow-btn-primary hover:bg-brand-dark cursor-pointer'
+        : 'bg-[#f5f3fa] text-[#c4bed0] cursor-not-allowed');
+  }
+
+  function closePublishModal() {
+    document.getElementById('publish-modal').style.display = 'none';
+    document.body.style.overflow = '';
+    pendingPublish = null;
+  }
+
+  // Warn if any prospective winner has no email (their certificate can't be delivered).
+  async function checkWinnerEmails(show) {
+    let winnerIds = [];
+    if (show.is_judged === false) {
+      const vc = voteCountsByShow[show.id] || {};
+      for (const catId of Object.keys(vc)) {
+        Object.entries(vc[catId])
+          .map(([eid, v]) => ({ eid, c: v.confirmed || 0 }))
+          .filter(x => x.c > 0)
+          .sort((a, b) => b.c - a.c)
+          .slice(0, 3)
+          .forEach(x => winnerIds.push(x.eid));
+      }
+    } else {
+      const { data } = await supabase.from('judge_rankings')
+        .select('entry_id').eq('show_id', show.id).lte('rank', 3);
+      winnerIds = (data || []).map(r => r.entry_id);
+    }
+    winnerIds = [...new Set(winnerIds)];
+    if (winnerIds.length === 0) return;
+
+    const { data: entries } = await supabase.from('show_entries')
+      .select('id, exhibitor_email').in('id', winnerIds);
+    if (!entries) return;
+
+    const missing = entries.filter(e => !e.exhibitor_email || !String(e.exhibitor_email).trim()).length;
+    if (missing > 0 && pendingPublish && pendingPublish.showId === show.id) {
+      const warn = document.getElementById('publish-email-warning');
+      warn.innerHTML = `⚠ <strong>${missing} of ${entries.length}</strong> ${entries.length === 1 ? 'winner has' : 'winners have'} no email address on file — they won't receive a certificate.`;
+      warn.style.display = 'block';
+    }
+  }
+
+  async function doPublishJudged(showId) {
+    const { data: rankings, error: rankErr } = await supabase
+      .from('judge_rankings').select('entry_id, rank').eq('show_id', showId).lte('rank', 3);
+    if (rankErr || !rankings?.length) throw new Error('Failed to read judge rankings — please try again.');
+
+    const placements = await Promise.all(rankings.map(r =>
+      supabase.from('show_entries').update({ result_place: r.rank }).eq('id', r.entry_id)));
+    if (placements.find(r => r.error)) throw new Error('Failed to write placements — please try again.');
+
+    const ts = new Date().toISOString();
+    const { error } = await supabase.from('shows').update({ results_published_at: ts }).eq('id', showId);
+    if (error) throw new Error('Failed to publish — please try again.');
+    return ts;
+  }
+
+  async function doPublishVotes(showId) {
+    const { error } = await supabase.rpc('publish_vote_results', { p_show_id: showId });
+    if (error) throw new Error('Failed to publish — please try again.');
+    return new Date().toISOString();
+  }
+
+  async function confirmPublish() {
+    if (!pendingPublish) return;
+    const cta = document.getElementById('publish-modal-cta');
+    if (cta.disabled) return;
+    const { showId, isPublic } = pendingPublish;
+
+    cta.disabled = true;
+    cta.textContent = 'Publishing…';
+    document.getElementById('publish-modal-error').style.display = 'none';
+
+    try {
+      const ts = isPublic ? await doPublishVotes(showId) : await doPublishJudged(showId);
+      const show = allShows.find(s => s.id === showId);
+      if (show) show.results_published_at = ts;
+      closePublishModal();
+      cta.textContent = 'Publish Results';
+      renderShowStatus();
+      showToast('Results published! Send certificates from Manage Results.');
+    } catch (err) {
+      const errEl = document.getElementById('publish-modal-error');
+      errEl.textContent = err.message || 'Something went wrong — please try again.';
+      errEl.style.display = 'block';
+      cta.textContent = 'Publish Results';
+      updatePublishCta();
+    }
+  }
+
+  function wirePublishModal() {
+    document.getElementById('publish-modal-cancel')?.addEventListener('click', closePublishModal);
+    document.getElementById('publish-modal')?.addEventListener('click', e => {
+      if (e.target === e.currentTarget) closePublishModal();
+    });
+    document.getElementById('publish-check-list')?.addEventListener('change', updatePublishCta);
+    document.getElementById('publish-modal-cta')?.addEventListener('click', confirmPublish);
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && document.getElementById('publish-modal')?.style.display === 'flex') closePublishModal();
+    });
   }
 
   // ── Render: Show Status ───────────────────────────────────────────────────────
@@ -550,6 +814,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   }
 
   function attachShowStatusListeners() {
+    if (listenersAttached) return;   // delegated on the persistent container — attach once
+    listenersAttached = true;
     document.getElementById('shows-container')?.addEventListener('click', async e => {
       const toggleBtn = e.target.closest('.cat-toggle');
       if (toggleBtn) {
@@ -562,80 +828,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         return;
       }
 
-      const publishBtn = e.target.closest('.publish-results-btn');
+      // Both publish buttons open the confirmation modal (judged + public voting).
+      const publishBtn = e.target.closest('.publish-results-btn, .publish-votes-btn');
       if (publishBtn && !publishBtn.disabled) {
-        const showId = publishBtn.dataset.showId;
-        publishBtn.disabled = true;
-        publishBtn.textContent = 'Publishing…';
-
-        // Fetch all rankings for this show (single judge), keep top 3 per category
-        const { data: rankings, error: rankErr } = await supabase
-          .from('judge_rankings')
-          .select('entry_id, rank')
-          .eq('show_id', showId)
-          .lte('rank', 3);
-
-        if (rankErr || !rankings?.length) {
-          publishBtn.disabled = false;
-          publishBtn.textContent = 'Publish Results';
-          showToast('Failed to read judge rankings — please try again');
-          return;
-        }
-
-        // Write result_place onto each winning entry
-        const placements = await Promise.all(
-          rankings.map(r =>
-            supabase.from('show_entries')
-              .update({ result_place: r.rank })
-              .eq('id', r.entry_id)
-          )
-        );
-        const placementErr = placements.find(r => r.error);
-        if (placementErr) {
-          publishBtn.disabled = false;
-          publishBtn.textContent = 'Publish Results';
-          showToast('Failed to write placements — please try again');
-          return;
-        }
-
-        // Stamp results_published_at
-        const ts = new Date().toISOString();
-        const { error } = await supabase.from('shows')
-          .update({ results_published_at: ts })
-          .eq('id', showId);
-        if (error) {
-          publishBtn.disabled = false;
-          publishBtn.textContent = 'Publish Results';
-          showToast('Failed to publish — please try again');
-        } else {
-          const show = allShows.find(s => s.id === showId);
-          if (show) show.results_published_at = ts;
-          renderShowStatus();
-          attachShowStatusListeners();
-          showToast('Results published!');
-        }
-      }
-
-      const publishVotesBtn = e.target.closest('.publish-votes-btn');
-      if (publishVotesBtn && !publishVotesBtn.disabled) {
-        const showId = publishVotesBtn.dataset.showId;
-        if (!confirm('Publish vote results? Once published, results will be visible to the public. This cannot be undone.')) return;
-        publishVotesBtn.disabled = true;
-        publishVotesBtn.textContent = 'Publishing…';
-
-        const { data, error } = await supabase.rpc('publish_vote_results', { p_show_id: showId });
-        if (error) {
-          publishVotesBtn.disabled = false;
-          publishVotesBtn.textContent = 'Publish Results';
-          showToast('Failed to publish — please try again');
-        } else {
-          const ts = new Date().toISOString();
-          const s  = allShows.find(x => x.id === showId);
-          if (s) s.results_published_at = ts;
-          renderShowStatus();
-          attachShowStatusListeners();
-          showToast('Results published!');
-        }
+        const show = allShows.find(s => s.id === publishBtn.dataset.showId);
+        if (show) openPublishModal(show);
         return;
       }
 
@@ -1059,6 +1256,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     renderJudgeBook();
     setupTabs();
     attachShowStatusListeners();
+    wirePublishModal();
 
     // Drawer wiring
     document.getElementById('drawer-backdrop')?.addEventListener('click', closeDrawer);
