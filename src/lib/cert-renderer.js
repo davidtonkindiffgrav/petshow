@@ -328,8 +328,16 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
   const contentH = H - y - footerH - PAD;
   const contentW = W - 2 * PAD;
 
+  // With no image, the text is centred across the whole page — give it a size
+  // boost. Font sizes and matching line heights both scale.
+  const noImg    = !contentImg;
+  const NAME_PX  = noImg ? 46 : 36;
+  const BREED_PX = noImg ? 22 : 18;
+  const OWNER_PX = noImg ? 19 : 16;
   // Text-block height (for vertical centring) — matches the per-line advances below.
-  const NAME_H = 44, BREED_H = 26, OWNER_H = 30;
+  const NAME_H  = noImg ? 56 : 44;
+  const BREED_H = noImg ? 32 : 26;
+  const OWNER_H = noImg ? 34 : 30;
   let blockH = 0;
   if (d.fields.includes('animal_name')) blockH += NAME_H;
   if (d.fields.includes('breed') && entry?.breed) blockH += BREED_H;
@@ -397,35 +405,35 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
 
   if (d.fields.includes('animal_name')) {
     const name = entry?.animal_name || 'Animal Name';
-    let px = 36;
+    let px = NAME_PX;
     ctx.font = `700 ${px}px ${MAIN}`;
     while (ctx.measureText(name).width > textMaxW && px > 18) {
       px--; ctx.font = `700 ${px}px ${MAIN}`;
     }
     ctx.fillStyle = TEXT_DARK;
-    ctx.fillText(name, textDrawX, ty + 30);
+    ctx.fillText(name, textDrawX, ty + (noImg ? 38 : 30));
     ty += NAME_H;
   }
   if (d.fields.includes('breed') && entry?.breed) {
-    let px = 18;
+    let px = BREED_PX;
     ctx.font = `500 ${px}px ${MAIN}`;
     while (ctx.measureText(entry.breed).width > textMaxW && px > 11) {
       px--; ctx.font = `500 ${px}px ${MAIN}`;
     }
     ctx.fillStyle = TEXT_MID;
-    ctx.fillText(entry.breed, textDrawX, ty + 18);
+    ctx.fillText(entry.breed, textDrawX, ty + (noImg ? 22 : 18));
     ty += BREED_H;
   }
   if (d.fields.includes('exhibitor_name') && entry?.exhibitor_name) {
     ty += 6;
     const owner = `Owner: ${entry.exhibitor_name}`;
-    let px = 16;
+    let px = OWNER_PX;
     ctx.font = `500 ${px}px ${MAIN}`;
     while (ctx.measureText(owner).width > textMaxW && px > 10) {
       px--; ctx.font = `500 ${px}px ${MAIN}`;
     }
     ctx.fillStyle = TEXT_LIGHT;
-    ctx.fillText(owner, textDrawX, ty + 14);
+    ctx.fillText(owner, textDrawX, ty + (noImg ? 16 : 14));
     ty += 24;
   }
 
