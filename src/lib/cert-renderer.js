@@ -339,30 +339,33 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
   let textDrawX, textStartY, textMaxW;
 
   if (contentImg) {
-    // 2-column layout: image LEFT, text RIGHT. The size slider (0.25–0.50)
-    // scales the image in BOTH dimensions, so tall images like ribbons scale
-    // too — not just landscape photos. EDGE keeps the image off the left border
-    // and the text off the right border.
+    // 2-column layout: image LEFT (fixed-width column), text RIGHT. The image
+    // column width is CONSTANT, so the image always scales about the column's
+    // centre — no sideways drift. The size slider (0.25–0.50) scales the image
+    // WITHIN that column, in both dimensions, so ribbons and photos behave the
+    // same. EDGE keeps the column off the left border and text off the right.
     const imgFrac  = Math.min(Math.max(d.photo_size ?? 0.33, 0.25), 0.50);
     const EDGE     = 18;
-    const colGap   = 22;
+    const colGap   = 20;
+    const COL_FRAC = 0.46;   // fixed image-column width (fraction of content zone)
     const zoneX    = PAD + EDGE;
     const zoneW    = contentW - EDGE * 2;
+    const imgColW  = zoneW * COL_FRAC;
 
-    const boxW  = zoneW * imgFrac;
-    const boxH  = contentH * Math.min(1, imgFrac / 0.50);
+    // Fill fraction of the column box (slider 0.25→0.50 maps to 0.50→1.00).
+    const fill  = Math.min(1, imgFrac / 0.50);
+    const boxW  = imgColW  * fill;
+    const boxH  = contentH * fill;
     const scale = Math.min(boxW / contentImg.naturalWidth, boxH / contentImg.naturalHeight);
     photoW = Math.round(contentImg.naturalWidth  * scale);
     photoH = Math.round(contentImg.naturalHeight * scale);
 
-    // Left-anchored: every image (photo or ribbon) grows rightward from the same
-    // left edge and stays vertically centred, so scaling is consistent and stable
-    // — no sideways drift as the image resizes.
-    photoX = zoneX;
+    // Centre the image inside its fixed column, both axes.
+    photoX = zoneX + Math.round((imgColW - photoW) / 2);
     photoY = y + Math.round((contentH - photoH) / 2);
 
-    // Text fills the space to the right of the actual image, centred within it.
-    const textColX = zoneX + photoW + colGap;
+    // Text fills the fixed right column, centred within it.
+    const textColX = zoneX + imgColW + colGap;
     const textColW = zoneX + zoneW - textColX;
     textDrawX  = textColX + textColW / 2;
     textStartY = y + Math.max(0, Math.round((contentH - blockH) / 2));
