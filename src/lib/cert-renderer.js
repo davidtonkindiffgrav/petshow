@@ -234,6 +234,12 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
     ...sponsorUrls.map(loadImg),
   ]);
 
+  // Sponsor strip and judge signature both anchor bottom-left/bottom-right —
+  // when both are on, the footer URL (normally bottom-left, to clear the
+  // signature) collides with the sponsor logos. Move it to the top-right instead.
+  const hasSponsorLogos = d.show_sponsors && sponsorImgs.some(Boolean);
+  const urlClash        = d.show_signature && hasSponsorLogos;
+
   // Decorative frame: draw full-page over the background, under all content.
   // (drawBorder above is a no-op for frame styles, so there is no double border.)
   if (frameImg) ctx.drawImage(frameImg, 0, 0, W, H);
@@ -268,12 +274,20 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
     ctx.fillText(show.host_org, W / 2, y + 30);
   }
 
-  if (d.fields.includes('show_date') && show?.show_date) {
+  const showDate = d.fields.includes('show_date') && show?.show_date;
+  if (showDate) {
     const dt = new Date(show.show_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
     ctx.font      = `500 10px ${FONT}`;
     ctx.fillStyle = TEXT_LIGHT;
     ctx.textAlign = 'right';
     ctx.fillText(dt, W - PAD, y + 12);
+  }
+
+  if (urlClash) {
+    ctx.font      = `400 9px ${FONT}`;
+    ctx.fillStyle = TEXT_LIGHT;
+    ctx.textAlign = 'right';
+    ctx.fillText('FurToFeathers.com', W - PAD, y + (showDate ? 26 : 12));
   }
 
   y += headerH;
@@ -324,7 +338,7 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
   y += 16;
 
   // ── Content zone ──────────────────────────────────────────────────────────
-  const footerH = d.show_sponsors && sponsorImgs.some(Boolean) ? 56 : 36;
+  const footerH = hasSponsorLogos ? 56 : 36;
   const contentH = H - y - footerH - PAD;
   const contentW = W - 2 * PAD;
 
@@ -456,10 +470,12 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
   ctx.lineWidth   = 0.5;
   ctx.beginPath(); ctx.moveTo(PAD, fy - 28); ctx.lineTo(W - PAD, fy - 28); ctx.stroke();
 
-  ctx.font      = `400 9px ${FONT}`;
-  ctx.fillStyle = TEXT_LIGHT;
-  ctx.textAlign = d.show_signature ? 'left' : 'right';
-  ctx.fillText('FurToFeathers.com', d.show_signature ? PAD : W - PAD, fy - 14);
+  if (!urlClash) {
+    ctx.font      = `400 9px ${FONT}`;
+    ctx.fillStyle = TEXT_LIGHT;
+    ctx.textAlign = d.show_signature ? 'left' : 'right';
+    ctx.fillText('FurToFeathers.com', d.show_signature ? PAD : W - PAD, fy - 14);
+  }
 
   // ── Judge signature ───────────────────────────────────────────────────────
   if (d.show_signature) {
