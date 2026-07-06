@@ -76,7 +76,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 <script>
   import { getAuth }        from '../../lib/auth.js';
   import { supabase }       from '../../lib/supabase.js';
-  import { renderCertificate, CERT_DEFAULTS } from '../../lib/cert-renderer.js';
+  import { CERT_DEFAULTS } from '../../lib/cert-renderer.js';
+  import { sendCertificateToEntry } from '../../lib/certSender.js';
 
   const PLACE_LABELS = { 1: '1st', 2: '2nd', 3: '3rd' };
   const PLACE_ICONS  = { 1: '🥇', 2: '🥈', 3: '🥉' };
@@ -287,60 +288,20 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       certBtn.disabled = true;
       certBtn.textContent = 'Generating…';
 
-      try {
-        // 1. Render certificate to offscreen canvas
-        const canvas = document.createElement('canvas');
-        await renderCertificate(canvas, {
-          show:     _show,
-          entry,
-          category,
-          sponsors: _sponsors,
-          design:   _design,
-        });
+      certBtn.textContent = 'Sending…';
+      const result = await sendCertificateToEntry({
+        supabase, show: _show, entry, category, sponsors: _sponsors, design: _design,
+      });
 
-        // 2. Export as JPG blob
-        certBtn.textContent = 'Uploading…';
-        const jpgDataUrl = canvas.toDataURL('image/jpeg', 0.92);
-        const fetchRes   = await fetch(jpgDataUrl);
-        const blob       = await fetchRes.blob();
-
-        // 3. Upload to storage
-        const jpgPath = `certs/${_show.id}/${entryId}.jpg`;
-        const { error: uploadErr } = await supabase.storage
-          .from('show-assets')
-          .upload(jpgPath, blob, { contentType: 'image/jpeg', upsert: true });
-        if (uploadErr) throw new Error('Upload failed: ' + uploadErr.message);
-
-        const { data: { publicUrl: cert_jpg_url } } = supabase.storage
-          .from('show-assets').getPublicUrl(jpgPath);
-
-        // 4. Call Edge Function → generates PDF + sends email
-        certBtn.textContent = 'Sending…';
-        const { data: { session } } = await supabase.auth.getSession();
-        const fnRes = await fetch(
-          `${import.meta.env.PUBLIC_SUPABASE_URL}/functions/v1/send-certificate`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${session.access_token}`,
-            },
-            body: JSON.stringify({ show_id: _show.id, entry_id: entryId, cert_jpg_url }),
-          },
-        );
-        const result = await fnRes.json();
-        if (result.error) throw new Error(result.error);
-
-        // 5. Update local state + re-render
+      if (result.ok) {
         entry.cert_email_sent_at = new Date().toISOString();
-        entry.cert_jpg_url = cert_jpg_url;
+        entry.cert_jpg_url = result.cert_jpg_url;
         renderCategories();
         showToast('Certificate sent!');
-
-      } catch (err) {
+      } else {
         certBtn.disabled = false;
         certBtn.textContent = 'Send Certificate';
-        showToast('Failed: ' + (err.message || 'unknown error'));
+        showToast('Failed: ' + (result.reason === 'no_email' ? 'No email address for this exhibitor' : result.message));
       }
     });
   }

@@ -203,7 +203,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           <ul class="space-y-1.5 text-[13px] text-[#4a4357] leading-snug">
             <li class="flex gap-2"><span class="text-brand font-bold shrink-0">•</span><span>Winners' placements (1st, 2nd, 3rd) are finalised.</span></li>
             <li class="flex gap-2"><span class="text-brand font-bold shrink-0">•</span><span>Results become <strong>public</strong> on the show's results page.</span></li>
-            <li class="flex gap-2"><span class="text-brand font-bold shrink-0">•</span><span>Certificates are <strong>not</strong> emailed automatically — you send them afterward from Manage Results, one per winner.</span></li>
+            <li class="flex gap-2"><span class="text-brand font-bold shrink-0">•</span><span>Certificates are <strong>emailed automatically</strong> to winners with an email on file. Anyone skipped can be sent from Manage Results afterward.</span></li>
             <li class="flex gap-2"><span style="color:#d97706" class="font-bold shrink-0">•</span><span style="color:#92400e"><strong>This cannot be undone.</strong></span></li>
           </ul>
         </div>
@@ -232,6 +232,29 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     </div>
   </div>
 
+  <!-- Certificate send report (shown right after publishing) -->
+  <div id="cert-report-modal" style="display:none"
+    class="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4"
+    role="dialog" aria-modal="true" aria-labelledby="cert-report-title">
+    <div class="bg-white rounded-[20px] w-full max-w-[480px] shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="p-6">
+        <div class="flex items-start gap-3 mb-4">
+          <div class="w-11 h-11 rounded-full bg-brand-tint flex items-center justify-center shrink-0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 4h16v16H4z" opacity="0"/><path d="M3 8l9 6 9-6"/><rect x="3" y="4" width="18" height="16" rx="2"/>
+            </svg>
+          </div>
+          <h2 id="cert-report-title" class="text-[18px] font-extrabold text-[#1c1626] mt-1.5">Certificates</h2>
+        </div>
+        <div id="cert-report-body"></div>
+        <button id="cert-report-close"
+          class="w-full mt-4 text-[14px] font-bold rounded-[10px] py-2.5 bg-brand text-white hover:bg-brand-dark transition-colors">
+          Done
+        </button>
+      </div>
+    </div>
+  </div>
+
 </DashboardLayout>
 
 <script>
@@ -240,6 +263,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   import { uploadImage } from '../../lib/storage.js';
   import { showUploadOverlay, hideUploadOverlay } from '../../lib/uploadOverlay.js';
   import { isVotingOpen, getVoteWindow, zonedDateTime } from '../../lib/voteWindow.js';
+  import { CERT_DEFAULTS } from '../../lib/cert-renderer.js';
+  import { sendCertificateToEntry } from '../../lib/certSender.js';
 
   let base = '';
   let uid  = '';
@@ -479,6 +504,88 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     return new Date().toISOString();
   }
 
+  // Fetch winners + everything renderCertificate needs, then send one email per
+  // winner. Returns a report of what happened so the organiser can see who
+  // didn't get their certificate (no email on file, or a send error).
+  async function sendAllCertificates(showId) {
+    const [showRes, catsRes, entriesRes, sponsorsRes, judgeRes] = await Promise.all([
+      supabase.from('shows').select('*').eq('id', showId).single(),
+      supabase.from('show_categories').select('id, name').eq('show_id', showId),
+      supabase.from('show_entries')
+        .select('id, category_id, animal_name, breed, exhibitor_name, exhibitor_email, photo_url, result_place')
+        .eq('show_id', showId).not('result_place', 'is', null).lte('result_place', 3),
+      supabase.from('show_sponsors').select('name, logo_url').eq('show_id', showId),
+      supabase.from('show_judges').select('first_name, last_name').eq('show_id', showId).limit(1).maybeSingle(),
+    ]);
+
+    const fullShow = showRes.data;
+    const entries  = entriesRes.data || [];
+    if (!fullShow || entries.length === 0) return { sent: [], skipped: [], failed: [], totalWinners: entries.length, certNotLocked: false };
+
+    if (!fullShow.cert_design_locked_at) {
+      return { sent: [], skipped: [], failed: [], totalWinners: entries.length, certNotLocked: true };
+    }
+
+    const j = judgeRes?.data;
+    if (j) fullShow.judge_name = `${j.first_name || ''} ${j.last_name || ''}`.trim();
+
+    let design;
+    try { design = { ...CERT_DEFAULTS, ...JSON.parse(fullShow.cert_design_json || '{}') }; }
+    catch { design = { ...CERT_DEFAULTS }; }
+    if (fullShow.is_judged === false) design.show_signature = false;
+
+    const categories = catsRes.data   || [];
+    const sponsors   = sponsorsRes.data || [];
+
+    const sent = [], skipped = [], failed = [];
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i];
+      showUploadOverlay(`Sending certificates… (${i + 1}/${entries.length})`);
+      const category = categories.find(c => c.id === entry.category_id);
+      const result = await sendCertificateToEntry({ supabase, show: fullShow, entry, category, sponsors, design });
+      if (result.ok) sent.push(entry);
+      else if (result.reason === 'no_email') skipped.push(entry);
+      else failed.push({ entry, message: result.message });
+    }
+    hideUploadOverlay();
+    return { sent, skipped, failed, totalWinners: entries.length, certNotLocked: false };
+  }
+
+  function nameOfEntry(e) {
+    return esc(e.animal_name || 'Unnamed') + (e.exhibitor_name ? ` (${esc(e.exhibitor_name)})` : '');
+  }
+
+  function showCertReport(report) {
+    const { sent, skipped, failed, totalWinners, certNotLocked } = report;
+    const body = document.getElementById('cert-report-body');
+
+    if (certNotLocked) {
+      body.innerHTML = `<div class="rounded-[10px] bg-[#fffbeb] border border-[#fde68a] p-3 text-[13px] text-[#92400e] leading-snug">
+        Certificates weren't sent — the certificate design isn't locked yet.
+        Lock it in the Certificate Designer, then send from Manage Results.
+      </div>`;
+    } else if (totalWinners === 0) {
+      body.innerHTML = `<p class="text-[13px] text-[#6f6880]">No winners to send certificates to.</p>`;
+    } else {
+      const skippedList = skipped.length
+        ? `<div class="rounded-[10px] bg-[#fffbeb] border border-[#fde68a] p-3 mb-2.5">
+             <p class="text-[12px] font-bold text-[#92400e] mb-1">⚠ ${skipped.length} skipped — no email on file</p>
+             <ul class="space-y-0.5">${skipped.map(e => `<li class="text-[12px] text-[#92400e]">${nameOfEntry(e)}</li>`).join('')}</ul>
+           </div>` : '';
+      const failedList = failed.length
+        ? `<div class="rounded-[10px] bg-[#fef2f2] border border-[#fecaca] p-3">
+             <p class="text-[12px] font-bold text-[#b91c1c] mb-1">✕ ${failed.length} failed to send</p>
+             <ul class="space-y-0.5">${failed.map(f => `<li class="text-[12px] text-[#b91c1c]">${nameOfEntry(f.entry)} — ${esc(f.message)}</li>`).join('')}</ul>
+           </div>` : '';
+      body.innerHTML = `
+        <p class="text-[13px] font-semibold text-[#1c1626] mb-2.5">${sent.length} of ${totalWinners} certificate${totalWinners === 1 ? '' : 's'} sent successfully.</p>
+        ${skippedList}${failedList}`;
+    }
+
+    document.getElementById('cert-report-modal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
   async function confirmPublish() {
     if (!pendingPublish) return;
     const cta = document.getElementById('publish-modal-cta');
@@ -496,13 +603,21 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       closePublishModal();
       cta.textContent = 'Publish Results';
       renderShowStatus();
-      showToast('Results published! Send certificates from Manage Results.');
     } catch (err) {
       const errEl = document.getElementById('publish-modal-error');
       errEl.textContent = err.message || 'Something went wrong — please try again.';
       errEl.style.display = 'block';
       cta.textContent = 'Publish Results';
       updatePublishCta();
+      return;
+    }
+
+    try {
+      const report = await sendAllCertificates(showId);
+      showCertReport(report);
+    } catch (err) {
+      hideUploadOverlay();
+      showToast('Results published, but sending certificates failed: ' + (err.message || 'unknown error'));
     }
   }
 
@@ -515,6 +630,15 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.getElementById('publish-modal-cta')?.addEventListener('click', confirmPublish);
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape' && document.getElementById('publish-modal')?.style.display === 'flex') closePublishModal();
+    });
+
+    function closeCertReport() {
+      document.getElementById('cert-report-modal').style.display = 'none';
+      document.body.style.overflow = '';
+    }
+    document.getElementById('cert-report-close')?.addEventListener('click', closeCertReport);
+    document.getElementById('cert-report-modal')?.addEventListener('click', e => {
+      if (e.target === e.currentTarget) closeCertReport();
     });
   }
 
