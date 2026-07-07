@@ -140,6 +140,14 @@ function navClass(page: string) {
             <img src={`${base}images/ftf_logo_256x212.png`} width="15" style="height:auto;display:block;" alt="" aria-hidden="true" />
             My Show Hub
           </button>
+          <button id="sidebar-switch-judge" style="display:none"
+            class="flex items-center gap-3 px-4 py-2.5 text-[13.5px] font-semibold text-[#1c1626] hover:bg-[#f0fafa] transition-colors w-full text-left">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="8" r="6"/>
+              <path d="M15.5 13.5 17 22l-5-3-5 3 1.5-8.5"/>
+            </svg>
+            Judge Mode
+          </button>
           <div class="my-1 mx-3 border-t border-[#efebf5]"></div>
           <button id="sidebar-signout"
             class="flex items-center gap-3 px-4 py-2.5 text-[13.5px] font-semibold text-red-500 hover:bg-red-50 transition-colors w-full text-left">
@@ -248,4 +256,18 @@ function navClass(page: string) {
     }
     window.location.href = base + 'participant';
   });
+
+  // Reveal "Judge Mode" only for accounts that already hold the judge role
+  // (judge access is granted via show invite, not self-service like participant/organiser).
+  (async () => {
+    const { getAuth } = await import('../lib/auth.js');
+    const { profile, base } = await getAuth();
+    if (profile?.roles?.includes('judge')) {
+      const judgeBtn = document.getElementById('sidebar-switch-judge');
+      if (judgeBtn) {
+        judgeBtn.style.display = 'flex';
+        judgeBtn.addEventListener('click', () => { window.location.href = base + 'judge'; });
+      }
+    }
+  })();
 </script>

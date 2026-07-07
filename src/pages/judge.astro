@@ -74,6 +74,15 @@ const base = raw.endsWith('/') ? raw : raw + '/';
           <p class="text-[11px] text-white/40">Judge</p>
         </div>
       </div>
+      <button id="btn-switch-organiser" style="display:none"
+        class="flex items-center gap-1.5 text-[12px] text-white/35 hover:text-white/70 transition-colors mb-2">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="9 21 3 21 3 15"/><line x1="3" y1="21" x2="10" y2="14"/>
+          <polyline points="15 3 21 3 21 9"/><line x1="21" y1="3" x2="14" y2="10"/>
+        </svg>
+        Organiser Mode
+      </button>
       <button id="btn-signout"
         class="flex items-center gap-1.5 text-[12px] text-white/35 hover:text-white/70 transition-colors">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -1390,6 +1399,15 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     // Update sidebar name display
     const nameEl = document.getElementById('judge-display-name');
     if (nameEl) nameEl.textContent = state.judgeName;
+
+    // Reveal "Organiser Mode" for dual-role accounts
+    if (profile?.roles?.includes('organiser')) {
+      const switchBtn = document.getElementById('btn-switch-organiser');
+      if (switchBtn) {
+        switchBtn.style.display = 'flex';
+        switchBtn.addEventListener('click', () => { window.location.href = base + 'organiser'; });
+      }
+    }
 
     setupEvents();
 
