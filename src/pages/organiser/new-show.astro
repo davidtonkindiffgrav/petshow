@@ -489,13 +489,22 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         </div>
       </div>
 
+      <div class="mb-6">
+        <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Fundraising Goal <span class="text-[#9b94a8] font-normal">(optional)</span></label>
+        <div class="relative max-w-[200px]">
+          <span id="s8-symbol-goal" class="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-[#9b94a8] font-semibold">A$</span>
+          <input type="number" id="s8-fund-goal" min="0" placeholder="0.00"
+            class="w-full border border-[#b8e4e0] rounded-[11px] pl-11 pr-4 py-2.5 text-[14px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        </div>
+      </div>
+
       <div class="flex items-center justify-between p-4 border border-[#efebf5] rounded-[12px]">
         <div>
           <p class="text-[13.5px] font-bold text-[#1c1626]">Display Fundraising Progress Publicly</p>
-          <p class="text-[12px] text-[#9b94a8]">Show a progress bar on the public show page</p>
+          <p id="s8-public-toggle-hint" class="text-[12px] text-[#9b94a8]">Show a progress bar on the public show page</p>
         </div>
         <button type="button" id="s8-public-toggle" data-on="false"
-          class="w-11 h-6 rounded-full bg-[#efebf5] transition-colors relative flex items-center px-0.5">
+          class="w-11 h-6 rounded-full bg-[#efebf5] transition-colors relative flex items-center px-0.5 disabled:opacity-40 disabled:cursor-not-allowed">
           <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
         </button>
       </div>
@@ -729,6 +738,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     has_digital_certs: null, has_physical_prizes: null, prize_source: null,
     prizes: [],
     is_fundraising: true,
+    fundraising_goal: null,
     show_fundraising_publicly: null,
     currency: 'AUD', entry_fee: 0,
     classes: [],
@@ -896,7 +906,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     updateNav();
     if (n === 4) initStep4();
     if (n === 6) updateJudgePanels();
-    if (n === 8) applyCurrencySymbol(show.currency || 'AUD');
+    if (n === 8) { applyCurrencySymbol(show.currency || 'AUD'); updatePublicToggleAvailability(); }
     if (n === 10) buildReview();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -1139,7 +1149,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     }
     if (n === 8) {
       show.is_fundraising            = true;
-      show.show_fundraising_publicly = document.getElementById('s8-public-toggle').dataset.on === 'true';
+      show.fundraising_goal          = parseFloat(document.getElementById('s8-fund-goal').value) || null;
+      show.show_fundraising_publicly = show.fundraising_goal > 0 && document.getElementById('s8-public-toggle').dataset.on === 'true';
       show.currency                  = document.getElementById('s8-currency').value || 'AUD';
       show.entry_fee                 = getFeeValue();
     }
@@ -1665,6 +1676,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         <div class="px-5">
           ${reviewRow('Currency', show.currency || 'AUD', 8)}
           ${reviewRow('Entry Fee', show.entry_fee > 0 ? `${CURRENCY_SYMBOLS[show.currency] || show.currency}${show.entry_fee} (all-in — includes all fees)` : 'Not set', 8)}
+          ${reviewRow('Fundraising Goal', show.fundraising_goal > 0 ? `${CURRENCY_SYMBOLS[show.currency] || show.currency}${show.fundraising_goal}` : 'Not set', 8)}
           ${reviewRow('Public Progress', show.show_fundraising_publicly ? 'Visible' : 'Hidden', 8)}
         </div>
       </div>`;
@@ -1725,6 +1737,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       prizes: prizesData?.map(p => p.description) || [],
       classes: cats?.length > 0 ? cats.map(c => ({ name: c.name, description: c.description || '', enabled: true, custom: false })) : [],
       is_fundraising: data.is_fundraising ?? true,
+      fundraising_goal: data.fundraising_goal,
       show_fundraising_publicly: data.show_fundraising_publicly,
       currency: data.currency || 'AUD',
       entry_fee: data.entry_fee || 0,
@@ -1834,10 +1847,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     }
 
     // Step 8 — fees
+    if (show.fundraising_goal) document.getElementById('s8-fund-goal').value = show.fundraising_goal;
     setToggle('s8-public-toggle', !!show.show_fundraising_publicly);
     if (show.currency) document.getElementById('s8-currency').value = show.currency;
     setFeeValue(Number(show.entry_fee) || getMin(show.currency || 'AUD') || 3);
     applyCurrencySymbol(show.currency || 'AUD');
+    updatePublicToggleAvailability();
 
     goToStep(Math.min(data.wizard_step || 1, 10));
   }
@@ -2058,6 +2073,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     });
     // Step 8: public toggle + currency selector + fee stepper
     setupToggle('s8-public-toggle', on => { show.show_fundraising_publicly = on; });
+    document.getElementById('s8-fund-goal').addEventListener('input', updatePublicToggleAvailability);
     document.getElementById('s8-currency').addEventListener('change', e => {
       applyCurrencySymbol(e.target.value);
     });
@@ -2140,11 +2156,26 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   function applyCurrencySymbol(code) {
     const sym = CURRENCY_SYMBOLS[code] || code;
     document.getElementById('s8-symbol-fee').textContent = sym;
+    document.getElementById('s8-symbol-goal').textContent = sym;
     const minFee2 = getMin(code);
     document.getElementById('s8-fee-hint').textContent = minFee2 != null
       ? `Minimum ${sym}${minFee2}`
       : 'Error — fee settings unavailable. Please refresh the page.';
     setFeeValue(getFeeValue());
+  }
+
+  // Fundraising progress can only be shown publicly once a goal is set — otherwise
+  // the public page renders a permanently-0% bar with no goal to reach.
+  function updatePublicToggleAvailability() {
+    const goalVal = parseFloat(document.getElementById('s8-fund-goal').value) || 0;
+    const enabled = goalVal > 0;
+    const toggle = document.getElementById('s8-public-toggle');
+    const hint = document.getElementById('s8-public-toggle-hint');
+    toggle.disabled = !enabled;
+    hint.textContent = enabled
+      ? 'Show a progress bar on the public show page'
+      : 'Set a fundraising goal above to enable';
+    if (!enabled) setToggle('s8-public-toggle', false);
   }
 
   function setupEventListeners() {

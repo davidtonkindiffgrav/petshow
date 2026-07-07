@@ -513,10 +513,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           <div class="flex items-center justify-between p-3 border border-[#efebf5] rounded-[11px]">
             <div>
               <p class="text-[13px] font-bold text-[#1c1626]">Display Progress Publicly</p>
-              <p class="text-[11.5px] text-[#9b94a8]">Show a progress bar on the public page</p>
+              <p id="mgmt-public-toggle-hint" class="text-[11.5px] text-[#9b94a8]">Show a progress bar on the public page</p>
             </div>
             <button type="button" id="mgmt-public-toggle" data-on="false"
-              class="w-11 h-6 rounded-full bg-[#efebf5] transition-colors relative flex items-center px-0.5 shrink-0">
+              class="w-11 h-6 rounded-full bg-[#efebf5] transition-colors relative flex items-center px-0.5 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed">
               <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
             </button>
           </div>
@@ -1441,6 +1441,21 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     setToggle('mgmt-public-toggle', show.show_fundraising_publicly === true);
     setFeeValue(Number(show.entry_fee) || getMin(show.currency || 'AUD') || 3);
     applyCurrencySymbol(show.currency || 'AUD');
+    updatePublicToggleAvailability();
+  }
+
+  // Fundraising progress can only be shown publicly once a goal is set — otherwise
+  // the public page renders a permanently-0% bar with no goal to reach.
+  function updatePublicToggleAvailability() {
+    const goalVal = parseFloat(document.getElementById('mgmt-fund-goal').value) || 0;
+    const enabled = goalVal > 0;
+    const toggle = document.getElementById('mgmt-public-toggle');
+    const hint = document.getElementById('mgmt-public-toggle-hint');
+    toggle.disabled = !enabled;
+    hint.textContent = enabled
+      ? 'Show a progress bar on the public page'
+      : 'Set a fundraising goal above to enable';
+    if (!enabled) setToggle('mgmt-public-toggle', false);
   }
 
   // ── Wire up all handlers ─────────────────────────────────────────────────────
@@ -1562,6 +1577,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     // Fundraising
     setupToggle('mgmt-public-toggle', () => {});
+    document.getElementById('mgmt-fund-goal').addEventListener('input', updatePublicToggleAvailability);
     document.getElementById('mgmt-currency').addEventListener('change', e => applyCurrencySymbol(e.target.value));
     document.getElementById('mgmt-fee-minus').addEventListener('click', () => setFeeValue(getFeeValue() - 1));
     document.getElementById('mgmt-fee-plus').addEventListener('click', () => setFeeValue(getFeeValue() + 1));
@@ -1896,12 +1912,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const minFee   = getMin(currency);
     if (minFee == null) return showPanelError('fundraising', 'Fee settings could not be loaded — please refresh the page.');
     if (entryFee < minFee) return showPanelError('fundraising', `Entry fee must be at least ${CURRENCY_SYMBOLS[currency] || ''}${minFee}.`);
+    const goal = parseFloat(document.getElementById('mgmt-fund-goal').value) || null;
     await saveSection('fundraising', {
       currency,
       entry_fee: entryFee,
       is_fundraising: true,
-      fundraising_goal: parseFloat(document.getElementById('mgmt-fund-goal').value) || null,
-      show_fundraising_publicly: document.getElementById('mgmt-public-toggle').dataset.on === 'true',
+      fundraising_goal: goal,
+      show_fundraising_publicly: goal > 0 && document.getElementById('mgmt-public-toggle').dataset.on === 'true',
     });
   }
 
