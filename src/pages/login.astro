@@ -86,6 +86,17 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   const raw = import.meta.env.BASE_URL;
   const base = raw.endsWith('/') ? raw : raw + '/';
 
+  // Preserve a `?redirect=` target (e.g. set by "Enter Now" on a show page)
+  // through the login flow, so the user lands back where they meant to go.
+  const redirectParam = new URL(window.location.href).searchParams.get('redirect');
+  function safeRedirectTarget() {
+    if (!redirectParam) return null;
+    // Only allow same-origin relative paths — reject anything that could send
+    // the user off-site via an open redirect.
+    if (/^https?:\/\//i.test(redirectParam) || redirectParam.startsWith('//')) return null;
+    return redirectParam.replace(/^\/+/, '');
+  }
+
   const pwInput   = document.getElementById('password');
   const toggleBtn = document.getElementById('toggle-password');
   const iconEye   = document.getElementById('icon-eye');
@@ -124,7 +135,8 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       .eq('id', data.user.id)
       .single();
 
-    const roles = profile?.roles || ['participant'];
-    window.location.href = roles.length === 1 ? base + roles[0] : base + 'choose';
+    const roles  = profile?.roles || ['participant'];
+    const target = safeRedirectTarget();
+    window.location.href = target ? base + target : (roles.length === 1 ? base + roles[0] : base + 'choose');
   });
 </script>
