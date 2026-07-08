@@ -1,0 +1,199 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const raw  = import.meta.env.BASE_URL;
+const base = raw.endsWith('/') ? raw : raw + '/';
+
+const sections = [
+  {
+    title: 'Running a Show',
+    items: [
+      {
+        q: 'Who is Fur to Feathers for?',
+        a: `Fur to Feathers is a platform for clubs and individuals to run virtual pet shows and competitions — often as a fundraiser. Organisers set up a show, exhibitors enter their pets online, and judging (expert or public vote) decides the winners.`,
+      },
+      {
+        q: 'How do I create a show?',
+        a: `From your dashboard, start the show wizard. It walks you through show basics, show type, breed &amp; eligibility, competition classes, sponsorship, judging setup, awards &amp; prizes, entry fees, and branding, then a final review before you publish. Your progress is saved automatically, so you can leave and come back to finish later.`,
+      },
+      {
+        q: 'Can I run a show as an individual, or does it have to be a club?',
+        a: `Either — when you sign up you choose an Individual or Club/Organisation account. Club accounts can run multiple shows under one organisation profile and share a club logo across their shows' certificates.`,
+      },
+      {
+        q: 'What types of show can I run?',
+        a: `Fun Stakes shows are available today. Beauty Contest, Memorial, Other, and non-dog animal show types are <strong>coming soon</strong>.`,
+      },
+      {
+        q: 'Can I edit a show or an entry once judging has started?',
+        a: `You can, but be careful — the entry edit screen shows a warning once judging day has begun, since changing an entry's class part-way through judging can affect scoring. A firmer safeguard is planned for later.`,
+      },
+      {
+        q: 'Can I set defaults so I don’t have to re-enter my timezone and currency every time?',
+        a: `Yes — set your default timezone and currency on your account settings page, and every new show you create will pre-fill with them.`,
+      },
+    ],
+  },
+  {
+    title: 'Fees & Getting Paid',
+    items: [
+      {
+        q: 'How does pricing work?',
+        a: `Fur to Feathers uses all-in pricing: the entry fee you set as an organiser is exactly what the exhibitor pays — nothing is added at checkout. Our platform fee and card processing costs are deducted from that amount, not added on top. See our <a href="${base}pricing" style="color:#1ba89a;font-weight:600;">Pricing page</a> for a full breakdown.`,
+      },
+      {
+        q: 'What’s the platform fee?',
+        a: `8% of each entry, or a small per-currency minimum if 8% works out lower (for example A$1.00, NZ$1.10, US$0.70, £0.50, €0.60, C$0.90, S$0.90, R12.00). It's deducted from the entry fee — never charged on top of it.`,
+      },
+      {
+        q: 'Why is there a minimum platform fee?',
+        a: `Card processors charge a small fixed fee per transaction, so a minimum platform fee applies to keep low-value entries financially viable.`,
+      },
+      {
+        q: 'How do I actually get paid?',
+        a: `Fur to Feathers raises an invoice on your behalf and transfers the funds raised to you — by bank transfer if you're in Australia, or via OFX for international organisers. Transfers go out shortly after your show wraps up.`,
+      },
+      {
+        q: 'Are entry fees refundable?',
+        a: `The platform fee component is never refundable. Beyond that, Fur to Feathers is a platform provider, not a party to the agreement between an exhibitor and an organiser — we don't issue entry-fee refunds ourselves. If you believe you're owed a refund, contact the organising club directly. See our <a href="${base}terms" style="color:#1ba89a;font-weight:600;">Terms &amp; Conditions</a> for the full refund policy.`,
+      },
+    ],
+  },
+  {
+    title: 'Entering a Show',
+    items: [
+      {
+        q: 'Do I need an account to enter a show?',
+        a: `Yes — sign up or log in before entering. If you follow a link to a show while logged out, you'll be brought straight back to it once you've signed in.`,
+      },
+      {
+        q: 'How much does it cost to enter?',
+        a: `Exactly what's shown on the show page — that's the total you pay, with no extra fees added at checkout.`,
+      },
+      {
+        q: 'Can I enter more than one pet or class?',
+        a: `Yes, you can add multiple pets and classes and pay for them together in one checkout.`,
+      },
+      {
+        q: 'What if a show only has one entry class?',
+        a: `It's selected for you automatically — no need to pick from a list of one.`,
+      },
+      {
+        q: 'When do entries close?',
+        a: `Every show sets its own entry open and close date, time, and timezone — check the show page for the exact cutoff.`,
+      },
+      {
+        q: 'Can a judge enter the show they’re judging?',
+        a: `No — judges are not permitted to enter a show they've been assigned to judge.`,
+      },
+      {
+        q: 'Can I get a refund if I change my mind?',
+        a: `Refunds are between you and the organising club — Fur to Feathers doesn't process entry-fee refunds itself. Contact the organiser directly, and see our <a href="${base}terms" style="color:#1ba89a;font-weight:600;">Terms</a> for details.`,
+      },
+      {
+        q: 'Can I sign in with Google or Facebook?',
+        a: `Not yet — sign-in is currently email and password only. Social sign-in is <strong>coming soon</strong>.`,
+      },
+    ],
+  },
+  {
+    title: 'Physical Prizes & Certificates',
+    items: [
+      {
+        q: 'What’s the difference between digital certificates and physical prizes?',
+        a: `They're two independent options an organiser can switch on when setting up a show. Digital certificates are auto-generated award certificates emailed to winners. Physical prizes are real-world items (ribbons, trophies, goodie bags, etc.) the organiser arranges separately.`,
+      },
+      {
+        q: 'Who supplies the physical prizes?',
+        a: `The organiser chooses — sponsor-supplied, provided by the organisation itself, or a mix of both — and adds a description of what's on offer for exhibitors to see on the show page.`,
+      },
+      {
+        q: 'How are prize winners chosen?',
+        a: `From the same rankings that come out of judging — the top-placed entries in each category.`,
+      },
+    ],
+  },
+  {
+    title: 'Judging & Results',
+    items: [
+      {
+        q: 'How are entries judged?',
+        a: `When setting up a show, the organiser chooses either an expert judge (who ranks entries directly) or public voting.`,
+      },
+      {
+        q: 'How does public voting work?',
+        a: `Voters receive a magic-link email to cast their vote. Depending on the organiser's settings, voting either opens alongside entries or only after entries close, and always closes at the show's start time.`,
+      },
+      {
+        q: 'What happens when results are published?',
+        a: `Once the organiser publishes results, placings are finalised and digital certificates are <strong>automatically emailed</strong> to winners who have an email on file. If a winner has no email on record, or the certificate design hasn't been finalised yet, that certificate is skipped and can be sent manually afterwards.`,
+      },
+    ],
+  },
+  {
+    title: 'Accounts & Support',
+    items: [
+      {
+        q: 'How do I sign up?',
+        a: `With an email address and password. Google and Facebook sign-in are <strong>coming soon</strong>.`,
+      },
+      {
+        q: 'I forgot my password — what do I do?',
+        a: `Use the <a href="${base}forgot-password" style="color:#1ba89a;font-weight:600;">Forgot Password</a> link on the login page to reset it by email.`,
+      },
+      {
+        q: 'Can I generate a QR code for my show?',
+        a: `Not yet — QR codes for shows (handy for flyers and posters) are <strong>coming soon</strong>.`,
+      },
+    ],
+  },
+];
+---
+
+<BaseLayout title="FAQ — Fur to Feathers" description="Answers to common questions about running and entering pet shows on Fur to Feathers.">
+
+  <div style="max-width:780px;margin:0 auto;padding:60px 24px 100px;">
+
+    <div style="text-align:center;margin-bottom:48px;">
+      <p style="font-size:13px;font-weight:700;color:#1ba89a;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 10px;">Help Center</p>
+      <h1 style="font-size:36px;font-weight:900;color:#1c1626;margin:0 0 14px;line-height:1.15;">Frequently Asked Questions</h1>
+      <p style="font-size:17px;color:#6b7c89;max-width:520px;margin:0 auto;line-height:1.6;">
+        Everything you need to know about running and entering shows on Fur to Feathers.
+      </p>
+    </div>
+
+    {sections.map(section => (
+      <section style="margin-bottom:44px;">
+        <h2 style="font-size:20px;font-weight:800;color:#1c1626;margin:0 0 16px;">{section.title}</h2>
+        <div style="border:1.5px solid #e7eef0;border-radius:16px;overflow:hidden;background:#fff;">
+          {section.items.map((item, i) => (
+            <details class="faq-item" style={i !== section.items.length - 1 ? 'border-bottom:1px solid #e7eef0;' : ''}>
+              <summary style="padding:16px 20px;font-size:15px;font-weight:700;color:#1c1626;cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <span set:html={item.q} />
+                <svg class="faq-chevron" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" style="flex-shrink:0;transition:transform 0.15s;">
+                  <path d="M4 6l4 4 4-4" stroke="#6b7c89" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </summary>
+              <div style="padding:0 20px 18px;font-size:14px;color:#4a4357;line-height:1.8;" set:html={item.a} />
+            </details>
+          ))}
+        </div>
+      </section>
+    ))}
+
+    <!-- Contact -->
+    <div style="background:#f5f8f9;border-radius:14px;padding:24px;">
+      <h2 style="font-size:16px;font-weight:800;color:#1c1626;margin:0 0 8px;">Still have questions?</h2>
+      <p style="font-size:14px;color:#4a4357;line-height:1.7;margin:0;">
+        We're happy to help — contact us at <a href="mailto:hello@furtofeathers.com" style="color:#1ba89a;font-weight:600;">hello@furtofeathers.com</a>.
+      </p>
+    </div>
+
+  </div>
+
+  <style>
+    .faq-item summary::-webkit-details-marker { display: none; }
+    .faq-item[open] .faq-chevron { transform: rotate(180deg); }
+  </style>
+
+</BaseLayout>
