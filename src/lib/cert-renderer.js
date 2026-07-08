@@ -338,7 +338,8 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
   y += 16;
 
   // ── Content zone ──────────────────────────────────────────────────────────
-  const footerH = hasSponsorLogos ? 56 : 36;
+  // Extra room reserves space for the "Proudly Sponsored By" label above the logos.
+  const footerH = hasSponsorLogos ? 70 : 36;
   const contentH = H - y - footerH - PAD;
   const contentW = W - 2 * PAD;
 
@@ -454,7 +455,12 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
   // ── Footer ────────────────────────────────────────────────────────────────
   const fy = H - PAD + 4;
 
-  if (d.show_sponsors) {
+  if (hasSponsorLogos) {
+    ctx.textAlign = 'left';
+    ctx.font      = `500 9px ${FONT}`;
+    ctx.fillStyle = TEXT_LIGHT;
+    ctx.fillText('Proudly Sponsored By', PAD, fy - 30);
+
     let sx = PAD;
     for (const sImg of sponsorImgs) {
       if (!sImg) continue;
@@ -468,7 +474,7 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
   // Thin footer line
   ctx.strokeStyle = ACCENT + '30';
   ctx.lineWidth   = 0.5;
-  ctx.beginPath(); ctx.moveTo(PAD, fy - 28); ctx.lineTo(W - PAD, fy - 28); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(PAD, fy - (hasSponsorLogos ? 42 : 28)); ctx.lineTo(W - PAD, fy - (hasSponsorLogos ? 42 : 28)); ctx.stroke();
 
   if (!urlClash) {
     ctx.font      = `400 9px ${FONT}`;
