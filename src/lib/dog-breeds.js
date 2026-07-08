@@ -43,7 +43,7 @@ export const DOG_BREEDS = [
   'Lagotto Romagnolo','Lakeland Terrier','Landseer (European Continental Type)',
   'Large Munsterlander','Leonberger','Lhasa Apso','Lowchen','Maltese',
   'Manchester Terrier','Maremma Sheepdog','Mastiff','Miniature American Shepherd',
-  'Miniature Pinscher','Mudi','Murray River Retriever','Neapolitan Mastiff',
+  'Miniature Pinscher','Mixed Breed','Mudi','Murray River Retriever','Neapolitan Mastiff',
   'Newfoundland','Norfolk Terrier','Norwegian Buhund','Norwegian Elkhound',
   'Norwich Terrier','Nova Scotia Duck Tolling Retriever','Old English Sheepdog',
   'Otterhound','Papillon','Parson Russell Terrier','Pekingese',
@@ -70,3 +70,17 @@ export const DOG_BREEDS = [
   'Xoloitzcuintle (Intermediate)','Xoloitzcuintle (Miniature)',
   'Xoloitzcuintle (Standard)','Yakutian Laika','Yorkshire Terrier',
 ];
+
+// Alternate words people search for when their dog isn't a single recognised
+// breed, so "mutt" or "moggy" still surfaces the "Mixed Breed" suggestion.
+const BREED_SYNONYMS = {
+  'Mixed Breed': ['mutt', 'mongrel', 'moggy', 'moggie', 'cross', 'crossbreed', 'cross breed', 'cross-breed'],
+};
+
+export function searchBreeds(query, limit = 60) {
+  const q = (query || '').trim().toLowerCase();
+  if (!q) return DOG_BREEDS.slice(0, 8);
+  return DOG_BREEDS
+    .filter(b => b.toLowerCase().includes(q) || (BREED_SYNONYMS[b] || []).some(s => s.includes(q)))
+    .slice(0, limit);
+}

@@ -12,7 +12,7 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
   import { getAuth } from '../../lib/auth.js';
   import { supabase } from '../../lib/supabase.js';
   import { zonedDateTime } from '../../lib/voteWindow.js';
-  import { DOG_BREEDS } from '../../lib/dog-breeds.js';
+  import { searchBreeds } from '../../lib/dog-breeds.js';
 
   const { session, profile, base } = await getAuth();
   if (!session) {
@@ -226,9 +226,7 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
     let activeIdx = -1;
 
     function getMatches(q: string) {
-      if (!q) return DOG_BREEDS.slice(0, 8);
-      const lq = q.toLowerCase();
-      return DOG_BREEDS.filter(b => b.toLowerCase().includes(lq)).slice(0, 60);
+      return searchBreeds(q);
     }
 
     function renderList(matches: string[]) {

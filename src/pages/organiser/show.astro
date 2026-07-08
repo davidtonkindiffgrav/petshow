@@ -658,7 +658,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   import { showUploadOverlay, hideUploadOverlay } from '../../lib/uploadOverlay.js';
   import { FUN_STAKES, STANDARD_CLASSES } from '../../lib/show-categories.js';
   import { minEntryFee, platformFee, stripeFeeEstimate, organiserNet, clampFee } from '../../lib/fees.js';
-  import { DOG_BREEDS } from '../../lib/dog-breeds.js';
+  import { searchBreeds } from '../../lib/dog-breeds.js';
 
   // ── State ────────────────────────────────────────────────────────────────────
   let show        = null;
@@ -1869,9 +1869,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     let activeIdx = -1;
 
     function getMatches(q) {
-      if (!q) return DOG_BREEDS.slice(0, 8);
-      const lq = q.toLowerCase();
-      return DOG_BREEDS.filter(b => b.toLowerCase().includes(lq)).slice(0, 60);
+      return searchBreeds(q);
     }
 
     function renderList(matches) {
