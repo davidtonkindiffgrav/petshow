@@ -10,27 +10,19 @@ const sections = [
     items: [
       {
         q: 'Who is Fur to Feathers for?',
-        a: `Fur to Feathers is a platform for clubs and individuals to run virtual pet shows and competitions — often as a fundraiser. Organisers set up a show, exhibitors enter their pets online, and judging (expert or public vote) decides the winners.`,
+        a: `Fur to Feathers is a platform for charities and non-profits to run virtual pet shows and competitions as a fundraiser. Organisers set up a show, exhibitors enter their pets online, and judging (expert or public vote) decides the winners.`,
+      },
+      {
+        q: 'Who can run a show on Fur to Feathers?',
+        a: `Right now, only registered charities and non-profit organisations can run shows on the platform — this keeps things straightforward for tax purposes. As the platform grows, we plan to open this up to commercial entities as well.`,
       },
       {
         q: 'How do I create a show?',
         a: `From your dashboard, start the show wizard. It walks you through show basics, show type, breed &amp; eligibility, competition classes, sponsorship, judging setup, awards &amp; prizes, entry fees, and branding, then a final review before you publish. Your progress is saved automatically, so you can leave and come back to finish later.`,
       },
       {
-        q: 'Can I run a show as an individual, or does it have to be a club?',
-        a: `Either — when you sign up you choose an Individual or Club/Organisation account. Club accounts can run multiple shows under one organisation profile and share a club logo across their shows' certificates.`,
-      },
-      {
         q: 'What types of show can I run?',
-        a: `Fun Stakes shows are available today. Beauty Contest, Memorial, Other, and non-dog animal show types are <strong>coming soon</strong>.`,
-      },
-      {
-        q: 'Can I edit a show or an entry once judging has started?',
-        a: `You can, but be careful — the entry edit screen shows a warning once judging day has begun, since changing an entry's class part-way through judging can affect scoring. A firmer safeguard is planned for later.`,
-      },
-      {
-        q: 'Can I set defaults so I don’t have to re-enter my timezone and currency every time?',
-        a: `Yes — set your default timezone and currency on your account settings page, and every new show you create will pre-fill with them.`,
+        a: `Fun Stakes shows are available today. At launch we're focused on dog shows, with other pets to follow soon. Beauty Contest, Memorial, and Other show types are also <strong>coming soon</strong>.`,
       },
     ],
   },
@@ -68,15 +60,11 @@ const sections = [
       },
       {
         q: 'How much does it cost to enter?',
-        a: `Exactly what's shown on the show page — that's the total you pay, with no extra fees added at checkout.`,
+        a: `Exactly what's shown on the show page — that's the total you pay, with no extra fees added at checkout. Each organiser sets their own entry price depending on their show and fundraising goals, so it varies from show to show.`,
       },
       {
         q: 'Can I enter more than one pet or class?',
         a: `Yes, you can add multiple pets and classes and pay for them together in one checkout.`,
-      },
-      {
-        q: 'What if a show only has one entry class?',
-        a: `It's selected for you automatically — no need to pick from a list of one.`,
       },
       {
         q: 'When do entries close?',
@@ -90,10 +78,6 @@ const sections = [
         q: 'Can I get a refund if I change my mind?',
         a: `Refunds are between you and the organising club — Fur to Feathers doesn't process entry-fee refunds itself. Contact the organiser directly, and see our <a href="${base}terms" style="color:#1ba89a;font-weight:600;">Terms</a> for details.`,
       },
-      {
-        q: 'Can I sign in with Google or Facebook?',
-        a: `Not yet — sign-in is currently email and password only. Social sign-in is <strong>coming soon</strong>.`,
-      },
     ],
   },
   {
@@ -101,7 +85,7 @@ const sections = [
     items: [
       {
         q: 'What’s the difference between digital certificates and physical prizes?',
-        a: `They're two independent options an organiser can switch on when setting up a show. Digital certificates are auto-generated award certificates emailed to winners. Physical prizes are real-world items (ribbons, trophies, goodie bags, etc.) the organiser arranges separately.`,
+        a: `They're two independent options an organiser can switch on when setting up a show. Digital certificates are auto-generated award certificates emailed to winners. "Physical prize" covers anything that isn't a digital certificate — ribbons, trophies, goodie bags, or even something like an online gift card. Organisers contact winners once the show wraps up to arrange delivery or handover of any physical prizes.`,
       },
       {
         q: 'Who supplies the physical prizes?',
@@ -126,7 +110,7 @@ const sections = [
       },
       {
         q: 'What happens when results are published?',
-        a: `Once the organiser publishes results, placings are finalised and digital certificates are <strong>automatically emailed</strong> to winners who have an email on file. If a winner has no email on record, or the certificate design hasn't been finalised yet, that certificate is skipped and can be sent manually afterwards.`,
+        a: `Once the organiser publishes results, placings are finalised and digital certificates are automatically emailed to winners. If the certificate design hasn't been finalised yet, that certificate is skipped and can be sent manually afterwards.`,
       },
     ],
   },
@@ -135,7 +119,7 @@ const sections = [
     items: [
       {
         q: 'How do I sign up?',
-        a: `With an email address and password. Google and Facebook sign-in are <strong>coming soon</strong>.`,
+        a: `With an email address and password. You'll be asked what type of account you want — an Organiser (to run shows) or someone entering a show.`,
       },
       {
         q: 'I forgot my password — what do I do?',
