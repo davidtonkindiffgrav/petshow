@@ -153,17 +153,23 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const shows         = activeRes.data || [];
     const archivedCount = (archivedRes.data || []).length;
 
-    if (archivedCount > 0) {
+    const viewingArchived = new URLSearchParams(window.location.search).get('archived') === '1';
+
+    if (viewingArchived || archivedCount > 0) {
       const archLink = document.createElement('a');
-      archLink.href = `${base}organiser/shows?archived=1`;
       archLink.className = 'text-[13px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-3 py-2 rounded-btn hover:bg-[#f0fafa] transition-colors';
       archLink.style.textDecoration = 'none';
-      archLink.textContent = `Archived (${archivedCount})`;
+      if (viewingArchived) {
+        archLink.href = `${base}organiser/shows`;
+        archLink.textContent = 'All Shows';
+      } else {
+        archLink.href = `${base}organiser/shows?archived=1`;
+        archLink.textContent = `Archived (${archivedCount})`;
+      }
       const newBtn = document.getElementById('btn-new-show');
       if (newBtn) newBtn.parentElement.insertBefore(archLink, newBtn);
     }
 
-    const viewingArchived = new URLSearchParams(window.location.search).get('archived') === '1';
     if (viewingArchived) {
       const { data: archived } = await supabase.from('shows').select('*').eq('created_by', session.user.id).not('archived_at', 'is', null).order('archived_at', { ascending: false });
       const list = archived || [];
