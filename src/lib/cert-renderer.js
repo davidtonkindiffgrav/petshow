@@ -255,12 +255,16 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
   let y = PAD;
 
   // ── Header row ────────────────────────────────────────────────────────────
-  const headerH = 44;
+  // Doubled logo size (was 36px tall / 110px max width). The header row grows
+  // to match, keeping the same gap below the logo before the divider — title,
+  // host org, and date positions are untouched; everything below just shifts
+  // down to make room.
+  const LOGO_H  = 72;
+  const headerH = logoImg ? LOGO_H + 8 : 44;
 
   if (logoImg) {
-    const lh = 36;
-    const lw = Math.min(lh * (logoImg.naturalWidth / logoImg.naturalHeight), 110);
-    ctx.drawImage(logoImg, PAD, y, lw, lh);
+    const lw = Math.min(LOGO_H * (logoImg.naturalWidth / logoImg.naturalHeight), 220);
+    ctx.drawImage(logoImg, PAD, y, lw, LOGO_H);
   }
 
   ctx.textAlign    = 'center';
