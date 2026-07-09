@@ -63,11 +63,12 @@ serve(async (req: Request) => {
     // 3. Verify show is open
     const { data: show, error: showErr } = await supabase
       .from('shows')
-      .select('id, title, entry_fee, currency, status, entry_close_date, entry_close_time, timezone')
+      .select('id, title, entry_fee, currency, status, entry_close_date, entry_close_time, timezone, suspended_at')
       .eq('id', show_id)
       .single();
     if (showErr || !show) throw new Error('Show not found');
     if (show.status !== 'published') throw new Error('Show is not published');
+    if (show.suspended_at) throw new Error('This show is currently suspended and not accepting entries');
     const closeAt = zonedDateTime(show.entry_close_date, show.entry_close_time, show.timezone);
     if (closeAt && closeAt < new Date()) throw new Error('Entries are closed');
 

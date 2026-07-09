@@ -19,6 +19,10 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       <h1 class="text-[26px] font-extrabold text-[#1c1626] text-center mb-1">Welcome back</h1>
       <p class="text-[15px] text-[#6f6880] text-center mb-8">Enter your email and password to continue.</p>
 
+      <p id="suspended-banner" style="display:none" class="text-[13px] text-red-500 text-center mb-4 bg-red-50 border border-red-100 rounded-lg px-3 py-2.5" role="alert">
+        Your account has been suspended. Contact the platform administrator for details.
+      </p>
+
       <!-- Login form -->
       <form id="login-form" novalidate>
         <div class="mb-4">
@@ -85,6 +89,10 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
   const raw = import.meta.env.BASE_URL;
   const base = raw.endsWith('/') ? raw : raw + '/';
+
+  if (new URL(window.location.href).searchParams.get('suspended') === '1') {
+    document.getElementById('suspended-banner').style.display = 'block';
+  }
 
   // Preserve a `?redirect=` target (e.g. set by "Enter Now" on a show page)
   // through the login flow, so the user lands back where they meant to go.

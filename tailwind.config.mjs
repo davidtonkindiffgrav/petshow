@@ -38,6 +38,10 @@ export default {
           dark:     '#e89b1c',
           tint:     '#fef1d6',
         },
+        red: {
+          brand:    '#ef4444',
+          tint:     '#fee2e2',
+        },
         hof:          '#e8f7f6',
         cream:        '#fdf3da',
         'card-cream': '#fffdf7',

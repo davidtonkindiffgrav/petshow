@@ -33,6 +33,25 @@ function wallClockUtc(ts: number, timeZone: string): number {
   return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second);
 }
 
+// Persists Resend's used-quota headers so the admin Email Monitoring page
+// can read them without a synthetic probe request — GET requests to
+// /domains and /emails don't carry x-resend-daily-quota/-monthly-quota,
+// only real POST /emails sends do (confirmed by testing). Mirrors the copy
+// in the other Resend-sending functions — keep in sync.
+async function persistResendQuota(supabase: any, res: Response) {
+  try {
+    const daily = res.headers.get('x-resend-daily-quota');
+    const monthly = res.headers.get('x-resend-monthly-quota');
+    const rows: { key: string; value: string }[] = [];
+    if (daily != null) rows.push({ key: 'resend_daily_quota_used', value: daily });
+    if (monthly != null) rows.push({ key: 'resend_monthly_quota_used', value: monthly });
+    if (rows.length) {
+      rows.push({ key: 'resend_quota_checked_at', value: new Date().toISOString() });
+      await supabase.from('platform_settings').upsert(rows, { onConflict: 'key' });
+    }
+  } catch { /* never let quota bookkeeping break the actual email send */ }
+}
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -183,6 +202,7 @@ serve(async (req: Request) => {
       }),
     });
 
+    await persistResendQuota(adminClient, emailRes);
     if (!emailRes.ok) {
       const detail = await emailRes.text();
       throw new Error(`Resend API error ${emailRes.status}: ${detail}`);

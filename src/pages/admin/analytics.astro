@@ -1,0 +1,226 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Analytics" activePage="analytics">
+
+  <div id="state-loading" class="flex items-center justify-center h-64">
+    <div class="w-8 h-8 border-[3px] border-coral/20 border-t-coral rounded-full animate-spin"></div>
+  </div>
+
+  <div id="state-error" style="display:none" class="bg-white rounded-[14px] border border-[#e6eaee] p-6 text-center text-[#5b6b7c]"></div>
+
+  <div id="state-content" style="display:none">
+
+    <div class="flex items-center justify-between flex-wrap gap-2.5 mb-[18px]">
+      <div>
+        <h1 class="text-[22px] font-extrabold text-[#10233f] m-0 mb-[3px]">Analytics</h1>
+        <p class="text-[13.5px] text-[#5b6b7c] m-0">Trends and leaderboards beyond the Dashboard basics.</p>
+      </div>
+      <div id="range-toggle" class="flex gap-1.5 bg-white border border-[#e6eaee] p-1 rounded-[10px]"></div>
+    </div>
+
+    <div class="bg-white rounded-[14px] border border-[#e6eaee] px-[18px] py-4 mb-4">
+      <div class="text-[14px] font-extrabold text-[#10233f] mb-3">Trends <span id="range-label" class="font-medium text-[#8492a3] text-[12.5px]"></span></div>
+      <div id="chart-grid" class="grid grid-cols-4 gap-[14px]"></div>
+    </div>
+
+    <div id="scalar-grid" class="grid gap-3 mb-4" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr));"></div>
+
+    <div class="text-[14px] font-extrabold text-[#10233f] mb-2.5">Leaderboards</div>
+    <div id="leaderboard-grid" class="grid gap-[14px] mb-[18px]" style="grid-template-columns:repeat(auto-fill,minmax(280px,1fr));"></div>
+
+    <div class="bg-white rounded-[14px] border border-[#e6eaee] px-[18px] py-4">
+      <p class="text-[13px] font-extrabold text-[#48586a] mb-2.5">Not tracked yet — by design</p>
+      <div class="flex flex-col gap-2.5">
+        <div class="flex gap-2.5 text-[12.5px] text-[#5b6b7c]"><span class="font-bold text-[#10233f] flex-none">Conversion rate</span><span>— no funnel/event tracking exists yet; entries are only recorded once payment is confirmed.</span></div>
+        <div class="flex gap-2.5 text-[12.5px] text-[#5b6b7c]"><span class="font-bold text-[#10233f] flex-none">Animal type breakdown</span><span>— every show is currently a dog show (other animal types are "coming soon" in the show wizard), so this would just show 100% dog.</span></div>
+        <div class="flex gap-2.5 text-[12.5px] text-[#5b6b7c]"><span class="font-bold text-[#10233f] flex-none">Storage growth over time</span><span>— no historical size snapshots are recorded; only a current total is available (see Storage Monitoring).</span></div>
+      </div>
+    </div>
+
+  </div>
+
+</AdminLayout>
+
+<script>
+  import { getAdminAuth, callAdminApi } from '../../lib/adminAuth.js';
+  import { supabase } from '../../lib/supabase.js';
+  import { sparklineSvg, downsampleSeries, RANGE_TARGET_POINTS } from '../../lib/charts.js';
+  import { esc, leaderboardRows } from '../../lib/format.js';
+
+  const RANGE_LABELS = { '7d': 'Last 7 days', '30d': 'Last 30 days', '90d': 'Last 90 days', ytd: 'Year to date' };
+  const TREND_COLOR = '#ff6b54';
+
+  function renderRangeToggle(current) {
+    const el = document.getElementById('range-toggle');
+    el.innerHTML = Object.keys(RANGE_LABELS).map(r => `
+      <button data-range="${r}" class="text-[12.5px] font-bold px-3 py-1.5 rounded-[8px] transition-colors ${r === current ? 'bg-[#10233f] text-white' : 'text-[#5b6b7c] hover:bg-[#f7f9fa]'}">${r === 'ytd' ? 'YTD' : r}</button>
+    `).join('');
+    el.querySelectorAll('[data-range]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentRange = btn.dataset.range;
+        document.getElementById('state-loading').style.display = 'flex';
+        document.getElementById('state-content').style.display = 'none';
+        refresh();
+      });
+    });
+  }
+
+  function trendTile(label, points, formatTotal) {
+    const total = points.reduce((s, p) => s + (p.value || 0), 0);
+    const sparkPoints = downsampleSeries(points, RANGE_TARGET_POINTS[currentRange] || 30, ['value']);
+    return `<div>
+      <div class="text-[12px] font-bold text-[#48586a] mb-0.5">${esc(label)}</div>
+      <div class="text-[17px] font-extrabold text-[#10233f]">${esc(formatTotal(total))}</div>
+      <div class="mt-2">${sparklineSvg(sparkPoints, { color: TREND_COLOR, height: 40 })}</div>
+    </div>`;
+  }
+
+  function renderCharts(trends) {
+    const mk = (field) => trends.map((d) => ({ value: d[field] }));
+    document.getElementById('chart-grid').innerHTML = [
+      trendTile('Revenue (AUD)', mk('revenue_aud'), (v) => `AUD ${v.toFixed(2)}`),
+      trendTile('New Users', mk('new_users'), (v) => String(Math.round(v))),
+      trendTile('Shows Created', mk('new_shows'), (v) => String(Math.round(v))),
+      trendTile('Entries Received', mk('new_entries'), (v) => String(Math.round(v))),
+    ].join('');
+  }
+
+  function scalarTile(label, value) {
+    return `<div class="bg-white rounded-[12px] border border-[#e6eaee] px-3.5 py-3">
+      <div class="text-[10.5px] font-bold text-[#8492a3] uppercase tracking-wide leading-tight">${esc(label)}</div>
+      <div class="text-[18px] font-extrabold text-[#10233f] mt-1">${value}</div>
+    </div>`;
+  }
+
+  function renderScalars(leaderboards, storage) {
+    const tiles = [scalarTile('Avg. Entries / Show', leaderboards.average_entries_per_show.toFixed(1))];
+    for (const [cur, v] of Object.entries(leaderboards.average_entry_fee_by_currency)) {
+      tiles.push(scalarTile(`Avg. Entry Fee (${esc(cur)})`, `${esc(cur)} ${v.toFixed(2)}`));
+    }
+    tiles.push(scalarTile('Photos Uploaded', storage.storage_breakdown.images.count));
+    tiles.push(scalarTile('Videos Uploaded', storage.storage_breakdown.videos.count));
+    document.getElementById('scalar-grid').innerHTML = tiles.join('');
+  }
+
+  function mountLeaderboardCard(container, config) {
+    const state = { showAll: false, currency: config.currencies ? config.currencies[0] : null };
+
+    function currentItems() {
+      const items = config.currencies ? (config.byCurrency[state.currency] || []) : config.items;
+      return items;
+    }
+
+    function render() {
+      const all = currentItems();
+      const visible = state.showAll ? all.slice(0, 10) : all.slice(0, 5);
+      const formatValue = config.currencies ? (v) => `${state.currency} ${Number(v).toFixed(0)}` : config.formatValue;
+      container.innerHTML = `
+        <div class="flex items-start justify-between gap-2">
+          <div>
+            <div class="text-[13.5px] font-extrabold text-[#10233f]">${esc(config.title)}</div>
+            ${config.subtitle ? `<div class="text-[11.5px] text-[#8492a3] mt-0.5">${esc(config.subtitle)}</div>` : ''}
+          </div>
+          ${config.currencies ? `<select class="lb-currency flex-none bg-[#f4f6f8] border border-[#e6eaee] rounded-[8px] px-2 py-1 text-[12px] font-bold text-[#10233f] outline-none cursor-pointer">
+            ${config.currencies.map(c => `<option value="${esc(c)}" ${c === state.currency ? 'selected' : ''}>${esc(c)}</option>`).join('')}
+          </select>` : ''}
+        </div>
+        ${config.caveat ? `<div class="text-[11px] mt-2.5 leading-relaxed" style="color:#b9770e;background:#fef8ea;border-radius:7px;padding:5px 8px;">⚠ ${esc(config.caveat)}</div>` : ''}
+        <div class="mt-3">${leaderboardRows(visible, { formatValue })}</div>
+        ${all.length > 5 ? `<button class="lb-toggle mt-2.5 text-[12px] font-bold text-[#ff6b54]">${state.showAll ? 'Show top 5' : `Show all ${Math.min(all.length, 10)}`}</button>` : ''}
+      `;
+      container.querySelector('.lb-currency')?.addEventListener('change', (e) => { state.currency = e.target.value; render(); });
+      container.querySelector('.lb-toggle')?.addEventListener('click', () => { state.showAll = !state.showAll; render(); });
+    }
+    render();
+  }
+
+  function cardShell() {
+    const div = document.createElement('div');
+    div.className = 'bg-white rounded-[14px] border border-[#e6eaee] p-[18px]';
+    return div;
+  }
+
+  function mountCurrencyLeaderboards(gridEl, titlePrefix, byCurrency) {
+    const currencies = Object.keys(byCurrency).filter((c) => (byCurrency[c] || []).length);
+    if (!currencies.length) return;
+    const shell = cardShell();
+    gridEl.appendChild(shell);
+    mountLeaderboardCard(shell, { title: titlePrefix, currencies, byCurrency });
+  }
+
+  function mountLeaderboard(gridEl, title, items, opts = {}) {
+    const shell = cardShell();
+    gridEl.appendChild(shell);
+    mountLeaderboardCard(shell, { title, items, ...opts });
+  }
+
+  async function loadAnalytics(range) {
+    const [stats, leaderboards, storage] = await Promise.all([
+      callAdminApi('stats', { range }),
+      callAdminApi('analytics-leaderboards', { limit: 10 }),
+      callAdminApi('storage-usage'),
+    ]);
+
+    document.getElementById('range-label').textContent = `— ${RANGE_LABELS[range]}`;
+    renderCharts(stats.trends);
+    renderScalars(leaderboards, storage);
+
+    const lb = document.getElementById('leaderboard-grid');
+    lb.innerHTML = '';
+    mountCurrencyLeaderboards(lb, 'Top Organisations', leaderboards.top_organisations_by_currency);
+    mountLeaderboard(lb, 'Largest Shows', leaderboards.largest_shows, { formatValue: v => `${v} entries` });
+    mountCurrencyLeaderboards(lb, 'Top Fundraising Events', leaderboards.top_fundraising_by_currency);
+    mountLeaderboard(lb, 'Most Popular Categories', leaderboards.most_popular_categories, { formatValue: v => `${v} entries` });
+    mountLeaderboard(lb, 'Most Popular Breeds', leaderboards.most_popular_breeds, {
+      formatValue: v => `${v} entries`,
+      caveat: 'Free-text field, not a constrained list — may include typos, "Mixed", or blanks.',
+    });
+    mountLeaderboard(lb, 'Returning Organisations', leaderboards.returning_organisations, { formatValue: v => `${v} shows` });
+    mountLeaderboard(lb, 'Returning Entrants', leaderboards.returning_entrants, {
+      formatValue: v => `${v} entries`,
+      caveat: 'Matched by email on file, since entries aren’t linked to accounts directly.',
+    });
+  }
+
+  let currentRange = '30d';
+
+  async function refresh() {
+    document.getElementById('state-error').style.display = 'none';
+    renderRangeToggle(currentRange);
+    try {
+      await loadAnalytics(currentRange);
+      document.getElementById('state-content').style.display = 'block';
+    } catch (err) {
+      document.getElementById('state-error').textContent = 'Failed to load analytics: ' + err.message;
+      document.getElementById('state-error').style.display = 'block';
+    } finally {
+      document.getElementById('state-loading').style.display = 'none';
+    }
+  }
+
+  const auth = await getAdminAuth();
+  if (auth.session && auth.profile?.roles?.includes('admin')) {
+    const { session, profile } = auth;
+    const name = profile?.display_name || session.user.email?.split('@')[0] || 'Admin';
+
+    const avatarEl = document.getElementById('sidebar-avatar');
+    const nameEl = document.getElementById('sidebar-username');
+    if (avatarEl) {
+      if (profile?.avatar_url) {
+        avatarEl.innerHTML = `<img src="${profile.avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+      } else {
+        avatarEl.textContent = name.charAt(0).toUpperCase();
+      }
+    }
+    if (nameEl) nameEl.textContent = name;
+
+    document.getElementById('sidebar-signout')?.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = auth.base + 'login';
+    });
+
+    await refresh();
+  }
+</script>

@@ -80,14 +80,14 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
   // ── Load show data ────────────────────────────────────────────────────────────
   const [showRes, catsRes] = await Promise.all([
     supabase.from('shows')
-      .select('id,title,host_org,entry_fee,currency,animal_type,breed_scope,breed_filter,entry_close_date,entry_close_time,timezone,has_digital_certs,has_physical_prizes,logo_url,status')
+      .select('id,title,host_org,entry_fee,currency,animal_type,breed_scope,breed_filter,entry_close_date,entry_close_time,timezone,has_digital_certs,has_physical_prizes,logo_url,status,suspended_at')
       .eq('id', showId).single(),
     supabase.from('show_categories').select('id,name').eq('show_id', showId),
   ]);
 
   const show = showRes.data;
 
-  if (!show || show.status !== 'published') {
+  if (!show || show.status !== 'published' || show.suspended_at) {
     root.innerHTML = `<div style="text-align:center;padding:60px 0;"><p style="font-size:20px;font-weight:800;color:#1c1626;margin-bottom:8px;">Show not available</p><p style="color:#6b7c89;font-size:14px;margin-bottom:20px;">This show is not currently accepting entries.</p><a href="${base}" style="color:#1ba89a;font-weight:700;font-size:14px;">Browse Shows →</a></div>`;
     throw 0;
   }

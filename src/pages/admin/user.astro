@@ -1,0 +1,262 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="User" activePage="users">
+
+  <div id="state-loading" class="flex items-center justify-center h-64">
+    <div class="w-8 h-8 border-[3px] border-coral/20 border-t-coral rounded-full animate-spin"></div>
+  </div>
+
+  <div id="state-content" style="display:none">
+    <div id="user-header" class="mb-4"></div>
+
+    <div class="grid gap-4" style="grid-template-columns:1fr;">
+      <div class="bg-white rounded-card border border-[#b8e4e0] p-5">
+        <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#9b94a8;margin-bottom:14px;">Name</p>
+        <div class="flex flex-wrap gap-3 items-end">
+          <div>
+            <label class="block text-[11px] font-semibold text-[#9b94a8] mb-1">First name</label>
+            <input id="edit-first-name" type="text" class="text-[13px] border border-[#b8e4e0] rounded-btn-sm px-2.5 py-2 bg-white w-[160px]" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-[#9b94a8] mb-1">Last name</label>
+            <input id="edit-last-name" type="text" class="text-[13px] border border-[#b8e4e0] rounded-btn-sm px-2.5 py-2 bg-white w-[160px]" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-[#9b94a8] mb-1">Display name</label>
+            <input id="edit-display-name" type="text" class="text-[13px] border border-[#b8e4e0] rounded-btn-sm px-2.5 py-2 bg-white w-[180px]" />
+          </div>
+          <button id="btn-save-name" class="text-[13px] font-bold text-white bg-brand px-4 py-2 rounded-btn hover:bg-brand-dark transition-colors">Save</button>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-card border border-[#b8e4e0] p-5">
+        <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#9b94a8;margin-bottom:14px;">Roles</p>
+        <p class="text-[12px] text-[#9b94a8] mb-3">Click a role to grant or revoke it — takes effect immediately.</p>
+        <div id="role-chips" class="flex flex-wrap gap-2"></div>
+      </div>
+
+      <div class="bg-white rounded-card border border-[#b8e4e0] p-5">
+        <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#9b94a8;margin-bottom:14px;">Shows Organised</p>
+        <div id="shows-organised"></div>
+      </div>
+      <div class="bg-white rounded-card border border-[#b8e4e0] p-5">
+        <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#9b94a8;margin-bottom:14px;">Shows Entered</p>
+        <div id="shows-entered"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Suspend modal -->
+  <div id="suspend-modal" style="display:none" class="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-card max-w-[420px] w-full p-6">
+      <h2 class="text-[17px] font-extrabold text-[#1c1626] mb-1">Suspend Account</h2>
+      <p class="text-[13px] text-[#6f6880] mb-4">This immediately blocks the user from signing in or using any part of the site.</p>
+      <label class="block text-[11px] font-semibold text-[#9b94a8] mb-1">Reason</label>
+      <textarea id="suspend-reason" rows="3" class="w-full text-[13px] border border-[#b8e4e0] rounded-btn-sm px-2.5 py-2 bg-white"></textarea>
+      <div class="flex justify-end gap-2 mt-5">
+        <button id="btn-cancel-suspend" class="text-[13.5px] font-bold text-[#6f6880] border border-[#b8e4e0] px-4 py-2.5 rounded-btn hover:bg-[#f0fafa] transition-colors">Cancel</button>
+        <button id="btn-confirm-suspend" class="text-[13.5px] font-bold text-white bg-red-500 px-4 py-2.5 rounded-btn hover:bg-red-600 transition-colors">Suspend</button>
+      </div>
+    </div>
+  </div>
+
+</AdminLayout>
+
+<script>
+  import { getAdminAuth, callAdminApi } from '../../lib/adminAuth.js';
+  import { supabase } from '../../lib/supabase.js';
+  import { esc, statusPill } from '../../lib/format.js';
+
+  const raw = import.meta.env.BASE_URL;
+  const base = raw.endsWith('/') ? raw : raw + '/';
+
+  const params = new URLSearchParams(window.location.search);
+  const userId = params.get('id');
+
+  let detail = null;
+  let currentAdminId = null;
+  let rolesBusy = false;
+
+  const ALL_ROLES = ['participant', 'organiser', 'judge', 'admin'];
+  const ROLE_LABELS = { participant: 'Participant', organiser: 'Organiser', judge: 'Judge', admin: 'Admin' };
+
+  function renderRoleChips() {
+    const el = document.getElementById('role-chips');
+    const roles = detail.profile.roles || [];
+    el.innerHTML = ALL_ROLES.map(r => {
+      const active = roles.includes(r);
+      const lockedSelf = r === 'admin' && active && userId === currentAdminId;
+      return `<button data-role="${r}" ${lockedSelf ? `disabled title="You cannot remove your own admin role"` : ''}
+        class="role-chip text-[12.5px] font-bold px-3.5 py-2 rounded-full border transition-colors ${active ? 'bg-brand text-white border-brand' : 'bg-white text-[#6f6880] border-[#b8e4e0] hover:bg-[#f0fafa]'} ${lockedSelf ? 'opacity-50 cursor-not-allowed' : ''}">${ROLE_LABELS[r]}</button>`;
+    }).join('');
+
+    el.querySelectorAll('.role-chip').forEach(btn => {
+      if (btn.disabled) return;
+      btn.addEventListener('click', () => toggleRole(btn.dataset.role));
+    });
+  }
+
+  async function toggleRole(role) {
+    if (rolesBusy) return;
+    const roles = detail.profile.roles || [];
+    const willAdd = !roles.includes(role);
+
+    // Granting/revoking admin access is significant enough to confirm —
+    // the other three roles toggle instantly, no confirmation, per the
+    // "quick interaction" brief.
+    if (role === 'admin') {
+      const verb = willAdd ? 'grant admin access to' : 'revoke admin access from';
+      if (!confirm(`Are you sure you want to ${verb} this user?`)) return;
+    }
+
+    const newRoles = willAdd ? [...roles, role] : roles.filter(r => r !== role);
+    if (!newRoles.length) { alert('A user must have at least one role.'); return; }
+
+    rolesBusy = true;
+    try {
+      await callAdminApi('update-user-roles', { user_id: userId, roles: newRoles });
+      await reload();
+    } catch (err) {
+      alert('Failed to update roles: ' + err.message);
+    } finally {
+      rolesBusy = false;
+    }
+  }
+
+  function renderHeader() {
+    const p = detail.profile;
+    const name = p.display_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || '—';
+    document.getElementById('user-header').innerHTML = `
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 class="text-[19px] font-extrabold text-[#1c1626]">${esc(name)}</h2>
+          <p class="text-[13px] text-[#6f6880]">${esc(detail.email || '—')} · ${esc((p.roles || []).join(', ') || 'no roles')}</p>
+          ${p.suspended_reason ? `<p class="text-[12px] text-red-500 mt-1">Suspended: ${esc(p.suspended_reason)}</p>` : ''}
+        </div>
+        <div class="flex items-center gap-2">
+          ${statusPill(p.suspended_at ? 'suspended' : 'active')}
+          ${p.roles?.includes('admin')
+            ? ''
+            : p.suspended_at
+              ? `<button id="btn-unsuspend" class="text-[13px] font-bold text-white bg-brand px-4 py-2 rounded-btn hover:bg-brand-dark transition-colors">Unsuspend</button>`
+              : `<button id="btn-suspend" class="text-[13px] font-bold text-white bg-red-500 px-4 py-2 rounded-btn hover:bg-red-600 transition-colors">Suspend</button>`}
+        </div>
+      </div>`;
+
+    document.getElementById('btn-suspend')?.addEventListener('click', () => {
+      document.getElementById('suspend-modal').style.display = 'flex';
+    });
+    document.getElementById('btn-unsuspend')?.addEventListener('click', async (e) => {
+      e.target.disabled = true; e.target.textContent = 'Unsuspending…';
+      try { await callAdminApi('unsuspend-user', { user_id: userId }); await reload(); }
+      catch (err) { alert('Failed to unsuspend: ' + err.message); }
+    });
+  }
+
+  function renderOrganisedTable(el, shows) {
+    if (!shows.length) { el.innerHTML = `<p class="text-[13px] text-[#9b94a8]">None.</p>`; return; }
+    el.innerHTML = `<div class="overflow-x-auto"><table class="w-full text-[13px]"><tbody>${shows.map(s => `
+      <tr class="border-b border-[#f5f3fa]">
+        <td class="py-2 pr-3 font-semibold">${esc(s.title)}</td>
+        <td class="py-2 pr-3">${statusPill(s.status)}</td>
+        <td class="py-2 pr-3 text-[#9b94a8]">${s.show_date ? new Date(s.show_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'TBC'}</td>
+      </tr>`).join('')}</tbody></table></div>`;
+  }
+
+  // Doubles as this user's payment history — each entry carries the amount
+  // paid, so a separate "payments" query would just be redundant.
+  function renderEnteredTable(el, entries) {
+    if (!entries.length) { el.innerHTML = `<p class="text-[13px] text-[#9b94a8]">None.</p>`; return; }
+    el.innerHTML = `<div class="overflow-x-auto"><table class="w-full text-[13px]"><tbody>${entries.map(e => `
+      <tr class="border-b border-[#f5f3fa]">
+        <td class="py-2 pr-3 font-semibold">${esc(e.animal_name)}</td>
+        <td class="py-2 pr-3 text-[#6f6880]">${esc(e.shows?.title || '—')}</td>
+        <td class="py-2 pr-3">${statusPill(e.status)}</td>
+        <td class="py-2 pr-3">${esc(e.shows?.currency || '')} ${Number(e.entry_fee_paid || 0).toFixed(2)}</td>
+        <td class="py-2 pr-3 text-[#9b94a8]">${new Date(e.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+      </tr>`).join('')}</tbody></table></div>`;
+  }
+
+  async function reload() {
+    detail = await callAdminApi('user-detail', { user_id: userId });
+    renderHeader();
+    document.getElementById('edit-first-name').value = detail.profile.first_name || '';
+    document.getElementById('edit-last-name').value = detail.profile.last_name || '';
+    document.getElementById('edit-display-name').value = detail.profile.display_name || '';
+    renderRoleChips();
+    renderOrganisedTable(document.getElementById('shows-organised'), detail.shows_organised);
+    renderEnteredTable(document.getElementById('shows-entered'), detail.shows_entered);
+  }
+
+  const auth = await getAdminAuth();
+  if (auth.session && auth.profile?.roles?.includes('admin')) {
+    const { session, profile } = auth;
+    currentAdminId = session.user.id;
+    const name = profile?.display_name || session.user.email?.split('@')[0] || 'Admin';
+
+    const avatarEl = document.getElementById('sidebar-avatar');
+    const nameEl = document.getElementById('sidebar-username');
+    if (avatarEl) {
+      if (profile?.avatar_url) {
+        avatarEl.innerHTML = `<img src="${profile.avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+      } else {
+        avatarEl.textContent = name.charAt(0).toUpperCase();
+      }
+    }
+    if (nameEl) nameEl.textContent = name;
+
+    document.getElementById('sidebar-signout')?.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = auth.base + 'login';
+    });
+
+    document.getElementById('btn-save-name')?.addEventListener('click', async (e) => {
+      e.target.disabled = true; e.target.textContent = 'Saving…';
+      try {
+        await callAdminApi('update-user-profile', {
+          user_id: userId,
+          first_name: document.getElementById('edit-first-name').value.trim(),
+          last_name: document.getElementById('edit-last-name').value.trim(),
+          display_name: document.getElementById('edit-display-name').value.trim(),
+        });
+        await reload();
+      } catch (err) {
+        alert('Failed to save name: ' + err.message);
+      } finally {
+        e.target.disabled = false; e.target.textContent = 'Save';
+      }
+    });
+
+    document.getElementById('btn-cancel-suspend')?.addEventListener('click', () => {
+      document.getElementById('suspend-modal').style.display = 'none';
+    });
+    document.getElementById('btn-confirm-suspend')?.addEventListener('click', async (e) => {
+      const reason = document.getElementById('suspend-reason').value.trim();
+      if (!reason) { alert('Enter a reason.'); return; }
+      e.target.disabled = true; e.target.textContent = 'Suspending…';
+      try {
+        await callAdminApi('suspend-user', { user_id: userId, reason });
+        document.getElementById('suspend-modal').style.display = 'none';
+        await reload();
+      } catch (err) {
+        alert('Failed to suspend: ' + err.message);
+      } finally {
+        e.target.disabled = false; e.target.textContent = 'Suspend';
+      }
+    });
+
+    if (!userId) {
+      document.getElementById('state-loading').innerHTML = `<p class="text-[#6f6880] text-center">No user ID provided.</p>`;
+    } else {
+      try {
+        await reload();
+        document.getElementById('state-loading').style.display = 'none';
+        document.getElementById('state-content').style.display = 'block';
+      } catch (err) {
+        document.getElementById('state-loading').innerHTML = `<p class="text-[#6f6880] text-center">Failed to load: ${esc(err.message)}</p>`;
+      }
+    }
+  }
+</script>

@@ -1,0 +1,140 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="System Health" activePage="health">
+
+  <button slot="actions" id="btn-recheck"
+    class="text-[13.5px] font-bold text-white bg-coral px-4 py-2.5 rounded-btn hover:opacity-90 transition-opacity">
+    Recheck Now
+  </button>
+
+  <div id="state-loading" class="flex items-center justify-center h-64">
+    <div class="w-8 h-8 border-[3px] border-coral/20 border-t-coral rounded-full animate-spin"></div>
+  </div>
+
+  <div id="state-error" style="display:none" class="bg-white rounded-card border border-[#b8e4e0] p-6 text-center text-[#6f6880]"></div>
+
+  <div id="state-health" style="display:none">
+    <div id="health-grid" class="grid gap-3" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr));"></div>
+
+    <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#9b94a8;margin:24px 0 12px;">Capacity</p>
+    <div id="capacity-grid" class="grid gap-3" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr));"></div>
+
+    <p id="checked-at" class="text-[11px] text-[#9b94a8] mt-4"></p>
+  </div>
+
+</AdminLayout>
+
+<script>
+  import { getAdminAuth, callAdminApi } from '../../lib/adminAuth.js';
+  import { supabase } from '../../lib/supabase.js';
+  import { usageBar, formatBytes } from '../../lib/format.js';
+
+  const raw = import.meta.env.BASE_URL;
+  const base = raw.endsWith('/') ? raw : raw + '/';
+
+  const STATUS_STYLE = {
+    green: { dot: '#16a34a', bg: '#dcf6e3', label: 'Operational' },
+    amber: { dot: '#e89b1c', bg: '#fef1d6', label: 'Degraded' },
+    red:   { dot: '#ef4444', bg: '#fee2e2', label: 'Down' },
+  };
+
+  function esc(s) {
+    return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function capacityTile(title, href, bodyHtml) {
+    return `<a href="${href}" class="block bg-white rounded-card border border-[#b8e4e0] p-5 hover:border-brand transition-colors">
+      <p class="text-[12.5px] font-bold text-[#1c1626] mb-2">${esc(title)} →</p>
+      ${bodyHtml}
+    </a>`;
+  }
+
+  function tile(name, probe) {
+    const style = STATUS_STYLE[probe?.status] || STATUS_STYLE.red;
+    return `<div class="bg-white rounded-card border border-[#b8e4e0] p-5">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="display:flex;align-items:center;gap:8px;flex:1;">
+          <span style="width:9px;height:9px;border-radius:50%;background:${style.dot};flex-shrink:0;"></span>
+          <p class="text-[14px] font-bold text-[#1c1626]">${esc(name)}</p>
+        </div>
+      </div>
+      <p class="text-[12.5px] font-semibold mt-2" style="color:${style.dot};">${style.label}</p>
+      ${probe?.latency_ms != null ? `<p class="text-[11px] text-[#9b94a8] mt-1">${probe.latency_ms}ms</p>` : ''}
+      ${probe?.error ? `<p class="text-[11px] text-red-500 mt-1">${esc(probe.error)}</p>` : ''}
+    </div>`;
+  }
+
+  async function loadCapacity() {
+    const el = document.getElementById('capacity-grid');
+    const [storageRes, emailRes] = await Promise.allSettled([
+      callAdminApi('storage-usage'),
+      callAdminApi('email-usage'),
+    ]);
+
+    const tiles = [];
+    if (storageRes.status === 'fulfilled') {
+      const s = storageRes.value;
+      tiles.push(capacityTile('Database Size', `${base}admin/storage`, usageBar(s.db_size_bytes, s.db_size_limit_bytes, { formatValue: formatBytes })));
+    } else {
+      tiles.push(capacityTile('Database Size', `${base}admin/storage`, `<p class="text-[11px] text-red-500">Failed to load</p>`));
+    }
+    if (emailRes.status === 'fulfilled' && emailRes.value.daily_quota_used != null) {
+      const e = emailRes.value;
+      tiles.push(capacityTile('Daily Email Quota', `${base}admin/email`, usageBar(e.daily_quota_used, e.daily_quota_limit)));
+    } else {
+      tiles.push(capacityTile('Daily Email Quota', `${base}admin/email`, `<p class="text-[11px] text-[#9b94a8]">Not reported</p>`));
+    }
+    el.innerHTML = tiles.join('');
+  }
+
+  async function loadHealth() {
+    document.getElementById('state-loading').style.display = 'flex';
+    document.getElementById('state-health').style.display = 'none';
+    document.getElementById('state-error').style.display = 'none';
+    try {
+      const health = await callAdminApi('health-check');
+      const el = document.getElementById('health-grid');
+      el.innerHTML = [
+        tile('Database', health.database),
+        tile('Stripe', health.stripe),
+        tile('Resend', health.resend),
+        tile('Storage', health.storage),
+      ].join('');
+      document.getElementById('checked-at').textContent = `Last checked: ${new Date(health.checked_at).toLocaleString()}`;
+      document.getElementById('state-health').style.display = 'block';
+      loadCapacity();
+    } catch (err) {
+      document.getElementById('state-error').textContent = 'Failed to run health check: ' + err.message;
+      document.getElementById('state-error').style.display = 'block';
+    } finally {
+      document.getElementById('state-loading').style.display = 'none';
+    }
+  }
+
+  const auth = await getAdminAuth();
+  if (auth.session && auth.profile?.roles?.includes('admin')) {
+    const { session, profile } = auth;
+    const name = profile?.display_name || session.user.email?.split('@')[0] || 'Admin';
+
+    const avatarEl = document.getElementById('sidebar-avatar');
+    const nameEl = document.getElementById('sidebar-username');
+    if (avatarEl) {
+      if (profile?.avatar_url) {
+        avatarEl.innerHTML = `<img src="${profile.avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+      } else {
+        avatarEl.textContent = name.charAt(0).toUpperCase();
+      }
+    }
+    if (nameEl) nameEl.textContent = name;
+
+    document.getElementById('sidebar-signout')?.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = auth.base + 'login';
+    });
+
+    document.getElementById('btn-recheck')?.addEventListener('click', loadHealth);
+    await loadHealth();
+  }
+</script>

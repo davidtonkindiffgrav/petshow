@@ -6,6 +6,25 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Persists Resend's used-quota headers so the admin Email Monitoring page
+// can read them without a synthetic probe request — GET requests to
+// /domains and /emails don't carry x-resend-daily-quota/-monthly-quota,
+// only real POST /emails sends do (confirmed by testing). Mirrors the copy
+// in the other Resend-sending functions — keep in sync.
+async function persistResendQuota(supabase: any, res: Response) {
+  try {
+    const daily = res.headers.get('x-resend-daily-quota');
+    const monthly = res.headers.get('x-resend-monthly-quota');
+    const rows: { key: string; value: string }[] = [];
+    if (daily != null) rows.push({ key: 'resend_daily_quota_used', value: daily });
+    if (monthly != null) rows.push({ key: 'resend_monthly_quota_used', value: monthly });
+    if (rows.length) {
+      rows.push({ key: 'resend_quota_checked_at', value: new Date().toISOString() });
+      await supabase.from('platform_settings').upsert(rows, { onConflict: 'key' });
+    }
+  } catch { /* never let quota bookkeeping break the actual email send */ }
+}
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -57,7 +76,7 @@ serve(async (req: Request) => {
     const siteUrl    = Deno.env.get('SITE_URL') || 'https://www.furtofeathers.com';
     const redirectTo = `${siteUrl}/auth/judge-accept`;
     const resendKey  = Deno.env.get('RESEND_API_KEY');
-    const fromAddr   = Deno.env.get('RESEND_FROM') || 'Fur to Feathers <noreply@example.com>';
+    const fromAddr   = Deno.env.get('RESEND_FROM') || 'Fur to Feathers <noreply@furtofeathers.com>';
     const now        = new Date().toISOString();
 
     let sentCount    = 0;
@@ -89,26 +108,33 @@ serve(async (req: Request) => {
           // Existing user — add judge role and send notification via Resend
           await adminClient.rpc('add_judge_role_by_email', { p_email: judge.email });
 
-          if (resendKey) {
-            await fetch('https://api.resend.com/emails', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${resendKey}`,
-              },
-              body: JSON.stringify({
-                from: fromAddr,
-                to:   [judge.email],
-                subject: `You've been added as a judge for ${show.title}`,
-                html: `
-                  <p>Hi ${judge.first_name},</p>
-                  <p><strong>${organiserName}</strong> has added you as a judge
-                     for <strong>${show.title}</strong> on Fur to Feathers.</p>
-                  <p>Log in to access the judging portal:</p>
-                  <p><a href="${siteUrl}/judge">${siteUrl}/judge</a></p>
-                `,
-              }),
-            });
+          if (!resendKey) throw new Error('RESEND_API_KEY secret is not set');
+
+          const emailRes = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${resendKey}`,
+            },
+            body: JSON.stringify({
+              from: fromAddr,
+              to:   [judge.email],
+              subject: `You've been added as a judge for ${show.title}`,
+              html: `
+                <p>Hi ${judge.first_name},</p>
+                <p><strong>${organiserName}</strong> has added you as a judge
+                   for <strong>${show.title}</strong> on Fur to Feathers.</p>
+                <p>Log in to access the judging portal:</p>
+                <p><a href="${siteUrl}/judge">${siteUrl}/judge</a></p>
+              `,
+            }),
+          });
+          await persistResendQuota(adminClient, emailRes);
+          // Previously this response was never checked — a rejected send
+          // (e.g. an unverified from-address) was silently marked as sent.
+          if (!emailRes.ok) {
+            const detail = await emailRes.text();
+            throw new Error(`Resend API error ${emailRes.status}: ${detail}`);
           }
 
           await adminClient.from('show_judges').update({ invite_sent_at: now }).eq('id', judge.id);

@@ -1,0 +1,145 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Storage Monitoring" activePage="storage">
+
+  <button slot="actions" id="btn-recheck"
+    class="text-[13.5px] font-bold text-white bg-coral px-4 py-2.5 rounded-btn hover:opacity-90 transition-opacity">
+    Recheck Now
+  </button>
+
+  <div id="state-loading" class="flex items-center justify-center h-64">
+    <div class="w-8 h-8 border-[3px] border-coral/20 border-t-coral rounded-full animate-spin"></div>
+  </div>
+
+  <div id="state-error" style="display:none" class="bg-white rounded-card border border-[#b8e4e0] p-6 text-center text-[#6f6880]"></div>
+
+  <div id="state-content" style="display:none">
+
+    <div id="usage-grid" class="grid gap-3 items-start" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr));"></div>
+
+    <div class="grid gap-4 mt-4" style="grid-template-columns:1fr;">
+      <div class="bg-white rounded-card border border-[#b8e4e0] p-5">
+        <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#9b94a8;margin-bottom:14px;">File Types</p>
+        <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;">
+          <div style="width:120px;flex-shrink:0;" id="breakdown-donut"></div>
+          <div id="breakdown-legend" style="flex:1;min-width:180px;"></div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-card border border-[#b8e4e0] p-5">
+        <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#9b94a8;margin-bottom:14px;">Storage by Type</p>
+        <div id="prefix-table"></div>
+      </div>
+
+      <div class="bg-white rounded-card border border-[#b8e4e0] p-5">
+        <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#9b94a8;margin-bottom:14px;">Database Rows</p>
+        <div id="row-counts" class="grid gap-3" style="grid-template-columns:repeat(auto-fill,minmax(120px,1fr));"></div>
+      </div>
+    </div>
+
+    <p id="checked-at" class="text-[11px] text-[#9b94a8] mt-4"></p>
+
+  </div>
+
+</AdminLayout>
+
+<script>
+  import { getAdminAuth, callAdminApi } from '../../lib/adminAuth.js';
+  import { supabase } from '../../lib/supabase.js';
+  import { esc, usageBar, formatBytes } from '../../lib/format.js';
+  import { donutSvg } from '../../lib/charts.js';
+
+  const PREFIX_LABELS = {
+    shows: 'Show logos/banners', sponsors: 'Sponsor logos', judges: 'Judge photos',
+    profiles: 'Profile avatars', entries: 'Entry photos', certs: 'Certificates', settlements: 'Settlement statements',
+  };
+
+  function usageCard(label, used, limit) {
+    return `<div class="bg-white rounded-card border border-[#b8e4e0] px-4 py-3.5">
+      <p class="text-[11px] font-semibold text-[#9b94a8] uppercase tracking-wide mb-2">${esc(label)}</p>
+      ${usageBar(used, limit, { formatValue: formatBytes })}
+    </div>`;
+  }
+
+  async function loadStorage() {
+    document.getElementById('state-loading').style.display = 'flex';
+    document.getElementById('state-content').style.display = 'none';
+    document.getElementById('state-error').style.display = 'none';
+    try {
+      const usage = await callAdminApi('storage-usage');
+
+      document.getElementById('usage-grid').innerHTML = [
+        usageCard('Database Size', usage.db_size_bytes, usage.db_size_limit_bytes),
+        usageCard('Storage Bucket', usage.storage_bytes, usage.storage_limit_bytes),
+        `<div class="bg-white rounded-card border border-[#b8e4e0] px-4 py-3.5">
+          <p class="text-[11px] font-semibold text-[#9b94a8] uppercase tracking-wide mb-2">Accounts</p>
+          ${usageBar(usage.auth_users.count, usage.auth_users.limit, { formatValue: v => String(v) })}
+          <p class="text-[10.5px] text-[#9b94a8] mt-1.5">Closest available proxy for Supabase's Monthly Active Users limit — not the literal same metric.</p>
+        </div>`,
+      ].join('');
+
+      const b = usage.storage_breakdown;
+      const segments = [
+        { label: 'Images', value: b.images.bytes, color: '#1ba89a' },
+        { label: 'Videos', value: b.videos.bytes, color: '#002d6b' },
+        { label: 'Other', value: b.other.bytes, color: '#daeeed' },
+      ];
+      document.getElementById('breakdown-donut').innerHTML = donutSvg(segments, { size: 120, strokeWidth: 16, centerTop: String(usage.storage_file_count), centerBottom: 'files' });
+      document.getElementById('breakdown-legend').innerHTML = segments.map(s => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f5f3fa;">
+          <div style="display:flex;align-items:center;gap:7px;"><span style="width:9px;height:9px;border-radius:50%;background:${s.color};flex-shrink:0;"></span><span style="font-size:12.5px;color:#4a4357;">${esc(s.label)}</span></div>
+          <span style="font-size:12.5px;font-weight:700;color:#1c1626;">${formatBytes(s.value)}</span>
+        </div>`).join('');
+
+      const prefixRows = Object.entries(usage.storage_by_prefix).sort((a, b2) => b2[1] - a[1]);
+      document.getElementById('prefix-table').innerHTML = prefixRows.length
+        ? `<table class="w-full text-[13px]"><tbody>${prefixRows.map(([prefix, bytes]) => `
+            <tr class="border-b border-[#f5f3fa]">
+              <td class="py-2 pr-3">${esc(PREFIX_LABELS[prefix] || prefix)}</td>
+              <td class="py-2 pr-3 text-right font-semibold">${formatBytes(bytes)}</td>
+            </tr>`).join('')}</tbody></table>`
+        : `<p class="text-[13px] text-[#9b94a8]">No files yet.</p>`;
+
+      document.getElementById('row-counts').innerHTML = Object.entries(usage.row_counts).map(([table, count]) => `
+        <div class="bg-[#f0fafa] rounded-btn-sm px-3 py-2.5 text-center">
+          <p class="text-[16px] font-extrabold text-[#1c1626]">${count}</p>
+          <p class="text-[10.5px] text-[#9b94a8] mt-0.5">${esc(table.replace('_', ' '))}</p>
+        </div>`).join('');
+
+      document.getElementById('checked-at').textContent = `Last checked: ${new Date(usage.computed_at).toLocaleString()}`;
+      document.getElementById('state-content').style.display = 'block';
+    } catch (err) {
+      document.getElementById('state-error').textContent = 'Failed to load storage usage: ' + err.message;
+      document.getElementById('state-error').style.display = 'block';
+    } finally {
+      document.getElementById('state-loading').style.display = 'none';
+    }
+  }
+
+  const auth = await getAdminAuth();
+  if (auth.session && auth.profile?.roles?.includes('admin')) {
+    const { session, profile } = auth;
+    const name = profile?.display_name || session.user.email?.split('@')[0] || 'Admin';
+
+    const avatarEl = document.getElementById('sidebar-avatar');
+    const nameEl = document.getElementById('sidebar-username');
+    if (avatarEl) {
+      if (profile?.avatar_url) {
+        avatarEl.innerHTML = `<img src="${profile.avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+      } else {
+        avatarEl.textContent = name.charAt(0).toUpperCase();
+      }
+    }
+    if (nameEl) nameEl.textContent = name;
+
+    document.getElementById('sidebar-signout')?.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = auth.base + 'login';
+    });
+
+    document.getElementById('btn-recheck')?.addEventListener('click', loadStorage);
+    await loadStorage();
+  }
+</script>

@@ -1,0 +1,255 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Platform Configuration" activePage="settings">
+
+  <div id="state-loading" class="flex items-center justify-center h-64">
+    <div class="w-8 h-8 border-[3px] border-coral/20 border-t-coral rounded-full animate-spin"></div>
+  </div>
+
+  <div id="state-content" style="display:none">
+
+    <!-- Hero: the main lever -->
+    <div id="hero-card" class="bg-gradient-to-br from-brand to-brand-dark rounded-card-lg p-6 text-white mb-4"></div>
+
+    <div class="grid gap-4" style="grid-template-columns:1fr;">
+      <div id="service-fee-card" class="bg-white rounded-card border border-[#b8e4e0] p-5"></div>
+      <div id="platform-fees-card" class="bg-white rounded-card border border-[#b8e4e0] p-5"></div>
+      <div id="stripe-card" class="bg-white rounded-card border border-[#b8e4e0] p-5"></div>
+      <div id="upload-card" class="bg-white rounded-card border border-[#b8e4e0] p-5"></div>
+      <div id="other-card" style="display:none" class="bg-white rounded-card border border-[#b8e4e0] p-5"></div>
+    </div>
+
+    <div class="bg-white rounded-card border border-[#b8e4e0] p-5 mt-4">
+      <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#9b94a8;margin-bottom:4px;">Add Setting</p>
+      <p class="text-[12px] text-[#9b94a8] mb-4">For a new key that doesn't fit the categories above yet (e.g. a new currency).</p>
+      <div class="flex flex-wrap gap-2 items-end">
+        <div>
+          <label class="block text-[11px] font-semibold text-[#9b94a8] mb-1">Key</label>
+          <input id="new-key" type="text" class="text-[13px] border border-[#b8e4e0] rounded-btn-sm px-2.5 py-2 bg-white w-[220px]" />
+        </div>
+        <div>
+          <label class="block text-[11px] font-semibold text-[#9b94a8] mb-1">Value</label>
+          <input id="new-value" type="text" class="text-[13px] border border-[#b8e4e0] rounded-btn-sm px-2.5 py-2 bg-white w-[160px]" />
+        </div>
+        <button id="btn-add-setting" class="text-[13px] font-bold text-white bg-brand px-4 py-2 rounded-btn hover:bg-brand-dark transition-colors">Add Setting</button>
+      </div>
+    </div>
+
+  </div>
+
+</AdminLayout>
+
+<script>
+  import { getAdminAuth, callAdminApi } from '../../lib/adminAuth.js';
+  import { supabase } from '../../lib/supabase.js';
+  import { esc } from '../../lib/format.js';
+
+  let settingsMap = {};
+
+  // Currency-suffixed keys (e.g. min_entry_fee_AUD) drive which currencies
+  // get a column — not a hardcoded list, so a new currency's settings show
+  // up automatically once someone adds the rows.
+  function currenciesFor(prefix) {
+    const re = new RegExp(`^${prefix}_([A-Z]{3})$`);
+    return Object.keys(settingsMap)
+      .map(k => k.match(re)?.[1])
+      .filter(Boolean)
+      .sort();
+  }
+
+  function currencyInput(key) {
+    const value = settingsMap[key] ?? '';
+    return `<div>
+      <label class="block text-[10.5px] font-semibold text-[#9b94a8] mb-1">${esc(key.match(/([A-Z]{3})$/)?.[1] || key)}</label>
+      <input data-key="${esc(key)}" type="text" value="${esc(value)}" class="setting-input text-[13px] border border-[#b8e4e0] rounded-btn-sm px-2.5 py-1.5 bg-white w-[90px]" />
+    </div>`;
+  }
+
+  function cardHeader(title, sub) {
+    return `<div class="flex items-start justify-between mb-4">
+      <div>
+        <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#9b94a8;">${esc(title)}</p>
+        ${sub ? `<p class="text-[12px] text-[#9b94a8] mt-0.5">${esc(sub)}</p>` : ''}
+      </div>
+      <button class="btn-save-card text-[12.5px] font-bold text-white bg-brand px-3.5 py-1.5 rounded-btn hover:bg-brand-dark transition-colors">Save</button>
+    </div>`;
+  }
+
+  async function saveCard(cardEl, btn) {
+    const inputs = cardEl.querySelectorAll('.setting-input');
+    btn.disabled = true;
+    const original = btn.textContent;
+    btn.textContent = 'Saving…';
+    try {
+      await Promise.all(Array.from(inputs).map(input =>
+        callAdminApi('update-platform-setting', { key: input.dataset.key, value: input.value })
+      ));
+      for (const input of inputs) settingsMap[input.dataset.key] = input.value;
+      btn.textContent = 'Saved';
+      setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 1200);
+    } catch (err) {
+      alert('Failed to save: ' + err.message);
+      btn.disabled = false;
+      btn.textContent = original;
+    }
+  }
+
+  function wireSaveButton(cardEl) {
+    cardEl.querySelector('.btn-save-card')?.addEventListener('click', () => saveCard(cardEl, cardEl.querySelector('.btn-save-card')));
+  }
+
+  function renderHero() {
+    const el = document.getElementById('hero-card');
+    const value = settingsMap['service_fee_pct'] ?? '';
+    el.innerHTML = `
+      <p class="text-[11px] font-bold uppercase tracking-wide text-white/70 mb-2">Service Fee — the platform's main commission rate</p>
+      <div class="flex items-end gap-3 flex-wrap">
+        <div class="flex items-baseline gap-1">
+          <input id="hero-input" type="text" value="${esc(value)}" class="text-[44px] font-extrabold bg-transparent border-b-2 border-white/40 focus:border-white outline-none w-[110px] text-white placeholder-white/50" />
+          <span class="text-[28px] font-extrabold">%</span>
+        </div>
+        <button id="btn-save-hero" class="text-[13px] font-bold text-brand bg-white px-4 py-2.5 rounded-btn hover:bg-white/90 transition-colors mb-1.5">Save</button>
+      </div>
+      <p class="text-[12px] text-white/70 mt-2">Charged on every entry fee, subject to the per-currency minimum in the Service Fee card below.</p>`;
+
+    document.getElementById('btn-save-hero')?.addEventListener('click', async (e) => {
+      const btn = e.target;
+      const value = document.getElementById('hero-input').value;
+      btn.disabled = true; btn.textContent = 'Saving…';
+      try {
+        await callAdminApi('update-platform-setting', { key: 'service_fee_pct', value });
+        settingsMap['service_fee_pct'] = value;
+        btn.textContent = 'Saved';
+        setTimeout(() => { btn.textContent = 'Save'; btn.disabled = false; }, 1200);
+      } catch (err) {
+        alert('Failed to save: ' + err.message);
+        btn.disabled = false; btn.textContent = 'Save';
+      }
+    });
+  }
+
+  function renderServiceFeeCard() {
+    const el = document.getElementById('service-fee-card');
+    const currencies = currenciesFor('service_fee_floor');
+    el.innerHTML = cardHeader('Service Fee — Minimums', 'The service fee never charges less than this amount, per currency.') +
+      `<div class="flex flex-wrap gap-3">${currencies.map(c => currencyInput(`service_fee_floor_${c}`)).join('')}</div>`;
+    wireSaveButton(el);
+  }
+
+  function renderPlatformFeesCard() {
+    const el = document.getElementById('platform-fees-card');
+    const currencies = currenciesFor('min_entry_fee');
+    el.innerHTML = cardHeader('Platform Fees — Minimum Entry Fee', 'The lowest entry fee an organiser is allowed to charge, per currency.') +
+      `<div class="flex flex-wrap gap-3">${currencies.map(c => currencyInput(`min_entry_fee_${c}`)).join('')}</div>`;
+    wireSaveButton(el);
+  }
+
+  function renderStripeCard() {
+    const el = document.getElementById('stripe-card');
+    const currencies = currenciesFor('stripe_fee_fixed');
+    el.innerHTML = cardHeader('Payment Processing (Stripe)', 'Estimated Stripe cost used to compute organiser payouts — not the platform’s own fee.') +
+      `<div class="flex flex-wrap gap-3 mb-3">
+        <div>
+          <label class="block text-[10.5px] font-semibold text-[#9b94a8] mb-1">Rate %</label>
+          <input data-key="stripe_fee_pct" type="text" value="${esc(settingsMap['stripe_fee_pct'] ?? '')}" class="setting-input text-[13px] border border-[#b8e4e0] rounded-btn-sm px-2.5 py-1.5 bg-white w-[90px]" />
+        </div>
+      </div>
+      <p class="text-[11px] font-semibold text-[#9b94a8] uppercase tracking-wide mb-2">Fixed fee per currency</p>
+      <div class="flex flex-wrap gap-3">${currencies.map(c => currencyInput(`stripe_fee_fixed_${c}`)).join('')}</div>`;
+    wireSaveButton(el);
+  }
+
+  function renderUploadCard() {
+    const el = document.getElementById('upload-card');
+    el.innerHTML = cardHeader('Maximum Upload Size') +
+      `<div class="flex items-end gap-2">
+        <input data-key="max_upload_mb" type="text" value="${esc(settingsMap['max_upload_mb'] ?? '')}" class="setting-input text-[13px] border border-[#b8e4e0] rounded-btn-sm px-2.5 py-2 bg-white w-[90px]" />
+        <span class="text-[13px] text-[#6f6880] pb-2">MB</span>
+      </div>`;
+    wireSaveButton(el);
+  }
+
+  function renderOtherCard(categorizedKeys) {
+    const el = document.getElementById('other-card');
+    const leftover = Object.keys(settingsMap).filter(k => !categorizedKeys.has(k)).sort();
+    if (!leftover.length) { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    el.innerHTML = cardHeader('Other Settings', 'Keys that don’t fit a category above yet.') +
+      `<div class="flex flex-wrap gap-3">${leftover.map(k => `<div>
+        <label class="block text-[10.5px] font-semibold text-[#9b94a8] mb-1">${esc(k)}</label>
+        <input data-key="${esc(k)}" type="text" value="${esc(settingsMap[k])}" class="setting-input text-[13px] border border-[#b8e4e0] rounded-btn-sm px-2.5 py-1.5 bg-white w-[120px]" />
+      </div>`).join('')}</div>`;
+    wireSaveButton(el);
+  }
+
+  function renderAll() {
+    renderHero();
+    renderServiceFeeCard();
+    renderPlatformFeesCard();
+    renderStripeCard();
+    renderUploadCard();
+
+    const categorized = new Set([
+      'service_fee_pct', 'stripe_fee_pct', 'max_upload_mb',
+      ...currenciesFor('service_fee_floor').map(c => `service_fee_floor_${c}`),
+      ...currenciesFor('min_entry_fee').map(c => `min_entry_fee_${c}`),
+      ...currenciesFor('stripe_fee_fixed').map(c => `stripe_fee_fixed_${c}`),
+    ]);
+    renderOtherCard(categorized);
+  }
+
+  async function loadSettings() {
+    const { rows } = await callAdminApi('platform-settings-list');
+    settingsMap = Object.fromEntries(rows.map(r => [r.key, r.value]));
+    renderAll();
+  }
+
+  const auth = await getAdminAuth();
+  if (auth.session && auth.profile?.roles?.includes('admin')) {
+    const { session, profile } = auth;
+    const name = profile?.display_name || session.user.email?.split('@')[0] || 'Admin';
+
+    const avatarEl = document.getElementById('sidebar-avatar');
+    const nameEl = document.getElementById('sidebar-username');
+    if (avatarEl) {
+      if (profile?.avatar_url) {
+        avatarEl.innerHTML = `<img src="${profile.avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+      } else {
+        avatarEl.textContent = name.charAt(0).toUpperCase();
+      }
+    }
+    if (nameEl) nameEl.textContent = name;
+
+    document.getElementById('sidebar-signout')?.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = auth.base + 'login';
+    });
+
+    document.getElementById('btn-add-setting')?.addEventListener('click', async (e) => {
+      const key = document.getElementById('new-key').value.trim();
+      const value = document.getElementById('new-value').value;
+      if (!key) { alert('Enter a key.'); return; }
+      e.target.disabled = true; e.target.textContent = 'Adding…';
+      try {
+        await callAdminApi('update-platform-setting', { key, value });
+        document.getElementById('new-key').value = '';
+        document.getElementById('new-value').value = '';
+        await loadSettings();
+      } catch (err) {
+        alert('Failed to add setting: ' + err.message);
+      } finally {
+        e.target.disabled = false; e.target.textContent = 'Add Setting';
+      }
+    });
+
+    try {
+      await loadSettings();
+      document.getElementById('state-loading').style.display = 'none';
+      document.getElementById('state-content').style.display = 'block';
+    } catch (err) {
+      document.getElementById('state-loading').innerHTML = `<p class="text-[#6f6880] text-center">Failed to load: ${esc(err.message)}</p>`;
+    }
+  }
+</script>

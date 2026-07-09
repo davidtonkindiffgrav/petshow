@@ -1,0 +1,277 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Settlement" activePage="settlements">
+
+  <div id="state-loading" class="flex items-center justify-center h-64">
+    <div class="w-8 h-8 border-[3px] border-coral/20 border-t-coral rounded-full animate-spin"></div>
+  </div>
+
+  <div id="state-content" style="display:none; max-width:1000px;">
+
+    <a href="javascript:history.back()" class="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-[#5b6b7c] hover:text-[#10233f] mb-3.5">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Settlements
+    </a>
+
+    <div id="settlement-header" class="mb-5"></div>
+
+    <div class="grid grid-cols-[1.2fr_1fr] gap-4">
+      <div class="bg-white rounded-[14px] border border-[#e6eaee] p-5">
+        <p class="text-[13px] font-extrabold text-[#8492a3] uppercase tracking-wide mb-3.5">Payout Breakdown</p>
+        <div id="breakdown"></div>
+
+        <div class="border-t border-[#f1f3f5] mt-[18px] pt-4">
+          <p class="text-[13px] font-extrabold text-[#8492a3] uppercase tracking-wide mb-2.5">Adjustments</p>
+          <div id="adjustments-list" class="mb-3"></div>
+          <div id="add-adjustment-form" class="flex flex-wrap gap-2 items-end" style="display:none">
+            <div>
+              <label class="block text-[11px] font-semibold text-[#8492a3] mb-1">Amount (+/-)</label>
+              <input id="adj-amount" type="number" step="0.01" class="text-[13px] border border-[#e6eaee] rounded-[10px] px-2.5 py-2 bg-white w-[120px]" />
+            </div>
+            <div class="flex-1 min-w-[200px]">
+              <label class="block text-[11px] font-semibold text-[#8492a3] mb-1">Reason</label>
+              <input id="adj-reason" type="text" class="text-[13px] border border-[#e6eaee] rounded-[10px] px-2.5 py-2 bg-white w-full" />
+            </div>
+            <button id="btn-add-adjustment" class="text-[13px] font-bold text-white bg-[#ff6b54] px-4 py-2 rounded-[10px] hover:opacity-90 transition-opacity">Add Adjustment</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-4">
+        <div class="bg-white rounded-[14px] border border-[#e6eaee] p-5">
+          <p class="text-[13px] font-extrabold text-[#8492a3] uppercase tracking-wide mb-3">Audit Trail</p>
+          <div id="audit-list"></div>
+        </div>
+
+        <div id="cancel-card" class="bg-[#fce8e6] border border-[#f6c9c4] rounded-[14px] p-4" style="display:none">
+          <div class="text-[12.5px] font-extrabold text-[#8a2f1e] mb-1.5">Cancel Settlement</div>
+          <div class="text-[12px] text-[#8a2f1e] mb-2.5 leading-relaxed">One-way — cannot be undone. Refunds are handled manually outside this action.</div>
+          <button id="btn-cancel-settlement" class="text-[12.5px] font-bold text-[#c53d3d] bg-white border border-[#f6c9c4] px-[13px] py-[7px] rounded-[9px] hover:bg-[#fef7f6]">Cancel Settlement</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</AdminLayout>
+
+<script>
+  import { getAdminAuth, callAdminApi } from '../../lib/adminAuth.js';
+  import { supabase } from '../../lib/supabase.js';
+  import { statusPillV2 } from '../../lib/format.js';
+
+  function esc(s) {
+    return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const settlementId = params.get('id');
+
+  let settlement = null;
+  let show = null;
+
+  function money(n) { return `${settlement.currency} ${Number(n).toFixed(2)}`; }
+
+  function renderHeader() {
+    document.getElementById('settlement-header').innerHTML = `
+      <div class="flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <div class="flex items-center gap-2.5 flex-wrap mb-1.5">
+            <h1 class="text-[22px] font-extrabold text-[#10233f] m-0">${esc(show?.title || settlement.show_id)}</h1>
+            ${statusPillV2(settlement.status)}
+          </div>
+          <div class="text-[13.5px] text-[#5b6b7c]">${esc(show?.host_org || '')}${show?.charity_number ? ` · Charity ID ${esc(show.charity_number)}` : ''}</div>
+        </div>
+        <div id="header-actions" class="flex gap-2 flex-wrap"></div>
+      </div>`;
+  }
+
+  const EST_CHIP = `<em style="font-style:normal;font-size:11px;background:#f4f6f8;color:#8492a3;padding:1px 6px;border-radius:6px;">est.</em>`;
+  const LIVE_CHIP = `<em style="font-style:normal;font-size:11px;background:#e5f6ec;color:#1d8a4e;padding:1px 6px;border-radius:6px;">live</em>`;
+
+  function renderBreakdown() {
+    const row = (label, value, opts = {}) => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;${opts.bold ? 'border-top:1.5px solid #e6eaee;margin-top:4px;padding-top:11px;font-weight:800;font-size:16px;' : ''}">
+        <span style="font-size:14px;color:${opts.bold ? '#10233f' : '#8492a3'};display:flex;align-items:center;gap:6px;">${esc(label)}${opts.chip || ''}</span>
+        <span style="font-size:${opts.bold ? '16px' : '14px'};font-weight:${opts.bold ? '800' : '700'};color:#10233f;">${value}</span>
+      </div>`;
+    document.getElementById('breakdown').innerHTML =
+      row('Gross Entry Fees', money(settlement.gross_entry_fees)) +
+      row('Platform Fee', `−${money(settlement.platform_fee)}`, { chip: EST_CHIP }) +
+      row('Stripe Fees', `−${money(settlement.stripe_fees)}`, { chip: EST_CHIP }) +
+      row('Refunds', `−${money(settlement.refunds)}`, { chip: LIVE_CHIP }) +
+      row('Net Amount Owed', money(settlement.net_amount_owed), { bold: true }) +
+      row('Amount Paid', money(settlement.amount_paid)) +
+      (settlement.payment_date ? row('Payment Date', new Date(settlement.payment_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })) : '') +
+      `<p style="font-size:11.5px;color:#8492a3;margin-top:14px;">Figures marked ${EST_CHIP} are computed from platform fee settings, not real per-transaction Stripe fees. Refunds are a live Stripe figure.</p>`;
+  }
+
+  const VALID_TRANSITIONS = {
+    draft: ['pending_approval', 'cancelled'],
+    pending_approval: ['paid', 'cancelled', 'draft'],
+    paid: [],
+    cancelled: [],
+    overdue: ['paid', 'cancelled'],
+  };
+
+  async function reload() {
+    const { data, error } = await supabase.from('settlements').select('*').eq('id', settlementId).single();
+    if (error || !data) throw new Error('Settlement not found');
+    settlement = data;
+    const { shows } = await callAdminApi('filter-options');
+    show = (shows || []).find(s => s.id === settlement.show_id) || null;
+
+    renderHeader();
+    renderBreakdown();
+    renderActions();
+    renderAdjustments();
+    await renderAudit();
+  }
+
+  function actionButton(id, label, cls) {
+    return `<button id="${id}" class="text-[13px] font-bold px-3.5 py-2.5 rounded-[10px] transition-opacity hover:opacity-80 ${cls}">${esc(label)}</button>`;
+  }
+
+  const TRANSITION_LABELS = {
+    pending_approval: 'Submit for Approval',
+    paid: 'Approve → Mark Paid',
+    draft: 'Revert to Draft',
+  };
+
+  function renderActions() {
+    const el = document.getElementById('header-actions');
+    const btns = [];
+    btns.push(actionButton('btn-pdf', settlement.pdf_url ? 'Regenerate PDF' : 'Generate PDF', 'bg-white border border-[#e6eaee] text-[#48586a]'));
+    if (settlement.pdf_url) {
+      btns.push(`<a href="${settlement.pdf_url}" target="_blank" class="text-[13px] font-bold px-3.5 py-2.5 rounded-[10px] bg-white border border-[#e6eaee] text-[#48586a] hover:opacity-80">Download PDF</a>`);
+      btns.push(actionButton('btn-email', 'Email Statement', 'bg-white border border-[#e6eaee] text-[#48586a]'));
+    }
+    const transitions = (VALID_TRANSITIONS[settlement.status] || []).filter(t => t !== 'cancelled');
+    for (const t of transitions) {
+      const style = t === 'draft' ? 'bg-white border border-[#e6eaee] text-[#48586a]' : 'text-white bg-[#10233f]';
+      btns.push(actionButton(`btn-status-${t}`, TRANSITION_LABELS[t] || `Mark as ${t.replace('_', ' ')}`, style));
+    }
+    el.innerHTML = btns.join('');
+
+    const cancelCard = document.getElementById('cancel-card');
+    const canCancel = (VALID_TRANSITIONS[settlement.status] || []).includes('cancelled');
+    cancelCard.style.display = canCancel ? 'block' : 'none';
+    document.getElementById('btn-cancel-settlement')?.addEventListener('click', async () => {
+      if (!confirm('Cancel this settlement? This cannot be undone.')) return;
+      try {
+        await callAdminApi('update-settlement-status', { settlement_id: settlementId, new_status: 'cancelled' });
+        await reload();
+      } catch (err) { alert('Failed to cancel settlement: ' + err.message); }
+    });
+
+    document.getElementById('btn-pdf')?.addEventListener('click', async (e) => {
+      e.target.disabled = true; e.target.textContent = 'Generating…';
+      try { await callAdminApi('settlement-pdf', { settlement_id: settlementId }); await reload(); }
+      catch (err) { alert('Failed to generate PDF: ' + err.message); }
+    });
+    document.getElementById('btn-email')?.addEventListener('click', async (e) => {
+      e.target.disabled = true; e.target.textContent = 'Sending…';
+      try { await callAdminApi('send-settlement-email', { settlement_id: settlementId }); alert('Statement emailed.'); await reload(); }
+      catch (err) { alert('Failed to send email: ' + err.message); }
+    });
+    for (const t of transitions) {
+      document.getElementById(`btn-status-${t}`)?.addEventListener('click', async () => {
+        let extra = {};
+        if (t === 'paid') {
+          const amount = prompt(`Amount paid (${settlement.currency})`, settlement.net_amount_owed);
+          if (amount == null) return;
+          const date = prompt('Payment date (YYYY-MM-DD)', new Date().toISOString().slice(0, 10));
+          if (date == null) return;
+          extra = { amount_paid: parseFloat(amount), payment_date: date };
+        }
+        try {
+          await callAdminApi('update-settlement-status', { settlement_id: settlementId, new_status: t, ...extra });
+          await reload();
+        } catch (err) { alert('Failed to update status: ' + err.message); }
+      });
+    }
+  }
+
+  function renderAdjustments() {
+    const list = document.getElementById('adjustments-list');
+    const form = document.getElementById('add-adjustment-form');
+    if (settlement.status !== 'paid') {
+      form.style.display = 'none';
+      list.innerHTML = `<p class="text-[13px] text-[#8492a3]">No adjustments — settlement is not yet paid. Adjustments unlock once marked paid (paid settlements are otherwise locked).</p>`;
+      return;
+    }
+    form.style.display = 'flex';
+
+    supabase.from('settlement_adjustments').select('*').eq('settlement_id', settlementId).order('created_at', { ascending: false })
+      .then(({ data }) => {
+        if (!data?.length) { list.innerHTML = `<p class="text-[13px] text-[#8492a3]">No adjustments recorded.</p>`; return; }
+        list.innerHTML = data.map(a => `
+          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f3f5;">
+            <span style="font-size:13px;color:#48586a;">${esc(a.reason)}</span>
+            <span style="font-size:13px;font-weight:700;color:${a.amount >= 0 ? '#1d8a4e' : '#c53d3d'};">${a.amount >= 0 ? '+' : ''}${money(a.amount)}</span>
+          </div>
+        `).join('');
+      });
+
+    document.getElementById('btn-add-adjustment')?.addEventListener('click', async () => {
+      const amount = parseFloat(document.getElementById('adj-amount').value);
+      const reason = document.getElementById('adj-reason').value.trim();
+      if (!isFinite(amount) || !reason) { alert('Enter an amount and a reason.'); return; }
+      try {
+        await callAdminApi('update-settlement-status', { settlement_id: settlementId, new_status: 'paid', adjustment_amount: amount, adjustment_reason: reason });
+        await reload();
+      } catch (err) { alert('Failed to add adjustment: ' + err.message); }
+    });
+  }
+
+  async function renderAudit() {
+    const { data } = await supabase.from('audit_log').select('*').eq('entity_type', 'settlement').eq('entity_id', settlementId).order('created_at', { ascending: false });
+    const el = document.getElementById('audit-list');
+    if (!data?.length) { el.innerHTML = `<p class="text-[13px] text-[#8492a3]">No audit entries yet.</p>`; return; }
+    el.innerHTML = data.map(a => `
+      <div style="display:flex;gap:10px;padding:6px 0;">
+        <div style="width:7px;height:7px;border-radius:50%;background:#ff6b54;margin-top:5px;flex:none;"></div>
+        <div>
+          <div style="font-size:12.5px;font-weight:700;color:#10233f;">${esc(a.action)}</div>
+          <div style="font-size:11.5px;color:#8492a3;">${new Date(a.created_at).toLocaleString()}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  const auth = await getAdminAuth();
+  if (auth.session && auth.profile?.roles?.includes('admin')) {
+    const { session, profile } = auth;
+    const name = profile?.display_name || session.user.email?.split('@')[0] || 'Admin';
+
+    const avatarEl = document.getElementById('sidebar-avatar');
+    const nameEl = document.getElementById('sidebar-username');
+    if (avatarEl) {
+      if (profile?.avatar_url) {
+        avatarEl.innerHTML = `<img src="${profile.avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+      } else {
+        avatarEl.textContent = name.charAt(0).toUpperCase();
+      }
+    }
+    if (nameEl) nameEl.textContent = name;
+
+    document.getElementById('sidebar-signout')?.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = auth.base + 'login';
+    });
+
+    if (!settlementId) {
+      document.getElementById('state-loading').innerHTML = `<p class="text-[#6f6880] text-center">No settlement ID provided.</p>`;
+    } else {
+      try {
+        await reload();
+        document.getElementById('state-loading').style.display = 'none';
+        document.getElementById('state-content').style.display = 'block';
+      } catch (err) {
+        document.getElementById('state-loading').innerHTML = `<p class="text-[#6f6880] text-center">Failed to load: ${esc(err.message)}</p>`;
+      }
+    }
+  }
+</script>

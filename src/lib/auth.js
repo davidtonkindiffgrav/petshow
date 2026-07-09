@@ -9,9 +9,20 @@ export async function getAuth() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('roles, display_name, first_name, last_name, organiser_type, organisation_id, avatar_url, bio, default_timezone, default_currency')
+    .select('roles, display_name, first_name, last_name, organiser_type, organisation_id, avatar_url, bio, default_timezone, default_currency, suspended_at')
     .eq('id', session.user.id)
     .single()
+
+  // A suspended account is fully locked out. Handled here, self-contained,
+  // same shape as the !session branch above — not a new return field —
+  // because getAuth() is called from ~20 pages across every role and none
+  // of them branch on anything beyond `if (!auth.session)` today. Adding a
+  // new field would mean every call site has to remember to check it.
+  if (profile?.suspended_at) {
+    await supabase.auth.signOut()
+    window.location.replace(base + 'login?suspended=1')
+    return { session: null, profile: null, base }
+  }
 
   // Fall back to auth metadata if profile columns aren't populated yet
   if (profile && !profile.first_name) {

@@ -1,0 +1,155 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Organisation" activePage="shows">
+
+  <div id="state-loading" class="flex items-center justify-center h-64">
+    <div class="w-8 h-8 border-[3px] border-coral/20 border-t-coral rounded-full animate-spin"></div>
+  </div>
+
+  <div id="state-content" style="display:none">
+
+    <div id="org-header" class="mb-4"></div>
+
+    <div id="kpi-grid" class="grid gap-3 mb-4 items-start" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr));"></div>
+
+    <div class="grid gap-4" style="grid-template-columns:1fr;">
+      <div class="bg-white rounded-card border border-[#b8e4e0] p-5">
+        <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#9b94a8;margin-bottom:14px;">Notes</p>
+        <textarea id="notes-input" rows="3" class="w-full text-[13px] border border-[#b8e4e0] rounded-btn-sm px-2.5 py-2 bg-white"></textarea>
+        <button id="btn-save-notes" class="mt-2 text-[13px] font-bold text-white bg-brand px-4 py-2 rounded-btn hover:bg-brand-dark transition-colors">Save Notes</button>
+      </div>
+
+      <div class="bg-white rounded-card border border-[#b8e4e0] p-5">
+        <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#9b94a8;margin-bottom:14px;">Shows Run</p>
+        <div id="shows-list"></div>
+      </div>
+
+      <div class="bg-white rounded-card border border-[#b8e4e0] p-5">
+        <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#9b94a8;margin-bottom:14px;">Settlements</p>
+        <div id="settlements-list"></div>
+      </div>
+    </div>
+
+  </div>
+
+</AdminLayout>
+
+<script>
+  import { getAdminAuth, callAdminApi } from '../../lib/adminAuth.js';
+  import { supabase } from '../../lib/supabase.js';
+  import { esc, statusPill, currencyTable } from '../../lib/format.js';
+
+  const raw = import.meta.env.BASE_URL;
+  const base = raw.endsWith('/') ? raw : raw + '/';
+
+  const params = new URLSearchParams(window.location.search);
+  const orgId = params.get('id');
+
+  let detail = null;
+
+  function renderHeader() {
+    document.getElementById('org-header').innerHTML = `
+      <h2 class="text-[19px] font-extrabold text-[#1c1626]">${esc(detail.organisation.name)}</h2>`;
+  }
+
+  const MONEY_TABLE = { bigClass: 'text-[18px]', rowClass: 'text-[12px]', rowHeightPx: 26, maxVisibleRows: 4 };
+
+  function renderKpis() {
+    const fs = detail.financial_summary;
+    document.getElementById('kpi-grid').innerHTML = [
+      { label: 'Shows Run', value: `<p class="text-[18px] font-extrabold text-[#1c1626]">${detail.shows.length}</p>` },
+      { label: 'Gross Revenue', value: currencyTable(fs.gross_revenue, MONEY_TABLE) },
+      { label: 'Platform Fees Paid', value: currencyTable(fs.platform_revenue, MONEY_TABLE) },
+      { label: 'Total Paid Out', value: currencyTable(detail.total_paid_out, MONEY_TABLE) },
+      { label: 'Pending Payouts', value: currencyTable(detail.pending_payouts, MONEY_TABLE) },
+    ].map(k => `<div class="bg-white rounded-card border border-[#b8e4e0] px-4 py-3.5">
+      <p class="text-[11px] font-semibold text-[#9b94a8] uppercase tracking-wide mb-1">${esc(k.label)}</p>
+      ${k.value}
+    </div>`).join('');
+  }
+
+  function renderShows() {
+    const el = document.getElementById('shows-list');
+    if (!detail.shows.length) { el.innerHTML = `<p class="text-[13px] text-[#9b94a8]">No shows yet.</p>`; return; }
+    el.innerHTML = `<div class="overflow-x-auto"><table class="w-full text-[13px]"><tbody>${detail.shows.map(s => `
+      <tr class="border-b border-[#f5f3fa] cursor-pointer hover:bg-[#f0fafa]" data-id="${s.id}">
+        <td class="py-2 pr-3 font-semibold">${esc(s.title)}</td>
+        <td class="py-2 pr-3">${statusPill(s.status)}</td>
+        <td class="py-2 pr-3 text-[#9b94a8]">${s.show_date ? new Date(s.show_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'TBC'}</td>
+      </tr>`).join('')}</tbody></table></div>`;
+    el.querySelectorAll('tr[data-id]').forEach(tr => {
+      tr.addEventListener('click', () => { window.location.href = `${base}admin/show?id=${tr.dataset.id}`; });
+    });
+  }
+
+  function renderSettlements() {
+    const el = document.getElementById('settlements-list');
+    if (!detail.settlements.length) { el.innerHTML = `<p class="text-[13px] text-[#9b94a8]">No settlements yet.</p>`; return; }
+    el.innerHTML = `<div class="overflow-x-auto"><table class="w-full text-[13px]"><tbody>${detail.settlements.map(s => `
+      <tr class="border-b border-[#f5f3fa] cursor-pointer hover:bg-[#f0fafa]" data-id="${s.id}">
+        <td class="py-2 pr-3">${esc(s.currency)} ${Number(s.net_amount_owed).toFixed(2)} owed</td>
+        <td class="py-2 pr-3">${statusPill(s.status)}</td>
+        <td class="py-2 pr-3 text-[#9b94a8]">${new Date(s.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+        ${s.pdf_url ? `<td class="py-2 pr-3"><a href="${s.pdf_url}" target="_blank" class="text-brand font-semibold hover:underline" onclick="event.stopPropagation()">PDF</a></td>` : '<td></td>'}
+      </tr>`).join('')}</tbody></table></div>`;
+    el.querySelectorAll('tr[data-id]').forEach(tr => {
+      tr.addEventListener('click', () => { window.location.href = `${base}admin/settlement?id=${tr.dataset.id}`; });
+    });
+  }
+
+  async function reload() {
+    detail = await callAdminApi('organisation-detail', { organisation_id: orgId });
+    renderHeader();
+    renderKpis();
+    renderShows();
+    renderSettlements();
+    document.getElementById('notes-input').value = detail.organisation.notes || '';
+  }
+
+  const auth = await getAdminAuth();
+  if (auth.session && auth.profile?.roles?.includes('admin')) {
+    const { session, profile } = auth;
+    const name = profile?.display_name || session.user.email?.split('@')[0] || 'Admin';
+
+    const avatarEl = document.getElementById('sidebar-avatar');
+    const nameEl = document.getElementById('sidebar-username');
+    if (avatarEl) {
+      if (profile?.avatar_url) {
+        avatarEl.innerHTML = `<img src="${profile.avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+      } else {
+        avatarEl.textContent = name.charAt(0).toUpperCase();
+      }
+    }
+    if (nameEl) nameEl.textContent = name;
+
+    document.getElementById('sidebar-signout')?.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = auth.base + 'login';
+    });
+
+    document.getElementById('btn-save-notes')?.addEventListener('click', async (e) => {
+      e.target.disabled = true; e.target.textContent = 'Saving…';
+      try {
+        await callAdminApi('update-organisation-notes', { organisation_id: orgId, notes: document.getElementById('notes-input').value });
+      } catch (err) {
+        alert('Failed to save notes: ' + err.message);
+      } finally {
+        e.target.disabled = false; e.target.textContent = 'Save Notes';
+      }
+    });
+
+    if (!orgId) {
+      document.getElementById('state-loading').innerHTML = `<p class="text-[#6f6880] text-center">No organisation ID provided.</p>`;
+    } else {
+      try {
+        await reload();
+        document.getElementById('state-loading').style.display = 'none';
+        document.getElementById('state-content').style.display = 'block';
+      } catch (err) {
+        document.getElementById('state-loading').innerHTML = `<p class="text-[#6f6880] text-center">Failed to load: ${esc(err.message)}</p>`;
+      }
+    }
+  }
+</script>

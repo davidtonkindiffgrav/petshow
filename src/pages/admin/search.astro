@@ -1,0 +1,95 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Search" activePage="">
+
+  <div id="state-loading" class="flex items-center justify-center h-64">
+    <div class="w-8 h-8 border-[3px] border-coral/20 border-t-coral rounded-full animate-spin"></div>
+  </div>
+
+  <div id="state-content" style="display:none">
+    <p id="query-label" class="text-[13px] text-[#6f6880] mb-4"></p>
+    <div id="results" class="grid gap-4" style="grid-template-columns:1fr;"></div>
+  </div>
+
+  <style>
+    @media (min-width: 900px) {
+      #results { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+
+</AdminLayout>
+
+<script>
+  import { getAdminAuth, callAdminApi } from '../../lib/adminAuth.js';
+  import { supabase } from '../../lib/supabase.js';
+  import { esc } from '../../lib/format.js';
+
+  const raw = import.meta.env.BASE_URL;
+  const base = raw.endsWith('/') ? raw : raw + '/';
+
+  const q = new URLSearchParams(window.location.search).get('q') || '';
+
+  function resultGroup(title, items, renderItem) {
+    return `<div class="bg-white rounded-card border border-[#b8e4e0] p-5">
+      <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#9b94a8;margin-bottom:12px;">${esc(title)} (${items.length})</p>
+      ${items.length ? items.map(renderItem).join('') : `<p class="text-[13px] text-[#9b94a8]">No matches.</p>`}
+    </div>`;
+  }
+
+  function row(href, primary, secondary) {
+    return `<a href="${href}" class="block py-2 border-b border-[#f5f3fa] hover:bg-[#f0fafa] -mx-1 px-1 rounded">
+      <p class="text-[13px] font-semibold text-[#1c1626]">${primary}</p>
+      ${secondary ? `<p class="text-[11.5px] text-[#9b94a8]">${secondary}</p>` : ''}
+    </a>`;
+  }
+
+  async function runSearch() {
+    document.getElementById('query-label').textContent = q ? `Results for "${q}"` : 'Enter a search term above.';
+    if (!q) { document.getElementById('state-content').style.display = 'block'; document.getElementById('state-loading').style.display = 'none'; return; }
+
+    const result = await callAdminApi('global-search', { q });
+    const el = document.getElementById('results');
+    el.innerHTML = [
+      resultGroup('Users', result.users, u => {
+        const name = u.display_name || [u.first_name, u.last_name].filter(Boolean).join(' ') || '—';
+        return row(`${base}admin/user?id=${u.id}`, esc(name), esc((u.roles || []).join(', ')));
+      }),
+      resultGroup('Shows', result.shows, s => row(`${base}admin/show?id=${s.id}`, esc(s.title), esc(s.status))),
+      resultGroup('Organisations', result.organisations, o => row(`${base}admin/organisation?id=${o.id}`, esc(o.name), '')),
+      resultGroup('Payments', result.payments, e => row(`${base}admin/financial?show_id=${e.show_id}`, esc(e.animal_name), esc(e.shows?.title || ''))),
+    ].join('');
+
+    document.getElementById('state-loading').style.display = 'none';
+    document.getElementById('state-content').style.display = 'block';
+  }
+
+  const auth = await getAdminAuth();
+  if (auth.session && auth.profile?.roles?.includes('admin')) {
+    const { session, profile } = auth;
+    const name = profile?.display_name || session.user.email?.split('@')[0] || 'Admin';
+
+    const avatarEl = document.getElementById('sidebar-avatar');
+    const nameEl = document.getElementById('sidebar-username');
+    if (avatarEl) {
+      if (profile?.avatar_url) {
+        avatarEl.innerHTML = `<img src="${profile.avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+      } else {
+        avatarEl.textContent = name.charAt(0).toUpperCase();
+      }
+    }
+    if (nameEl) nameEl.textContent = name;
+
+    document.getElementById('sidebar-signout')?.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = auth.base + 'login';
+    });
+
+    try {
+      await runSearch();
+    } catch (err) {
+      document.getElementById('state-loading').innerHTML = `<p class="text-[#6f6880] text-center">Search failed: ${esc(err.message)}</p>`;
+    }
+  }
+</script>

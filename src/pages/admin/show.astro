@@ -1,0 +1,237 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Show" activePage="shows">
+
+  <div id="state-loading" class="flex items-center justify-center h-64">
+    <div class="w-8 h-8 border-[3px] border-coral/20 border-t-coral rounded-full animate-spin"></div>
+  </div>
+
+  <div id="state-content" style="display:none; max-width:1080px;">
+
+    <a href="javascript:history.back()" class="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-[#5b6b7c] hover:text-[#10233f] mb-3.5">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Shows
+    </a>
+
+    <div id="show-header" class="mb-4"></div>
+
+    <div id="kpi-grid" class="grid grid-cols-4 gap-3 mb-4"></div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div class="bg-white rounded-[14px] border border-[#e6eaee] p-5">
+        <p class="text-[13px] font-extrabold text-[#8492a3] uppercase tracking-wide mb-2.5">Admin Notes</p>
+        <textarea id="notes-input" rows="3" placeholder="Add a private note about this show…" class="w-full text-[13.5px] border border-[#e6eaee] rounded-[10px] px-3 py-2.5 bg-white outline-none resize-y text-[#10233f]"></textarea>
+        <button id="btn-save-notes" class="mt-2.5 text-[12.5px] font-bold text-white bg-[#10233f] px-3.5 py-2 rounded-[9px] hover:opacity-90 transition-opacity">Save Note</button>
+      </div>
+
+      <div class="bg-white rounded-[14px] border border-[#e6eaee] p-5">
+        <p class="text-[13px] font-extrabold text-[#8492a3] uppercase tracking-wide mb-3">Organiser</p>
+        <div id="organiser-info"></div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-[14px] border border-[#e6eaee] p-5 mt-4">
+      <p class="text-[13px] font-extrabold text-[#8492a3] uppercase tracking-wide mb-3">Actions</p>
+      <div id="actions-panel" class="flex flex-wrap gap-2"></div>
+    </div>
+
+  </div>
+
+  <!-- Confirm-cancel modal -->
+  <div id="cancel-modal" style="display:none" class="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-[14px] max-w-[420px] w-full p-6">
+      <h2 class="text-[17px] font-extrabold text-[#10233f] mb-1">Cancel this show?</h2>
+      <p class="text-[13px] text-[#5b6b7c] mb-4">Cancellation is one-way — there's no un-cancel. The show will disappear from public listings and stop accepting entries. Refunds, if needed, are handled manually via the Financial Centre.</p>
+      <div class="flex justify-end gap-2">
+        <button id="btn-cancel-abort" class="text-[13.5px] font-bold text-[#48586a] border border-[#e6eaee] px-4 py-2.5 rounded-[10px] hover:bg-[#f7f9fa] transition-colors">Go back</button>
+        <button id="btn-cancel-confirm" class="text-[13.5px] font-bold text-white bg-[#c53d3d] px-4 py-2.5 rounded-[10px] hover:opacity-90 transition-opacity">Cancel show</button>
+      </div>
+    </div>
+  </div>
+
+</AdminLayout>
+
+<script>
+  import { getAdminAuth, callAdminApi } from '../../lib/adminAuth.js';
+  import { supabase } from '../../lib/supabase.js';
+  import { esc, statusPillV2 } from '../../lib/format.js';
+
+  const raw = import.meta.env.BASE_URL;
+  const base = raw.endsWith('/') ? raw : raw + '/';
+
+  const params = new URLSearchParams(window.location.search);
+  const showId = params.get('id');
+
+  let detail = null;
+
+  const SHOW_STATUS_TRANSITIONS = {
+    draft: ['published', 'cancelled'],
+    published: ['cancelled'],
+    cancelled: [],
+  };
+
+  function renderHeader() {
+    const s = detail.show;
+    document.getElementById('show-header').innerHTML = `
+      <div class="flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <div class="flex items-center gap-2 flex-wrap mb-1.5">
+            <h1 class="text-[22px] font-extrabold text-[#10233f] m-0">${esc(s.title)}</h1>
+            ${statusPillV2(s.status)}
+            ${s.featured ? '<span class="inline-flex items-center px-2 py-[3px] rounded-full text-[11px] font-bold" style="background:#fef3d6;color:#b9770e;">★ Featured</span>' : ''}
+            ${s.suspended_at ? '<span class="inline-flex items-center px-2 py-[3px] rounded-full text-[11px] font-bold" style="background:#fce8e6;color:#c53d3d;">Suspended</span>' : ''}
+          </div>
+          <div class="text-[13.5px] text-[#5b6b7c] flex items-center gap-2 flex-wrap">
+            ${esc(s.host_org || '')}
+            <span class="opacity-50">•</span>
+            <a href="${window.location.origin}${base}show?id=${s.id}" target="_blank" class="text-[#ff6b54] font-bold">View live page ↗</a>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function renderKpis() {
+    const s = detail.show;
+    const fundraisingPct = s.fundraising_goal ? Math.min(100, (detail.revenue / s.fundraising_goal) * 100) : 0;
+    document.getElementById('kpi-grid').innerHTML = [
+      { label: 'Entries', value: `<p class="text-[22px] font-extrabold text-[#10233f] mt-1">${detail.entry_count}</p>` },
+      { label: 'Revenue', value: `<p class="text-[22px] font-extrabold text-[#10233f] mt-1">${esc(s.currency)} ${Number(detail.revenue).toFixed(2)}</p>` },
+      { label: 'Judging', value: `<p class="text-[15px] font-extrabold mt-2" style="color:${detail.judging_started ? '#b9770e' : '#6b7c89'}">${detail.judging_started ? 'In Progress' : 'Not Started'}</p>` },
+      { label: 'Fundraising', value: s.fundraising_goal
+          ? `<p class="text-[15px] font-extrabold text-[#10233f] mt-1.5">${esc(s.currency)} ${Number(detail.revenue).toFixed(0)} / ${Number(s.fundraising_goal).toFixed(0)}</p>
+             <div class="h-[6px] bg-[#eef1f4] rounded-full mt-1.5 overflow-hidden"><div style="height:100%;width:${fundraisingPct.toFixed(1)}%;background:${fundraisingPct >= 100 ? '#1d8a4e' : '#ff6b54'};"></div></div>`
+          : `<p class="text-[15px] text-[#8492a3] mt-1.5">Not set</p>` },
+    ].map(k => `<div class="bg-white rounded-[14px] border border-[#e6eaee] px-4 py-3.5">
+      <p class="text-[11px] font-bold text-[#8492a3] uppercase tracking-wide">${esc(k.label)}</p>
+      ${k.value}
+    </div>`).join('');
+  }
+
+  function actionButton(id, label, cls) {
+    return `<button id="${id}" class="text-[13px] font-bold px-3.5 py-2.5 rounded-[10px] transition-opacity hover:opacity-80 ${cls}">${esc(label)}</button>`;
+  }
+
+  function renderActions() {
+    const s = detail.show;
+    const btns = [];
+    const transitions = SHOW_STATUS_TRANSITIONS[s.status] || [];
+    for (const t of transitions) {
+      const style = t === 'cancelled' ? 'text-white bg-[#c53d3d]' : 'text-white bg-[#ff6b54]';
+      btns.push(actionButton(`btn-status-${t}`, t === 'published' ? 'Publish' : `Mark as ${t}`, style));
+    }
+    btns.push(actionButton('btn-suspend-toggle', s.suspended_at ? 'Unsuspend' : 'Suspend', 'bg-white border border-[#e6eaee] text-[#48586a]'));
+    btns.push(actionButton('btn-feature-toggle', s.featured ? 'Unfeature' : 'Feature', 'bg-white border border-[#e6eaee] text-[#48586a]'));
+    btns.push(actionButton('btn-duplicate', 'Duplicate Show', 'bg-white border border-[#e6eaee] text-[#48586a]'));
+    document.getElementById('actions-panel').innerHTML = btns.join('');
+
+    for (const t of transitions) {
+      document.getElementById(`btn-status-${t}`)?.addEventListener('click', () => {
+        if (t === 'cancelled') { document.getElementById('cancel-modal').style.display = 'flex'; return; }
+        applyShowFields({ status: t });
+      });
+    }
+    document.getElementById('btn-suspend-toggle')?.addEventListener('click', () => applyShowFields({ suspended: !s.suspended_at }));
+    document.getElementById('btn-feature-toggle')?.addEventListener('click', () => applyShowFields({ featured: !s.featured }));
+    document.getElementById('btn-duplicate')?.addEventListener('click', async (e) => {
+      e.target.disabled = true; e.target.textContent = 'Duplicating…';
+      try {
+        const result = await callAdminApi('duplicate-show', { show_id: showId });
+        window.location.href = `${base}admin/show?id=${result.show_id}`;
+      } catch (err) {
+        alert('Failed to duplicate: ' + err.message);
+        e.target.disabled = false; e.target.textContent = 'Duplicate Show';
+      }
+    });
+  }
+
+  async function applyShowFields(fields) {
+    try {
+      await callAdminApi('update-show-admin-fields', { show_id: showId, ...fields });
+      await reload();
+    } catch (err) {
+      alert('Failed to update show: ' + err.message);
+    }
+  }
+
+  function renderOrganiser() {
+    const o = detail.organiser;
+    const name = o.display_name || o.email || o.id;
+    document.getElementById('organiser-info').innerHTML = o.id
+      ? `<div class="flex items-center gap-[11px]">
+           <div class="w-[42px] h-[42px] rounded-full bg-[#10233f] text-white font-bold flex items-center justify-center flex-shrink-0">${esc(String(name).charAt(0).toUpperCase())}</div>
+           <div class="min-w-0">
+             <div class="text-[14px] font-bold text-[#10233f] truncate">${esc(name)}</div>
+             ${o.email ? `<div class="text-[12.5px] text-[#8492a3] truncate">${esc(o.email)}</div>` : ''}
+           </div>
+           <a href="${base}admin/user?id=${o.id}" class="ml-auto flex-shrink-0 text-[12.5px] font-bold text-[#48586a] bg-[#f4f6f8] border border-[#e6eaee] px-3 py-[7px] rounded-[9px] hover:bg-[#eef1f4]">View User →</a>
+         </div>`
+      : `<p class="text-[13px] text-[#8492a3]">Unknown</p>`;
+  }
+
+  async function reload() {
+    detail = await callAdminApi('show-detail', { show_id: showId });
+    renderHeader();
+    renderKpis();
+    renderActions();
+    renderOrganiser();
+    document.getElementById('notes-input').value = detail.show.admin_notes || '';
+  }
+
+  const auth = await getAdminAuth();
+  if (auth.session && auth.profile?.roles?.includes('admin')) {
+    const { session, profile } = auth;
+    const name = profile?.display_name || session.user.email?.split('@')[0] || 'Admin';
+
+    const avatarEl = document.getElementById('sidebar-avatar');
+    const nameEl = document.getElementById('sidebar-username');
+    if (avatarEl) {
+      if (profile?.avatar_url) {
+        avatarEl.innerHTML = `<img src="${profile.avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+      } else {
+        avatarEl.textContent = name.charAt(0).toUpperCase();
+      }
+    }
+    if (nameEl) nameEl.textContent = name;
+
+    document.getElementById('sidebar-signout')?.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = auth.base + 'login';
+    });
+
+    document.getElementById('btn-save-notes')?.addEventListener('click', async (e) => {
+      e.target.disabled = true; e.target.textContent = 'Saving…';
+      try {
+        await applyShowFields({ admin_notes: document.getElementById('notes-input').value });
+      } finally {
+        e.target.disabled = false; e.target.textContent = 'Save Notes';
+      }
+    });
+
+    document.getElementById('btn-cancel-abort')?.addEventListener('click', () => {
+      document.getElementById('cancel-modal').style.display = 'none';
+    });
+    document.getElementById('btn-cancel-confirm')?.addEventListener('click', async (e) => {
+      e.target.disabled = true; e.target.textContent = 'Cancelling…';
+      try {
+        await applyShowFields({ status: 'cancelled' });
+        document.getElementById('cancel-modal').style.display = 'none';
+      } finally {
+        e.target.disabled = false; e.target.textContent = 'Cancel show';
+      }
+    });
+
+    if (!showId) {
+      document.getElementById('state-loading').innerHTML = `<p class="text-[#6f6880] text-center">No show ID provided.</p>`;
+    } else {
+      try {
+        await reload();
+        document.getElementById('state-loading').style.display = 'none';
+        document.getElementById('state-content').style.display = 'block';
+      } catch (err) {
+        document.getElementById('state-loading').innerHTML = `<p class="text-[#6f6880] text-center">Failed to load: ${esc(err.message)}</p>`;
+      }
+    }
+  }
+</script>

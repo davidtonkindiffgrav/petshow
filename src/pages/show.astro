@@ -241,6 +241,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       document.getElementById('preview-settings-link').href = `${base}organiser/show/?id=${showId}`;
     }
 
+    // A suspended show is unavailable to the public regardless of status —
+    // independent of the draft/published/cancelled lifecycle. The organiser's
+    // own preview link still works so they can see why.
+    if (show.suspended_at && !isPreview) { showNotFound(); return; }
+
     categories  = catsRes.data    || [];
     entries     = entriesRes.data  || [];
     sponsors    = sponsorsRes.data || [];

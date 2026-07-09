@@ -1,0 +1,339 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+const rawBase = import.meta.env.BASE_URL;
+const base = rawBase.endsWith('/') ? rawBase : rawBase + '/';
+---
+
+<AdminLayout title="Dashboard" activePage="dashboard">
+
+  <div id="state-loading" class="flex items-center justify-center h-64">
+    <div class="w-8 h-8 border-[3px] border-coral/20 border-t-coral rounded-full animate-spin"></div>
+  </div>
+
+  <div id="state-error" style="display:none" class="bg-white rounded-[14px] border border-[#e6eaee] p-6 text-center text-[#5b6b7c]"></div>
+
+  <div id="state-dashboard" style="display:none">
+
+    <div class="flex items-center justify-between flex-wrap gap-2.5 mb-[18px]">
+      <div>
+        <h1 class="text-[22px] font-extrabold text-[#10233f] m-0 mb-[3px]">Dashboard</h1>
+        <p class="text-[13.5px] text-[#5b6b7c] m-0">Business overview across every section.</p>
+      </div>
+      <div id="range-toggle" class="flex gap-1.5 bg-white border border-[#e6eaee] p-1 rounded-[10px]"></div>
+    </div>
+
+    <div id="alerts-strip" class="mb-[18px]" style="display:none"></div>
+
+    <div class="grid gap-[18px] items-start" style="grid-template-columns:1fr 340px;">
+      <!-- LEFT column -->
+      <div class="flex flex-col gap-[18px] min-w-0">
+
+        <div id="hero-kpi-grid" class="grid grid-cols-4 gap-3"></div>
+
+        <div id="secondary-kpi-grid" class="grid grid-cols-6 gap-3"></div>
+
+        <div class="bg-white rounded-[14px] border border-[#e6eaee] px-[18px] py-4">
+          <div class="text-[14px] font-extrabold text-[#10233f] mb-3">Trends <span id="range-label" class="font-medium text-[#8492a3] text-[12.5px]"></span></div>
+          <div id="chart-grid" class="grid grid-cols-4 gap-[14px]"></div>
+        </div>
+
+        <div id="section-summary-grid" class="grid grid-cols-2 gap-[14px]"></div>
+      </div>
+
+      <!-- RIGHT column -->
+      <div class="flex flex-col gap-4 min-w-0">
+        <div class="bg-white rounded-[14px] border border-[#e6eaee] px-[18px] py-4">
+          <div class="text-[13.5px] font-extrabold text-[#10233f] mb-3">Recent Activity</div>
+          <div id="activity-list"></div>
+        </div>
+
+        <div class="bg-white rounded-[14px] border border-[#e6eaee] px-[18px] py-4">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-[13.5px] font-extrabold text-[#10233f]">Top Organisations</span>
+            <a href={`${base}admin/analytics`} class="text-[#ff6b54] font-bold text-[12px]">Analytics →</a>
+          </div>
+          <div id="top-orgs-list" class="flex flex-col gap-2.5"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</AdminLayout>
+
+<script>
+  import { getAdminAuth, callAdminApi } from '../../lib/adminAuth.js';
+  import { supabase } from '../../lib/supabase.js';
+  import { sparklineSvg, downsampleSeries, RANGE_TARGET_POINTS } from '../../lib/charts.js';
+  import { esc, heroCurrencyValue } from '../../lib/format.js';
+
+  const raw = import.meta.env.BASE_URL;
+  const base = raw.endsWith('/') ? raw : raw + '/';
+
+  const RANGE_LABELS = { '7d': 'Last 7 days', '30d': 'Last 30 days', '90d': 'Last 90 days', ytd: 'Year to date' };
+  const TREND_COLOR = '#ff6b54';
+  const HEALTH_DOT_COLOR = { green: '#1d8a4e', amber: '#b9770e', red: '#c53d3d' };
+
+  function primaryAmount(byCurrency) {
+    const entries = Object.entries(byCurrency || {}).filter(([, v]) => v);
+    if (!entries.length) return null;
+    const [cur, v] = entries.sort((a, b) => b[1] - a[1])[0];
+    return `${cur} ${Number(v).toFixed(2)}`;
+  }
+
+  function renderRangeToggle(current) {
+    const el = document.getElementById('range-toggle');
+    el.innerHTML = Object.keys(RANGE_LABELS).map(r => `
+      <button data-range="${r}" class="text-[12.5px] font-bold px-3 py-1.5 rounded-[8px] transition-colors ${r === current ? 'bg-[#10233f] text-white' : 'text-[#5b6b7c] hover:bg-[#f7f9fa]'}">${r === 'ytd' ? 'YTD' : r}</button>
+    `).join('');
+    el.querySelectorAll('[data-range]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentRange = btn.dataset.range;
+        document.getElementById('state-loading').style.display = 'flex';
+        document.getElementById('state-dashboard').style.display = 'none';
+        loadStats().finally(() => { document.getElementById('state-loading').style.display = 'none'; });
+      });
+    });
+  }
+
+  function renderAlerts(needsAttention, stats, health) {
+    const alerts = [];
+    if (needsAttention.shows_needing_settlement.count > 0) {
+      alerts.push({ text: `${needsAttention.shows_needing_settlement.count} show${needsAttention.shows_needing_settlement.count === 1 ? '' : 's'} need a settlement`, href: `${base}admin/settlements` });
+    }
+    if (needsAttention.settlements_overdue.count > 0) {
+      alerts.push({ text: `${needsAttention.settlements_overdue.count} settlement${needsAttention.settlements_overdue.count === 1 ? '' : 's'} overdue`, href: `${base}admin/settlements` });
+    }
+    if (stats.pending_payouts.count > 0) {
+      alerts.push({ text: `${stats.pending_payouts.count} settlement${stats.pending_payouts.count === 1 ? '' : 's'} pending approval`, href: `${base}admin/settlements` });
+    }
+    if (health && Object.values(health).some(v => v && v.status && v.status !== 'green')) {
+      alerts.push({ text: 'System health degraded', href: `${base}admin/health` });
+    }
+
+    const el = document.getElementById('alerts-strip');
+    if (!alerts.length) { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    el.innerHTML = `
+      <div style="background:#fff5f3;border:1px solid #ffd8cf;border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <div style="width:34px;height:34px;border-radius:10px;background:#ff6b54;display:flex;align-items:center;justify-content:center;flex:none;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3.5l9.5 16.5H2.5L12 3.5z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 10v4.2M12 17h.01" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+        <div style="font-size:14px;font-weight:700;color:#8a2f1e;">Needs your attention:</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;flex:1;">
+          ${alerts.map(a => `<a href="${a.href}" style="background:#fff;border:1px solid #ffd8cf;color:#8a2f1e;font-size:13px;font-weight:700;padding:7px 13px;border-radius:9px;">${esc(a.text)}</a>`).join('')}
+        </div>
+      </div>`;
+  }
+
+  function heroTile(label, valueHtml, isDark) {
+    const bg = isDark ? 'background:#0a2540;' : 'background:#fff;border:1px solid #e6eaee;';
+    const labelColor = isDark ? '#8fb3e0' : '#8492a3';
+    return `<div style="${bg}border-radius:14px;padding:15px 17px;">
+      <div style="font-size:11px;font-weight:700;color:${labelColor};text-transform:uppercase;letter-spacing:0.05em;">${esc(label)}</div>
+      <div class="mt-1.5">${valueHtml}</div>
+    </div>`;
+  }
+
+  function renderHeroKpis(stats) {
+    const el = document.getElementById('hero-kpi-grid');
+    el.innerHTML = [
+      heroTile('Revenue Today', heroCurrencyValue(stats.revenue_today, { bigColor: '#fff', capColor: '#7fa0cc' }), true),
+      heroTile('Revenue This Month', heroCurrencyValue(stats.revenue_month, {})),
+      heroTile('Stripe Balance', heroCurrencyValue(stats.stripe_balance?.available || [], {}) + `<p class="text-[11.5px] mt-0.5" style="color:#8492a3;">Available now, live</p>`),
+      heroTile('Platform Fees Earned', heroCurrencyValue(stats.platform_fees_month, {}) + `<p class="text-[11.5px] mt-0.5" style="color:#8492a3;">This month, estimated</p>`),
+    ].join('');
+  }
+
+  function smallKpi(label, value) {
+    return `<div class="bg-white rounded-[12px] border border-[#e6eaee] px-3.5 py-3">
+      <div class="text-[10.5px] font-bold text-[#8492a3] uppercase tracking-wide leading-tight">${esc(label)}</div>
+      <div class="text-[19px] font-extrabold text-[#10233f] mt-1">${esc(value)}</div>
+    </div>`;
+  }
+
+  function renderSecondaryKpis(stats) {
+    document.getElementById('secondary-kpi-grid').innerHTML = [
+      smallKpi('Pending Payouts', String(stats.pending_payouts.count)),
+      smallKpi('Completed Payouts', String(stats.completed_payouts.count)),
+      smallKpi('Active Shows', String(stats.active_shows)),
+      smallKpi('Active Organisations', String(stats.active_organisations)),
+      smallKpi('Total Entrants', String(stats.total_entrants)),
+      smallKpi('Total Accounts', String(stats.total_accounts)),
+    ].join('');
+  }
+
+  function trendTile(label, points, formatTotal) {
+    const total = points.reduce((s, p) => s + (p.value || 0), 0);
+    const sparkPoints = downsampleSeries(points, RANGE_TARGET_POINTS[currentRange] || 30, ['value']);
+    return `<div>
+      <div class="text-[12px] font-bold text-[#48586a] mb-0.5">${esc(label)}</div>
+      <div class="text-[17px] font-extrabold text-[#10233f]">${esc(formatTotal(total))}</div>
+      <div class="mt-2">${sparklineSvg(sparkPoints, { color: TREND_COLOR, height: 40 })}</div>
+    </div>`;
+  }
+
+  function renderCharts(trends) {
+    const mk = (field) => trends.map((d) => ({ value: d[field] }));
+    document.getElementById('chart-grid').innerHTML = [
+      trendTile('Revenue (AUD)', mk('revenue_aud'), (v) => `AUD ${v.toFixed(2)}`),
+      trendTile('New Users', mk('new_users'), (v) => String(Math.round(v))),
+      trendTile('Shows Created', mk('new_shows'), (v) => String(Math.round(v))),
+      trendTile('Entries Received', mk('new_entries'), (v) => String(Math.round(v))),
+    ].join('');
+  }
+
+  function summaryCard(title, href, statsHtml) {
+    return `<div class="bg-white rounded-[14px] border border-[#e6eaee] px-[18px] py-4">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-[13.5px] font-extrabold text-[#10233f]">${esc(title)}</span>
+        <a href="${href}" class="text-[#ff6b54] font-bold text-[12.5px]">View →</a>
+      </div>
+      <div class="grid grid-cols-2 gap-2.5">${statsHtml}</div>
+    </div>`;
+  }
+  function statBlock(label, value, color) {
+    return `<div><div class="text-[11px] font-semibold" style="color:#8492a3;">${esc(label)}</div><div class="text-[16px] font-extrabold" style="color:${color || '#10233f'};">${value}</div></div>`;
+  }
+
+  function renderSectionSummaries(stats, needsAttention, financial, stripeEvents, health, storage, email) {
+    const financialCard = summaryCard('Financial Centre', `${base}admin/financial`,
+      statBlock('Gross revenue', primaryAmount(financial.gross_revenue) || '—') +
+      statBlock('Net to organisers', primaryAmount(financial.net_paid_to_organisers) || '—') +
+      statBlock('Failed payments', String(stripeEvents.failed_payments.length), stripeEvents.failed_payments.length ? '#c53d3d' : null) +
+      statBlock('Open disputes', String(stripeEvents.disputes.length), stripeEvents.disputes.length ? '#c53d3d' : null)
+    );
+
+    const pendingAmt = primaryAmount(stats.pending_payouts.by_currency);
+    const overdueAmt = primaryAmount(needsAttention.settlements_overdue.by_currency);
+    const paidAmt = primaryAmount(stats.paid_this_month.by_currency);
+    const settlementsCard = summaryCard('Settlements', `${base}admin/settlements`,
+      statBlock('Pending approval', `${stats.pending_payouts.count}${pendingAmt ? ` · ${pendingAmt}` : ''}`, stats.pending_payouts.count ? '#b9770e' : null) +
+      statBlock('Overdue', `${needsAttention.settlements_overdue.count}${overdueAmt ? ` · ${overdueAmt}` : ''}`, needsAttention.settlements_overdue.count ? '#c53d3d' : null) +
+      statBlock('Paid this month', `${stats.paid_this_month.count}${paidAmt ? ` · ${paidAmt}` : ''}`) +
+      `<div><a href="${base}admin/settlements" style="font-size:12px;font-weight:700;color:#10233f;background:#f4f6f8;border:1px solid #e6eaee;border-radius:8px;padding:5px 9px;display:inline-block;">+ Generate</a></div>`
+    );
+
+    const showsCard = summaryCard('Shows & Entrants', `${base}admin/shows`,
+      statBlock('Active shows', String(stats.active_shows)) +
+      statBlock('Total entrants', String(stats.total_entrants)) +
+      statBlock('Active organisations', String(stats.active_organisations)) +
+      statBlock('Total accounts', String(stats.total_accounts))
+    );
+
+    const healthDots = [
+      ['Database', health.database?.status], ['Stripe', health.stripe?.status],
+      ['Storage', health.storage?.status], ['Resend', health.resend?.status],
+    ].map(([name, status]) => `<div style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#48586a;"><span style="width:8px;height:8px;border-radius:50%;background:${HEALTH_DOT_COLOR[status] || '#8492a3'};"></span>${esc(name)}</div>`).join('');
+    const dbUsed = storage.db_size_bytes / (1024 * 1024);
+    const dbLimit = storage.db_size_limit_bytes / (1024 * 1024);
+    const emailUsed = email.daily_quota_used;
+    const healthCard = `<div class="bg-white rounded-[14px] border border-[#e6eaee] px-[18px] py-4">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-[13.5px] font-extrabold text-[#10233f]">System Health</span>
+        <a href="${base}admin/health" class="text-[#ff6b54] font-bold text-[12.5px]">View →</a>
+      </div>
+      <div class="flex gap-4 flex-wrap">${healthDots}</div>
+      <div class="flex gap-[18px] mt-3">
+        <div><div class="text-[11px] font-semibold" style="color:#8492a3;">DB size</div><div class="text-[14px] font-extrabold text-[#10233f]">${dbUsed.toFixed(0)} / ${dbLimit.toFixed(0)} MB</div></div>
+        <div><div class="text-[11px] font-semibold" style="color:#8492a3;">Emails today</div><div class="text-[14px] font-extrabold text-[#10233f]">${emailUsed != null ? `${emailUsed} / ${email.daily_quota_limit}` : 'Not reported'}</div></div>
+      </div>
+    </div>`;
+
+    document.getElementById('section-summary-grid').innerHTML = financialCard + settlementsCard + showsCard + healthCard;
+  }
+
+  function renderActivity(activity) {
+    const el = document.getElementById('activity-list');
+    if (!activity.length) {
+      el.innerHTML = `<p class="text-[13px] text-[#8492a3]">No recent activity yet.</p>`;
+      return;
+    }
+    const ICON = {
+      show: { bg: '#ff6b54', letter: 'S' },
+      organisation: { bg: '#10233f', letter: 'O' },
+      settlement: { bg: '#b9770e', letter: 'T' },
+      payment: { bg: '#1d8a4e', letter: 'P' },
+    };
+    el.innerHTML = activity.map(a => {
+      const icon = ICON[a.type] || { bg: '#8492a3', letter: '•' };
+      return `
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid #f1f3f5;">
+        <div style="width:26px;height:26px;border-radius:8px;background:${icon.bg};display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px;color:#fff;font-size:12px;font-weight:800;">${icon.letter}</div>
+        <div style="min-width:0;">
+          <div style="font-size:12.5px;color:#10233f;line-height:1.4;">${esc(a.text)}</div>
+          <div style="font-size:11.5px;color:#8492a3;margin-top:1px;">${new Date(a.timestamp).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderTopOrgs(byCurrency) {
+    const el = document.getElementById('top-orgs-list');
+    const currencies = Object.entries(byCurrency || {}).filter(([, items]) => items.length);
+    if (!currencies.length) { el.innerHTML = `<p class="text-[13px] text-[#8492a3]">No data yet.</p>`; return; }
+    const [cur, items] = currencies.sort((a, b) => (b[1][0]?.value || 0) - (a[1][0]?.value || 0))[0];
+    el.innerHTML = items.slice(0, 5).map((o, i) => `
+      <div style="display:flex;align-items:center;gap:9px;">
+        <span style="font-size:11.5px;font-weight:800;color:#8492a3;width:14px;">${i + 1}</span>
+        <span style="flex:1;font-size:13px;font-weight:600;color:#10233f;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(o.label)}</span>
+        <span style="font-size:13px;font-weight:800;color:#10233f;">${esc(cur)} ${Number(o.value).toFixed(0)}</span>
+      </div>`).join('');
+  }
+
+  let currentRange = '30d';
+
+  async function loadStats() {
+    document.getElementById('state-error').style.display = 'none';
+    renderRangeToggle(currentRange);
+    try {
+      const [stats, needsAttention, financial, stripeEvents, health, storage, email, leaderboards] = await Promise.all([
+        callAdminApi('stats', { range: currentRange }),
+        callAdminApi('needs-attention'),
+        callAdminApi('financial-summary', {}),
+        callAdminApi('stripe-events', { limit: 25 }),
+        callAdminApi('health-check'),
+        callAdminApi('storage-usage'),
+        callAdminApi('email-usage'),
+        callAdminApi('analytics-leaderboards', { limit: 10 }),
+      ]);
+
+      document.getElementById('range-label').textContent = `— ${RANGE_LABELS[currentRange]}`;
+      renderAlerts(needsAttention, stats, health);
+      renderHeroKpis(stats);
+      renderSecondaryKpis(stats);
+      renderCharts(stats.trends);
+      renderSectionSummaries(stats, needsAttention, financial, stripeEvents, health, storage, email);
+      renderActivity(stats.activity);
+      renderTopOrgs(leaderboards.top_organisations_by_currency);
+      document.getElementById('state-dashboard').style.display = 'block';
+    } catch (err) {
+      document.getElementById('state-error').textContent = 'Failed to load dashboard data: ' + err.message;
+      document.getElementById('state-error').style.display = 'block';
+    }
+  }
+
+  const auth = await getAdminAuth();
+  if (auth.session && auth.profile?.roles?.includes('admin')) {
+    const { session, profile } = auth;
+    const name = profile?.display_name || session.user.email?.split('@')[0] || 'Admin';
+
+    const avatarEl = document.getElementById('sidebar-avatar');
+    const nameEl = document.getElementById('sidebar-username');
+    if (avatarEl) {
+      if (profile?.avatar_url) {
+        avatarEl.innerHTML = `<img src="${profile.avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+      } else {
+        avatarEl.textContent = name.charAt(0).toUpperCase();
+      }
+    }
+    if (nameEl) nameEl.textContent = name;
+
+    document.getElementById('sidebar-signout')?.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = auth.base + 'login';
+    });
+
+    await loadStats();
+    document.getElementById('state-loading').style.display = 'none';
+  }
+</script>

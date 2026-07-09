@@ -167,6 +167,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   import { supabase } from '../lib/supabase.js';
   import { zonedDateTime } from '../lib/voteWindow.js';
   import { organiserNet } from '../lib/fees.js';
+  import { barLineSvg, donutSvg } from '../lib/charts.js';
 
   // Module-level state so all helpers can close over these
   let show          = null;
@@ -382,47 +383,34 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
     const isEmpty = entryCount === 0;
     const hasCategories = categories.length > 0;
-    const cx = 60, cy = 60, r = 46, sw = 14;
-    const circ = 2 * Math.PI * r;
 
     // Build donut segments
-    let donutArcs = '';
-    if (isEmpty || !hasCategories) {
-      donutArcs = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#efebf5" stroke-width="${sw}" transform="rotate(-90 ${cx} ${cy})"/>`;
-    } else {
-      let offset = 0;
-      categories.forEach((cat, i) => {
-        const count = cat.count || 0;
-        const frac = entryCount > 0 ? count / entryCount : 0;
-        const segLen = frac * circ;
-        const color = CAT_PALETTE[i % CAT_PALETTE.length];
-        const adjustedLen = Math.max(0, segLen - (categories.length > 1 ? 2 : 0));
-        const label = `${esc(cat.name)}: ${count}`;
-        donutArcs += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${sw}"
-          stroke-dasharray="${adjustedLen} ${circ - adjustedLen}"
-          stroke-dashoffset="${circ - offset}"
-          transform="rotate(-90 ${cx} ${cy})"
-          pointer-events="stroke"
-          data-label="${label}"
-          style="cursor:pointer;"/>`;
-        offset += segLen;
-      });
+    const segments = (isEmpty || !hasCategories) ? [] : categories.map((cat, i) => ({
+      label: cat.name,
+      value: cat.count || 0,
+      color: CAT_PALETTE[i % CAT_PALETTE.length],
+    }));
+    if (!isEmpty && hasCategories) {
       const categorised = categories.reduce((s, c) => s + (c.count || 0), 0);
       const uncategorised = entryCount - categorised;
-      if (uncategorised > 0) {
-        const segLen = (uncategorised / entryCount) * circ;
-        donutArcs += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#efebf5" stroke-width="${sw}"
-          stroke-dasharray="${segLen} ${circ - segLen}"
-          stroke-dashoffset="${circ - offset}"
-          transform="rotate(-90 ${cx} ${cy})"/>`;
-      }
+      if (uncategorised > 0) segments.push({ label: 'Uncategorised', value: uncategorised, color: '#efebf5' });
     }
 
-    const centerText = isEmpty
-      ? `<text x="${cx}" y="${cy - 6}" text-anchor="middle" font-size="11" fill="#9b94a8">No</text>
-         <text x="${cx}" y="${cy + 9}" text-anchor="middle" font-size="11" fill="#9b94a8">entries</text>`
-      : `<text x="${cx}" y="${cy - 4}" text-anchor="middle" font-size="22" font-weight="800" fill="#1c1626">${entryCount}</text>
-         <text x="${cx}" y="${cy + 13}" text-anchor="middle" font-size="10" fill="#9b94a8">entries</text>`;
+    const donutMarkup = donutSvg(segments, {
+      size: 120,
+      strokeWidth: 14,
+      radius: 46,
+      centerTop: isEmpty ? '' : String(entryCount),
+      centerBottom: isEmpty ? '' : 'entries',
+    });
+    // "No entries" needs two stacked lines that donutSvg's single-line
+    // centerBottom can't express — swap in the two-line version for that case.
+    const donutInner = isEmpty
+      ? donutMarkup.replace(
+          /<\/svg>$/,
+          `<text x="60" y="54" text-anchor="middle" font-size="11" fill="#9b94a8">No</text><text x="60" y="69" text-anchor="middle" font-size="11" fill="#9b94a8">entries</text></svg>`,
+        )
+      : donutMarkup;
 
     const legendRows = hasCategories
       ? categories.map((cat, i) => {
@@ -442,10 +430,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       ${sectionLabel('Entries by Category', 14)}
       <div class="donut-layout">
         <div class="donut-chart">
-          <svg viewBox="0 0 120 120" style="width:100%;height:auto;" aria-hidden="true">
-            ${donutArcs}
-            ${centerText}
-          </svg>
+          ${donutInner}
         </div>
         <div class="donut-legend">${legendRows}</div>
       </div>`;
@@ -568,62 +553,14 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   }
 
   function buildTrendSvg(days) {
-    const values  = days.map(d => trendDayValue(d));
-    const maxVal  = Math.max(...values, 1);
-    // Wide viewBox keeps text small as the SVG scales up on large screens
-    const W = 420, H = 125;
-    const padL = 28, padR = 6, padT = 16, padB = 18;
-    const chartW = W - padL - padR;
-    const chartH = H - padT - padB;
-    const slotW  = chartW / 5;
-    let svg = '';
-
-    // Horizontal gridlines
-    [0.33, 0.66, 1].forEach(frac => {
-      const y   = padT + chartH - frac * chartH;
-      const val = frac * maxVal;
-      const lbl = chartMetric === 'entries' ? Math.round(val)
-                : (val >= 10 ? Math.round(val) : val.toFixed(1));
-      svg += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W - padR}" y2="${y.toFixed(1)}" stroke="#f0eefa" stroke-width="1"/>`;
-      svg += `<text x="${padL - 4}" y="${(y + 3).toFixed(1)}" text-anchor="end" font-size="7" fill="#c4bed0">${lbl}</text>`;
-    });
-
-    if (chartMode === 'bar') {
-      const barW = slotW * 0.48;
-      days.forEach((day, i) => {
-        const val     = trendDayValue(day);
-        const cx      = padL + i * slotW + slotW / 2;
-        const barH    = val > 0 ? Math.max(3, (val / maxVal) * chartH) : 0;
-        const y       = padT + chartH - barH;
-        const isToday = i === 6;
-        const color   = isToday ? '#1ba89a' : '#b8e4e0';
-        if (val > 0) {
-          svg += `<rect x="${(cx - barW / 2).toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${barH.toFixed(1)}" rx="2.5" fill="${color}"/>`;
-          svg += `<text x="${cx.toFixed(1)}" y="${(y - 2.5).toFixed(1)}" text-anchor="middle" font-size="7.5" font-weight="700" fill="${isToday ? '#1ba89a' : '#6f6880'}">${trendFmtVal(val)}</text>`;
-        } else {
-          svg += `<rect x="${(cx - barW / 2).toFixed(1)}" y="${(padT + chartH - 2).toFixed(1)}" width="${barW.toFixed(1)}" height="2" rx="1" fill="#efebf5"/>`;
-        }
-        svg += `<text x="${cx.toFixed(1)}" y="${(H - 4).toFixed(1)}" text-anchor="middle" font-size="7.5" fill="${isToday ? '#1ba89a' : '#9b94a8'}" font-weight="${isToday ? '700' : '400'}">${day.shortLabel}</text>`;
-      });
-    } else {
-      const pts = days.map((day, i) => ({
-        x: padL + i * slotW + slotW / 2,
-        y: padT + chartH - (trendDayValue(day) / maxVal) * chartH,
-        val: trendDayValue(day),
-      }));
-      svg += `<defs><linearGradient id="tg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1ba89a" stop-opacity="0.15"/><stop offset="100%" stop-color="#1ba89a" stop-opacity="0.01"/></linearGradient></defs>`;
-      const bl = padT + chartH;
-      svg += `<path d="M${pts[0].x.toFixed(1)},${bl} ${pts.map(p => `L${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')} L${pts[pts.length - 1].x.toFixed(1)},${bl} Z" fill="url(#tg)"/>`;
-      svg += `<polyline points="${pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')}" fill="none" stroke="#1ba89a" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>`;
-      pts.forEach((p, i) => {
-        const isToday = i === 6;
-        svg += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${isToday ? 3.5 : 2.5}" fill="${isToday ? '#1ba89a' : '#fff'}" stroke="#1ba89a" stroke-width="1.5"/>`;
-        if (p.val > 0) svg += `<text x="${p.x.toFixed(1)}" y="${(p.y - 5.5).toFixed(1)}" text-anchor="middle" font-size="7.5" font-weight="700" fill="${isToday ? '#1ba89a' : '#6f6880'}">${trendFmtVal(p.val)}</text>`;
-        svg += `<text x="${p.x.toFixed(1)}" y="${(H - 4).toFixed(1)}" text-anchor="middle" font-size="7.5" fill="${isToday ? '#1ba89a' : '#9b94a8'}" font-weight="${isToday ? '700' : '400'}">${days[i].shortLabel}</text>`;
-      });
-    }
-
-    return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;" aria-hidden="true">${svg}</svg>`;
+    // highlightIndex is pinned at 6 to preserve this page's existing visual
+    // behavior exactly (the 5-day trend array has no index 6, so "today" was
+    // never actually highlighted here before this extraction — not fixing
+    // that as part of a pure refactor).
+    return barLineSvg(
+      days.map(d => ({ label: d.shortLabel, value: trendDayValue(d) })),
+      { mode: chartMode, formatValue: trendFmtVal, highlightIndex: 6 },
+    );
   }
 
   function renderRecentActivity() {

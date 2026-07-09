@@ -1,0 +1,149 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Shows" activePage="shows">
+
+  <div id="state-loading" class="flex items-center justify-center h-64">
+    <div class="w-8 h-8 border-[3px] border-coral/20 border-t-coral rounded-full animate-spin"></div>
+  </div>
+
+  <div id="state-content" style="display:none">
+
+    <div class="mb-[18px]">
+      <h1 class="text-[22px] font-extrabold text-[#10233f] m-0 mb-[3px]">Shows</h1>
+      <p class="text-[13.5px] text-[#5b6b7c] m-0">Search and moderate every show on the platform.</p>
+    </div>
+
+    <div class="bg-white rounded-[14px] border border-[#e6eaee] p-4 flex flex-wrap gap-3 items-end">
+      <div class="flex-1 min-w-[180px]">
+        <label class="block text-[11px] font-semibold text-[#8492a3] mb-1">Search</label>
+        <input id="f-search" type="text" placeholder="Show title…" class="text-[13px] border border-[#e6eaee] rounded-[10px] px-2.5 py-2 bg-white w-full" />
+      </div>
+      <div>
+        <label class="block text-[11px] font-semibold text-[#8492a3] mb-1">Status</label>
+        <select id="f-status" class="text-[13px] border border-[#e6eaee] rounded-[10px] px-2.5 py-2 bg-white">
+          <option value="">Any status</option>
+          <option value="draft">Draft</option>
+          <option value="published">Published</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-[11px] font-semibold text-[#8492a3] mb-1">Organisation</label>
+        <select id="f-org" class="text-[13px] border border-[#e6eaee] rounded-[10px] px-2.5 py-2 bg-white min-w-[160px]">
+          <option value="">All organisations</option>
+        </select>
+      </div>
+      <button id="btn-apply-filters" class="text-[13px] font-bold text-white bg-[#ff6b54] px-4 py-2 rounded-[10px] hover:opacity-90 transition-opacity">Apply</button>
+    </div>
+
+    <div class="bg-white rounded-[14px] border border-[#e6eaee] overflow-hidden mt-4">
+      <div class="overflow-x-auto">
+        <div class="min-w-[720px] grid grid-cols-[2fr_1.4fr_0.8fr_1fr_1fr_1fr] px-[18px] py-[11px] bg-[#f7f9fa] text-[11px] font-bold text-[#8492a3] uppercase tracking-wide">
+          <div>Title</div><div>Organisation</div><div>Entries</div><div>Revenue</div><div>Status</div><div>Flags</div>
+        </div>
+        <div id="shows-tbody" class="min-w-[720px]"></div>
+      </div>
+      <div id="shows-pagination" class="flex items-center justify-between px-[18px] py-3 text-[12.5px] text-[#5b6b7c] border-t border-[#f1f3f5]"></div>
+    </div>
+
+  </div>
+
+</AdminLayout>
+
+<script>
+  import { getAdminAuth, callAdminApi } from '../../lib/adminAuth.js';
+  import { supabase } from '../../lib/supabase.js';
+  import { esc, statusPillV2 } from '../../lib/format.js';
+
+  const raw = import.meta.env.BASE_URL;
+  const base = raw.endsWith('/') ? raw : raw + '/';
+
+  let page = 1;
+  const PAGE_SIZE = 25;
+
+  function currentFilters() {
+    const f = {};
+    const search = document.getElementById('f-search').value.trim();
+    const status = document.getElementById('f-status').value;
+    const organisation_id = document.getElementById('f-org').value;
+    if (search) f.search = search;
+    if (status) f.status = status;
+    if (organisation_id) f.organisation_id = organisation_id;
+    return f;
+  }
+
+  async function loadShows() {
+    const filters = { ...currentFilters(), page, page_size: PAGE_SIZE };
+    const result = await callAdminApi('shows-list', filters);
+    const tbody = document.getElementById('shows-tbody');
+    if (!result.rows.length) {
+      tbody.innerHTML = `<div class="py-8 text-center text-[13.5px] text-[#8492a3]">No shows match these filters.</div>`;
+    } else {
+      tbody.innerHTML = result.rows.map(s => `
+        <div class="grid grid-cols-[2fr_1.4fr_0.8fr_1fr_1fr_1fr] px-[18px] py-[13px] border-t border-[#f1f3f5] text-[13.5px] items-center cursor-pointer hover:bg-[#f7f9fa]" data-id="${s.id}">
+          <div class="font-bold text-[#10233f]">${esc(s.title)}</div>
+          <div class="text-[#48586a]">${esc(s.host_org || '—')}</div>
+          <div>${s.entry_count}</div>
+          <div class="font-bold text-[#10233f]">${esc(s.currency)} ${Number(s.revenue).toFixed(2)}</div>
+          <div>${statusPillV2(s.status)}</div>
+          <div class="flex gap-[5px] flex-wrap">${[
+            s.featured ? `<span class="inline-flex items-center px-2 py-[3px] rounded-full text-[11px] font-bold" style="background:#fef3d6;color:#b9770e;">★ Featured</span>` : '',
+            s.suspended_at ? `<span class="inline-flex items-center px-2 py-[3px] rounded-full text-[11px] font-bold" style="background:#fce8e6;color:#c53d3d;">Suspended</span>` : '',
+          ].filter(Boolean).join('')}</div>
+        </div>`).join('');
+      tbody.querySelectorAll('[data-id]').forEach(row => {
+        row.addEventListener('click', () => { window.location.href = `${base}admin/show?id=${row.dataset.id}`; });
+      });
+    }
+    const totalPages = Math.max(1, Math.ceil(result.total / PAGE_SIZE));
+    document.getElementById('shows-pagination').innerHTML = `
+      <span>Page ${page} of ${totalPages} · ${result.total} show${result.total === 1 ? '' : 's'}</span>
+      <div class="flex gap-2">
+        <button id="btn-prev-page" ${page <= 1 ? 'disabled' : ''} class="px-3 py-1.5 border border-[#e6eaee] rounded-[10px] text-[12px] font-semibold ${page <= 1 ? 'opacity-40' : 'hover:bg-[#f7f9fa]'}">Prev</button>
+        <button id="btn-next-page" ${page >= totalPages ? 'disabled' : ''} class="px-3 py-1.5 border border-[#e6eaee] rounded-[10px] text-[12px] font-semibold ${page >= totalPages ? 'opacity-40' : 'hover:bg-[#f7f9fa]'}">Next</button>
+      </div>`;
+    document.getElementById('btn-prev-page')?.addEventListener('click', () => { if (page > 1) { page--; loadShows(); } });
+    document.getElementById('btn-next-page')?.addEventListener('click', () => { if (page < totalPages) { page++; loadShows(); } });
+  }
+
+  async function populateFilterOptions() {
+    const { organisations } = await callAdminApi('filter-options');
+    const orgSel = document.getElementById('f-org');
+    for (const o of organisations || []) orgSel.insertAdjacentHTML('beforeend', `<option value="${o.id}">${esc(o.name)}</option>`);
+  }
+
+  const auth = await getAdminAuth();
+  if (auth.session && auth.profile?.roles?.includes('admin')) {
+    const { session, profile } = auth;
+    const name = profile?.display_name || session.user.email?.split('@')[0] || 'Admin';
+
+    const avatarEl = document.getElementById('sidebar-avatar');
+    const nameEl = document.getElementById('sidebar-username');
+    if (avatarEl) {
+      if (profile?.avatar_url) {
+        avatarEl.innerHTML = `<img src="${profile.avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+      } else {
+        avatarEl.textContent = name.charAt(0).toUpperCase();
+      }
+    }
+    if (nameEl) nameEl.textContent = name;
+
+    document.getElementById('sidebar-signout')?.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = auth.base + 'login';
+    });
+
+    document.getElementById('btn-apply-filters')?.addEventListener('click', () => { page = 1; loadShows(); });
+
+    try {
+      await populateFilterOptions();
+      await loadShows();
+      document.getElementById('state-loading').style.display = 'none';
+      document.getElementById('state-content').style.display = 'block';
+    } catch (err) {
+      document.getElementById('state-loading').innerHTML = `<p class="text-[#6f6880] text-center">Failed to load: ${esc(err.message)}</p>`;
+    }
+  }
+</script>

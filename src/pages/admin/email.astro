@@ -1,0 +1,125 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Email Monitoring" activePage="email">
+
+  <button slot="actions" id="btn-recheck"
+    class="text-[13.5px] font-bold text-white bg-coral px-4 py-2.5 rounded-btn hover:opacity-90 transition-opacity">
+    Recheck Now
+  </button>
+
+  <div id="state-loading" class="flex items-center justify-center h-64">
+    <div class="w-8 h-8 border-[3px] border-coral/20 border-t-coral rounded-full animate-spin"></div>
+  </div>
+
+  <div id="state-error" style="display:none" class="bg-white rounded-card border border-[#b8e4e0] p-6 text-center text-[#6f6880]"></div>
+
+  <div id="state-content" style="display:none">
+
+    <div class="grid gap-3 items-start" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr));">
+      <div class="bg-white rounded-card border border-[#b8e4e0] px-4 py-3.5">
+        <p class="text-[11px] font-semibold text-[#9b94a8] uppercase tracking-wide mb-2">Daily Quota (Resend free plan)</p>
+        <div id="daily-quota"></div>
+      </div>
+      <div class="bg-white rounded-card border border-[#b8e4e0] px-4 py-3.5">
+        <p class="text-[11px] font-semibold text-[#9b94a8] uppercase tracking-wide mb-2">Monthly Quota (Resend free plan)</p>
+        <div id="monthly-quota"></div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-card border border-[#b8e4e0] p-5 mt-4">
+      <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#9b94a8;margin-bottom:4px;">Recent Delivery Sample</p>
+      <p class="text-[12px] text-[#9b94a8] mb-4">Based on the last 100 emails sent — not a full historical rate, since no local log of every email ever sent is kept.</p>
+      <div id="sample-content"></div>
+    </div>
+
+    <p id="checked-at" class="text-[11px] text-[#9b94a8] mt-4"></p>
+
+  </div>
+
+</AdminLayout>
+
+<script>
+  import { getAdminAuth, callAdminApi } from '../../lib/adminAuth.js';
+  import { supabase } from '../../lib/supabase.js';
+  import { esc, bigValue, usageBar } from '../../lib/format.js';
+
+  function notReported(caption) {
+    return `<p class="text-[13px] text-[#9b94a8]">No data yet</p><p class="text-[10.5px] text-[#9b94a8] mt-1">${esc(caption)}</p>`;
+  }
+
+  async function loadEmail() {
+    document.getElementById('state-loading').style.display = 'flex';
+    document.getElementById('state-content').style.display = 'none';
+    document.getElementById('state-error').style.display = 'none';
+    try {
+      const usage = await callAdminApi('email-usage');
+
+      // Resend only attaches the quota headers to a real send response, not
+      // to any GET request — so these figures are "as of the last email
+      // actually sent by the app," not a live-on-page-load probe.
+      const observedCaption = usage.quota_observed_at
+        ? `As of the last email sent, ${new Date(usage.quota_observed_at).toLocaleString()}.`
+        : '';
+
+      document.getElementById('daily-quota').innerHTML = usage.daily_quota_used != null
+        ? usageBar(usage.daily_quota_used, usage.daily_quota_limit) + `<p class="text-[10.5px] text-[#9b94a8] mt-1.5">${esc(observedCaption)} Includes received emails too, if any — Resend counts both toward this quota.</p>`
+        : notReported('No email has been sent since this tracking was added — it will populate after the next one goes out.');
+
+      document.getElementById('monthly-quota').innerHTML = usage.monthly_quota_used != null
+        ? usageBar(usage.monthly_quota_used, usage.monthly_quota_limit) + (observedCaption ? `<p class="text-[10.5px] text-[#9b94a8] mt-1.5">${esc(observedCaption)}</p>` : '')
+        : notReported('No email has been sent since this tracking was added.');
+
+      const s = usage.recent_sample;
+      if (!s || !s.total) {
+        document.getElementById('sample-content').innerHTML = `<p class="text-[13px] text-[#9b94a8]">No recent emails found.</p>`;
+      } else {
+        document.getElementById('sample-content').innerHTML = `
+          <div class="grid gap-3" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr));">
+            <div>${bigValue(s.delivery_rate_pct != null ? s.delivery_rate_pct.toFixed(1) + '%' : '—', 'text-[22px]')}<p class="text-[11px] text-[#9b94a8] mt-1">Delivery rate</p></div>
+            <div>${bigValue(s.bounce_rate_pct != null ? s.bounce_rate_pct.toFixed(1) + '%' : '—', 'text-[22px]')}<p class="text-[11px] text-[#9b94a8] mt-1">Bounce rate</p></div>
+            <div>${bigValue(String(s.total), 'text-[22px]')}<p class="text-[11px] text-[#9b94a8] mt-1">Sample size</p></div>
+          </div>
+          <div class="mt-4 pt-4 border-t border-[#f5f3fa] flex flex-wrap gap-2">
+            ${Object.entries(s.tally).map(([status, count]) => `
+              <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:#f5f3fa;color:#4a4357;">${esc(status)} <b>${count}</b></span>
+            `).join('')}
+          </div>`;
+      }
+
+      document.getElementById('checked-at').textContent = `Last checked: ${new Date(usage.checked_at).toLocaleString()}`;
+      document.getElementById('state-content').style.display = 'block';
+    } catch (err) {
+      document.getElementById('state-error').textContent = 'Failed to load email usage: ' + err.message;
+      document.getElementById('state-error').style.display = 'block';
+    } finally {
+      document.getElementById('state-loading').style.display = 'none';
+    }
+  }
+
+  const auth = await getAdminAuth();
+  if (auth.session && auth.profile?.roles?.includes('admin')) {
+    const { session, profile } = auth;
+    const name = profile?.display_name || session.user.email?.split('@')[0] || 'Admin';
+
+    const avatarEl = document.getElementById('sidebar-avatar');
+    const nameEl = document.getElementById('sidebar-username');
+    if (avatarEl) {
+      if (profile?.avatar_url) {
+        avatarEl.innerHTML = `<img src="${profile.avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+      } else {
+        avatarEl.textContent = name.charAt(0).toUpperCase();
+      }
+    }
+    if (nameEl) nameEl.textContent = name;
+
+    document.getElementById('sidebar-signout')?.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = auth.base + 'login';
+    });
+
+    document.getElementById('btn-recheck')?.addEventListener('click', loadEmail);
+    await loadEmail();
+  }
+</script>

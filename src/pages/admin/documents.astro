@@ -1,0 +1,176 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Documents" activePage="documents">
+
+  <div id="state-loading" class="flex items-center justify-center h-64">
+    <div class="w-8 h-8 border-[3px] border-coral/20 border-t-coral rounded-full animate-spin"></div>
+  </div>
+
+  <div id="state-error" style="display:none" class="bg-white rounded-card border border-[#b8e4e0] p-6 text-center text-[#6f6880]"></div>
+
+  <div id="state-content" style="display:none">
+
+    <div class="bg-white rounded-card border border-[#b8e4e0] p-5">
+      <div class="flex items-center justify-between mb-1">
+        <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#9b94a8;">Settlement Statements</p>
+        <button id="btn-export-settlements" class="text-[12.5px] font-bold text-brand hover:underline">Export CSV</button>
+      </div>
+      <p class="text-[12px] text-[#9b94a8] mb-4">Payout receipts are the settlement PDF below — no separate receipt document exists.</p>
+      <div class="overflow-x-auto"><table class="w-full text-[13px]"><thead>
+        <tr class="text-left text-[11px] text-[#9b94a8] uppercase tracking-wide border-b border-[#f5f3fa]">
+          <th class="pb-2 pr-3">Show</th><th class="pb-2 pr-3">Organisation</th><th class="pb-2 pr-3">Net Owed</th>
+          <th class="pb-2 pr-3">Status</th><th class="pb-2 pr-3">Generated</th><th class="pb-2 pr-3"></th>
+        </tr>
+      </thead><tbody id="settlements-tbody"></tbody></table></div>
+    </div>
+
+    <div class="bg-white rounded-card border border-[#b8e4e0] p-5 mt-4">
+      <div class="flex items-center justify-between mb-4">
+        <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#9b94a8;">Certificates</p>
+        <button id="btn-export-certs" class="text-[12.5px] font-bold text-brand hover:underline">Export CSV</button>
+      </div>
+      <div class="overflow-x-auto"><table class="w-full text-[13px]"><thead>
+        <tr class="text-left text-[11px] text-[#9b94a8] uppercase tracking-wide border-b border-[#f5f3fa]">
+          <th class="pb-2 pr-3">Show</th><th class="pb-2 pr-3">Exhibitor</th><th class="pb-2 pr-3">Animal</th>
+          <th class="pb-2 pr-3">Sent</th><th class="pb-2 pr-3"></th>
+        </tr>
+      </thead><tbody id="certs-tbody"></tbody></table></div>
+      <div id="certs-pagination" class="flex items-center justify-between mt-4 text-[12.5px] text-[#6f6880]"></div>
+    </div>
+
+  </div>
+
+</AdminLayout>
+
+<script>
+  import { getAdminAuth, callAdminApi } from '../../lib/adminAuth.js';
+  import { supabase } from '../../lib/supabase.js';
+  import { esc, statusPill } from '../../lib/format.js';
+  import { downloadCsv } from '../../lib/csv.js';
+
+  let showsById = {};
+  let settlementsCache = [];
+  let certsCache = [];
+  let certsPage = 1;
+  const CERTS_PAGE_SIZE = 25;
+
+  async function loadSettlements() {
+    const { data, error } = await supabase.from('settlements').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    settlementsCache = data || [];
+
+    const tbody = document.getElementById('settlements-tbody');
+    if (!settlementsCache.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="py-4 text-center text-[#9b94a8]">No settlements generated yet.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = settlementsCache.map(s => {
+      const show = showsById[s.show_id];
+      return `
+        <tr class="border-b border-[#f5f3fa]">
+          <td class="py-2 pr-3 font-semibold">${esc(show?.title || s.show_id)}</td>
+          <td class="py-2 pr-3 text-[#6f6880]">${esc(show?.host_org || '—')}</td>
+          <td class="py-2 pr-3">${esc(s.currency)} ${Number(s.net_amount_owed).toFixed(2)}</td>
+          <td class="py-2 pr-3">${statusPill(s.status)}</td>
+          <td class="py-2 pr-3 text-[#9b94a8]">${new Date(s.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+          <td class="py-2 pr-3">${s.pdf_url ? `<a href="${s.pdf_url}" target="_blank" class="text-brand font-semibold hover:underline">PDF</a>` : '—'}</td>
+        </tr>`;
+    }).join('');
+  }
+
+  async function loadCerts() {
+    const result = await callAdminApi('documents-list', { page: certsPage, page_size: CERTS_PAGE_SIZE });
+    certsCache = result.rows;
+    const tbody = document.getElementById('certs-tbody');
+    if (!certsCache.length) {
+      tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-[#9b94a8]">No certificates sent yet.</td></tr>`;
+    } else {
+      tbody.innerHTML = certsCache.map(c => `
+        <tr class="border-b border-[#f5f3fa]">
+          <td class="py-2 pr-3 font-semibold">${esc(c.shows?.title || '—')}</td>
+          <td class="py-2 pr-3">${esc(c.exhibitor_name || '—')}</td>
+          <td class="py-2 pr-3">${esc(c.animal_name)}</td>
+          <td class="py-2 pr-3 text-[#9b94a8]">${c.cert_email_sent_at ? new Date(c.cert_email_sent_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</td>
+          <td class="py-2 pr-3"><a href="${c.cert_pdf_url}" target="_blank" class="text-brand font-semibold hover:underline">PDF</a></td>
+        </tr>`).join('');
+    }
+    const totalPages = Math.max(1, Math.ceil(result.total / CERTS_PAGE_SIZE));
+    document.getElementById('certs-pagination').innerHTML = `
+      <span>Page ${certsPage} of ${totalPages} · ${result.total} certificate${result.total === 1 ? '' : 's'}</span>
+      <div class="flex gap-2">
+        <button id="btn-prev-certs" ${certsPage <= 1 ? 'disabled' : ''} class="px-3 py-1.5 border border-[#b8e4e0] rounded-btn-sm text-[12px] font-semibold ${certsPage <= 1 ? 'opacity-40' : 'hover:bg-[#f0fafa]'}">Prev</button>
+        <button id="btn-next-certs" ${certsPage >= totalPages ? 'disabled' : ''} class="px-3 py-1.5 border border-[#b8e4e0] rounded-btn-sm text-[12px] font-semibold ${certsPage >= totalPages ? 'opacity-40' : 'hover:bg-[#f0fafa]'}">Next</button>
+      </div>`;
+    document.getElementById('btn-prev-certs')?.addEventListener('click', () => { if (certsPage > 1) { certsPage--; loadCerts(); } });
+    document.getElementById('btn-next-certs')?.addEventListener('click', () => { if (certsPage < totalPages) { certsPage++; loadCerts(); } });
+  }
+
+  const auth = await getAdminAuth();
+  if (auth.session && auth.profile?.roles?.includes('admin')) {
+    const { session, profile } = auth;
+    const name = profile?.display_name || session.user.email?.split('@')[0] || 'Admin';
+
+    const avatarEl = document.getElementById('sidebar-avatar');
+    const nameEl = document.getElementById('sidebar-username');
+    if (avatarEl) {
+      if (profile?.avatar_url) {
+        avatarEl.innerHTML = `<img src="${profile.avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+      } else {
+        avatarEl.textContent = name.charAt(0).toUpperCase();
+      }
+    }
+    if (nameEl) nameEl.textContent = name;
+
+    document.getElementById('sidebar-signout')?.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = auth.base + 'login';
+    });
+
+    document.getElementById('btn-export-settlements')?.addEventListener('click', () => {
+      downloadCsv('settlements', settlementsCache, [
+        { label: 'Show', value: r => showsById[r.show_id]?.title || r.show_id },
+        { label: 'Organisation', value: r => showsById[r.show_id]?.host_org || '' },
+        { label: 'Currency', value: r => r.currency },
+        { label: 'Gross Entry Fees', value: r => r.gross_entry_fees },
+        { label: 'Platform Fee', value: r => r.platform_fee },
+        { label: 'Stripe Fees', value: r => r.stripe_fees },
+        { label: 'Refunds', value: r => r.refunds },
+        { label: 'Net Amount Owed', value: r => r.net_amount_owed },
+        { label: 'Amount Paid', value: r => r.amount_paid },
+        { label: 'Status', value: r => r.status },
+        { label: 'Generated', value: r => r.created_at },
+      ]);
+    });
+
+    document.getElementById('btn-export-certs')?.addEventListener('click', async (e) => {
+      e.target.disabled = true; e.target.textContent = 'Preparing…';
+      try {
+        const result = await callAdminApi('documents-list', { page: 1, page_size: 5000 });
+        downloadCsv('certificates', result.rows, [
+          { label: 'Show', value: r => r.shows?.title || '' },
+          { label: 'Exhibitor', value: r => r.exhibitor_name || '' },
+          { label: 'Email', value: r => r.exhibitor_email || '' },
+          { label: 'Animal', value: r => r.animal_name },
+          { label: 'Sent At', value: r => r.cert_email_sent_at || '' },
+          { label: 'PDF URL', value: r => r.cert_pdf_url || '' },
+        ]);
+      } catch (err) {
+        alert('Failed to export: ' + err.message);
+      } finally {
+        e.target.disabled = false; e.target.textContent = 'Export CSV';
+      }
+    });
+
+    try {
+      const { shows } = await callAdminApi('filter-options');
+      showsById = Object.fromEntries((shows || []).map(s => [s.id, s]));
+      await Promise.all([loadSettlements(), loadCerts()]);
+      document.getElementById('state-loading').style.display = 'none';
+      document.getElementById('state-content').style.display = 'block';
+    } catch (err) {
+      document.getElementById('state-loading').innerHTML = `<p class="text-[#6f6880] text-center">Failed to load: ${esc(err.message)}</p>`;
+    }
+  }
+</script>

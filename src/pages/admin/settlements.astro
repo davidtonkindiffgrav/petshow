@@ -1,0 +1,175 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Settlements" activePage="settlements">
+
+  <div id="state-loading" class="flex items-center justify-center h-64">
+    <div class="w-8 h-8 border-[3px] border-coral/20 border-t-coral rounded-full animate-spin"></div>
+  </div>
+
+  <div id="state-content" style="display:none">
+    <div class="flex items-center justify-between flex-wrap gap-2.5 mb-[18px]">
+      <div>
+        <h1 class="text-[22px] font-extrabold text-[#10233f] m-0 mb-[3px]">Settlements</h1>
+        <p class="text-[13.5px] text-[#5b6b7c] m-0">What's owed to each organiser, and its lifecycle.</p>
+      </div>
+      <div class="flex gap-2.5">
+        <button id="btn-export-settlements" class="text-[13px] font-bold text-[#48586a] bg-white border border-[#e6eaee] px-[15px] py-[9px] rounded-[10px] hover:bg-[#f7f9fa]">Export CSV</button>
+        <button id="btn-generate" class="text-[13px] font-bold text-white bg-[#ff6b54] px-4 py-[9px] rounded-[10px] hover:opacity-90 transition-opacity">+ Generate Settlement</button>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-[14px] border border-[#e6eaee] overflow-hidden">
+      <div class="overflow-x-auto">
+        <div class="min-w-[760px] grid grid-cols-[2fr_1.4fr_1fr_1fr_1fr_90px] px-[18px] py-[11px] bg-[#f7f9fa] text-[11px] font-bold text-[#8492a3] uppercase tracking-wide">
+          <div>Show</div><div>Organisation</div><div>Net Owed</div><div>Amount Paid</div><div>Status</div><div></div>
+        </div>
+        <div id="settlements-tbody" class="min-w-[760px]"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generate Settlement modal -->
+  <div id="generate-modal" style="display:none" class="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-[14px] max-w-[440px] w-full p-6 max-h-[80vh] overflow-y-auto">
+      <h2 class="text-[17px] font-extrabold text-[#10233f] mb-1">Generate Settlement</h2>
+      <p class="text-[13px] text-[#5b6b7c] mb-4">Choose a show to generate (or regenerate) a draft settlement for.</p>
+      <div id="generate-show-list" class="space-y-1.5 max-h-[320px] overflow-y-auto"></div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button id="btn-cancel-generate" class="text-[13.5px] font-bold text-[#48586a] border border-[#e6eaee] px-4 py-2.5 rounded-[10px] hover:bg-[#f7f9fa] transition-colors">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+</AdminLayout>
+
+<script>
+  import { getAdminAuth, callAdminApi } from '../../lib/adminAuth.js';
+  import { supabase } from '../../lib/supabase.js';
+  import { downloadCsv } from '../../lib/csv.js';
+  import { statusPillV2 } from '../../lib/format.js';
+
+  const raw = import.meta.env.BASE_URL;
+  const base = raw.endsWith('/') ? raw : raw + '/';
+
+  function esc(s) {
+    return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  let showsById = {};
+  let settlementsCache = [];
+
+  async function loadSettlements() {
+    // settlements has an admin RLS read policy, safe to query directly.
+    const { data: settlements, error } = await supabase.from('settlements').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    settlementsCache = settlements;
+
+    const tbody = document.getElementById('settlements-tbody');
+    if (!settlements.length) {
+      tbody.innerHTML = `<div class="py-8 text-center text-[13.5px] text-[#8492a3]">No settlements generated yet.</div>`;
+      return;
+    }
+    tbody.innerHTML = settlements.map(s => {
+      const show = showsById[s.show_id];
+      return `
+        <div class="grid grid-cols-[2fr_1.4fr_1fr_1fr_1fr_90px] px-[18px] py-[13px] border-t border-[#f1f3f5] text-[13.5px] items-center cursor-pointer hover:bg-[#f7f9fa]" data-id="${s.id}">
+          <div class="font-bold text-[#10233f]">${esc(show?.title || s.show_id)}</div>
+          <div class="text-[#48586a]">${esc(show?.host_org || '—')}</div>
+          <div class="font-bold text-[#10233f]">${esc(s.currency)} ${Number(s.net_amount_owed).toFixed(2)}</div>
+          <div class="text-[#48586a]">${esc(s.currency)} ${Number(s.amount_paid).toFixed(2)}</div>
+          <div>${statusPillV2(s.status)}</div>
+          <div class="text-[#ff6b54] font-bold text-[12.5px]">Open →</div>
+        </div>`;
+    }).join('');
+    tbody.querySelectorAll('[data-id]').forEach(row => {
+      row.addEventListener('click', () => { window.location.href = `${base}admin/settlement?id=${row.dataset.id}`; });
+    });
+  }
+
+  async function openGenerateModal() {
+    const { data: existing } = await supabase.from('settlements').select('show_id, status').neq('status', 'cancelled');
+    const paidOrPending = new Set((existing || []).filter(s => s.status !== 'draft').map(s => s.show_id));
+
+    const eligible = Object.values(showsById).filter(s => !paidOrPending.has(s.id));
+    const list = document.getElementById('generate-show-list');
+    if (!eligible.length) {
+      list.innerHTML = `<p class="text-[13px] text-[#8492a3] py-4 text-center">No shows are eligible right now — every show either has no confirmed entries yet or already has a finalised settlement.</p>`;
+    } else {
+      list.innerHTML = eligible.map(s => `
+        <button data-show-id="${s.id}" class="generate-pick w-full text-left px-3 py-2.5 rounded-[10px] border border-[#e6eaee] hover:bg-[#f7f9fa] transition-colors">
+          <p class="text-[13.5px] font-bold text-[#10233f]">${esc(s.title)}</p>
+          <p class="text-[11.5px] text-[#8492a3]">${esc(s.host_org || '')}</p>
+        </button>
+      `).join('');
+      list.querySelectorAll('.generate-pick').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          btn.disabled = true;
+          btn.textContent = 'Generating…';
+          try {
+            const result = await callAdminApi('generate-settlement', { show_id: btn.dataset.showId });
+            window.location.href = `${base}admin/settlement?id=${result.settlement_id}`;
+          } catch (err) {
+            alert('Failed to generate settlement: ' + err.message);
+            btn.disabled = false;
+          }
+        });
+      });
+    }
+    document.getElementById('generate-modal').style.display = 'flex';
+  }
+
+  const auth = await getAdminAuth();
+  if (auth.session && auth.profile?.roles?.includes('admin')) {
+    const { session, profile } = auth;
+    const name = profile?.display_name || session.user.email?.split('@')[0] || 'Admin';
+
+    const avatarEl = document.getElementById('sidebar-avatar');
+    const nameEl = document.getElementById('sidebar-username');
+    if (avatarEl) {
+      if (profile?.avatar_url) {
+        avatarEl.innerHTML = `<img src="${profile.avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+      } else {
+        avatarEl.textContent = name.charAt(0).toUpperCase();
+      }
+    }
+    if (nameEl) nameEl.textContent = name;
+
+    document.getElementById('sidebar-signout')?.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = auth.base + 'login';
+    });
+
+    document.getElementById('btn-generate')?.addEventListener('click', openGenerateModal);
+    document.getElementById('btn-cancel-generate')?.addEventListener('click', () => {
+      document.getElementById('generate-modal').style.display = 'none';
+    });
+
+    document.getElementById('btn-export-settlements')?.addEventListener('click', () => {
+      downloadCsv('settlements', settlementsCache, [
+        { label: 'Show', value: r => showsById[r.show_id]?.title || r.show_id },
+        { label: 'Organisation', value: r => showsById[r.show_id]?.host_org || '' },
+        { label: 'Currency', value: r => r.currency },
+        { label: 'Gross Entry Fees', value: r => r.gross_entry_fees },
+        { label: 'Platform Fee', value: r => r.platform_fee },
+        { label: 'Stripe Fees', value: r => r.stripe_fees },
+        { label: 'Refunds', value: r => r.refunds },
+        { label: 'Net Amount Owed', value: r => r.net_amount_owed },
+        { label: 'Amount Paid', value: r => r.amount_paid },
+        { label: 'Status', value: r => r.status },
+        { label: 'Generated', value: r => r.created_at },
+      ]);
+    });
+
+    try {
+      const { shows } = await callAdminApi('filter-options');
+      showsById = Object.fromEntries((shows || []).map(s => [s.id, s]));
+      await loadSettlements();
+      document.getElementById('state-loading').style.display = 'none';
+      document.getElementById('state-content').style.display = 'block';
+    } catch (err) {
+      document.getElementById('state-loading').innerHTML = `<p class="text-[#6f6880] text-center">Failed to load: ${esc(err.message)}</p>`;
+    }
+  }
+</script>
