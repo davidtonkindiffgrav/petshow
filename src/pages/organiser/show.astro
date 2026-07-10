@@ -854,7 +854,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     badge.style.color      = st.color;
 
     const sym     = CURRENCY_SYMBOLS[show.currency] || 'A$';
-    const feeText = show.entry_fee > 0 ? ` · ${sym}${show.entry_fee} entry fee` : ' · Fee not set';
+    const feeText = show.entry_fee > 0 ? ` · ${sym}${Number(show.entry_fee).toFixed(2)} entry fee` : ' · Fee not set';
     const dateText = show.show_date
       ? new Date(show.show_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
       : 'Date not set';
@@ -1197,7 +1197,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (show.entry_fee > 0) {
       setHeader('fundraising', '#22c55e', 'Configured', 'Fundraising & Fees', [
         ['Entry fee', feeText],
-        ['Goal',      show.fundraising_goal ? `${sym}${show.fundraising_goal}` : 'Not set'],
+        ['Goal',      show.fundraising_goal ? `${sym}${Number(show.fundraising_goal).toFixed(2)}` : 'Not set'],
         ['Currency',  show.currency || 'AUD'],
       ], 'Edit');
     } else {
@@ -2313,7 +2313,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (feeEl)  feeEl.textContent  = sym;
     const minFee = getMin(code);
     if (hintEl) hintEl.textContent = minFee != null
-      ? `Minimum ${sym}${minFee}`
+      ? `Minimum ${sym}${Number(minFee).toFixed(2)}`
       : 'Error — fee settings unavailable. Please refresh the page.';
     setFeeValue(getFeeValue());
   }

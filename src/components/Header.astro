@@ -22,13 +22,19 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
     <!-- Desktop actions -->
     <div class="hidden min-[900px]:flex items-center gap-3">
-      <a href={`${base}login`}
+      <div id="header-actions-logged-out" class="flex items-center gap-3">
+        <a href={`${base}login`}
+          class="text-[15px] font-bold text-brand border-[1.5px] border-[#b8e4e0] rounded-btn-sm px-[18px] py-[9px] hover:bg-brand-tint transition-colors">
+          Log In
+        </a>
+        <a href={`${base}signup`}
+          class="text-[15px] font-bold text-white bg-brand rounded-btn-sm px-5 py-[10px] shadow-hero-btn hover:bg-brand-dark transition-colors">
+          Sign Up
+        </a>
+      </div>
+      <a id="header-hub-link" href={`${base}participant`} style="display:none;"
         class="text-[15px] font-bold text-brand border-[1.5px] border-[#b8e4e0] rounded-btn-sm px-[18px] py-[9px] hover:bg-brand-tint transition-colors">
-        Log In
-      </a>
-      <a href={`${base}signup`}
-        class="text-[15px] font-bold text-white bg-brand rounded-btn-sm px-5 py-[10px] shadow-hero-btn hover:bg-brand-dark transition-colors">
-        Sign Up
+        My Show Hub
       </a>
     </div>
 
@@ -79,9 +85,12 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     {/* <a href={`${base}#hof`}     class="py-4 px-3 text-base font-semibold text-[#4a4357] rounded-lg hover:bg-brand-tint hover:text-brand transition-colors">Hall of Fame</a> */}
   </nav>
 
-  <div class="flex flex-col gap-3 px-4 pb-8 pt-2 border-t border-[#efebf5]">
+  <div id="mobile-actions-logged-out" class="flex flex-col gap-3 px-4 pb-8 pt-2 border-t border-[#efebf5]">
     <a href={`${base}login`} class="w-full text-center font-bold text-brand border-[1.5px] border-[#b8e4e0] rounded-btn py-3 hover:bg-brand-tint transition-colors">Log In</a>
     <a href={`${base}signup`} class="w-full text-center font-bold text-white bg-brand rounded-btn py-3 shadow-hero-btn hover:bg-brand-dark transition-colors">Sign Up</a>
+  </div>
+  <div id="mobile-hub-link-wrap" class="flex flex-col gap-3 px-4 pb-8 pt-2 border-t border-[#efebf5]" style="display:none;">
+    <a id="mobile-hub-link" href={`${base}participant`} class="w-full text-center font-bold text-brand border-[1.5px] border-[#b8e4e0] rounded-btn py-3 hover:bg-brand-tint transition-colors">My Show Hub</a>
   </div>
 </div>
 
@@ -114,6 +123,21 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   btn?.addEventListener('click', openNav);
   closeBtn?.addEventListener('click', closeNav);
   overlay?.addEventListener('click', closeNav);
+
+  // ── Logged-in state: swap Log In/Sign Up for a link back to the dashboard ──
+  (async () => {
+    const { supabase } = await import('../lib/supabase.js');
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const loggedOutDesktop = document.getElementById('header-actions-logged-out');
+    const hubLink          = document.getElementById('header-hub-link');
+    const loggedOutMobile  = document.getElementById('mobile-actions-logged-out');
+    const mobileHubWrap    = document.getElementById('mobile-hub-link-wrap');
+    if (loggedOutDesktop) loggedOutDesktop.style.display = 'none';
+    if (hubLink)          hubLink.style.display          = 'inline-flex';
+    if (loggedOutMobile)  loggedOutMobile.style.display  = 'none';
+    if (mobileHubWrap)    mobileHubWrap.style.display    = 'flex';
+  })();
 
   // Close nav when a link inside it is clicked (except events-trigger — that opens the panel)
   nav?.querySelectorAll('a:not(.events-trigger)').forEach(link => link.addEventListener('click', closeNav));

@@ -1605,8 +1605,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         </div>
         <div class="px-5">
           ${reviewRow('Currency', show.currency || 'AUD', 8)}
-          ${reviewRow('Entry Fee', show.entry_fee > 0 ? `${CURRENCY_SYMBOLS[show.currency] || show.currency}${show.entry_fee} (all-in — includes all fees)` : 'Not set', 8)}
-          ${reviewRow('Fundraising Goal', show.fundraising_goal > 0 ? `${CURRENCY_SYMBOLS[show.currency] || show.currency}${show.fundraising_goal}` : 'Not set', 8)}
+          ${reviewRow('Entry Fee', show.entry_fee > 0 ? `${CURRENCY_SYMBOLS[show.currency] || show.currency}${Number(show.entry_fee).toFixed(2)} (all-in — includes all fees)` : 'Not set', 8)}
+          ${reviewRow('Fundraising Goal', show.fundraising_goal > 0 ? `${CURRENCY_SYMBOLS[show.currency] || show.currency}${Number(show.fundraising_goal).toFixed(2)}` : 'Not set', 8)}
           ${reviewRow('Public Progress', show.show_fundraising_publicly ? 'Visible' : 'Hidden', 8)}
         </div>
       </div>`;

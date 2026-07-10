@@ -553,9 +553,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     return card(`
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
         <h3 style="font-size:15px;font-weight:700;color:#143A37;margin:0">Help Us Reach Our Goal</h3>
-        ${goal > 0 ? `<span style="font-size:12px;color:#6B7C79">Goal: ${sym}${goal.toLocaleString()}</span>` : ''}
+        ${goal > 0 ? `<span style="font-size:12px;color:#6B7C79">Goal: ${sym}${fmtMoney(goal)}</span>` : ''}
       </div>
-      <p style="font-size:26px;font-weight:800;color:#1E8E7E;margin:0 0 12px">Raised ${sym}${totalRaised.toLocaleString()}</p>
+      <p style="font-size:26px;font-weight:800;color:#1E8E7E;margin:0 0 12px">Raised ${sym}${fmtMoney(totalRaised)}</p>
       <div style="height:12px;border-radius:999px;background:#E6EEEC;overflow:hidden;margin-bottom:4px">
         <div style="height:100%;border-radius:999px;width:${Math.min(pct, 100)}%;background:linear-gradient(to right,#A6D84A,#5FB23E)"></div>
       </div>
@@ -1377,6 +1377,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
   function fmt(d) {
     return d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+  }
+
+  function fmtMoney(n) {
+    return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   function esc(s) {
