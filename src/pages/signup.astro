@@ -123,6 +123,15 @@ const base = raw.endsWith('/') ? raw : raw + '/';
             placeholder="At least 6 characters"
             class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors"
           />
+          <div id="password-strength" class="hidden mt-2">
+            <div class="flex gap-1.5">
+              <div class="strength-seg h-1.5 flex-1 rounded-full bg-[#e6dcfb] transition-colors"></div>
+              <div class="strength-seg h-1.5 flex-1 rounded-full bg-[#e6dcfb] transition-colors"></div>
+              <div class="strength-seg h-1.5 flex-1 rounded-full bg-[#e6dcfb] transition-colors"></div>
+              <div class="strength-seg h-1.5 flex-1 rounded-full bg-[#e6dcfb] transition-colors"></div>
+            </div>
+            <p id="strength-label" class="text-[12px] font-semibold mt-1.5"></p>
+          </div>
         </div>
 
         <div class="mb-6">
@@ -236,6 +245,46 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
   const defaultRole = new URL(window.location.href).searchParams.get('role');
   setRole(defaultRole === 'organiser' ? 'organiser' : 'participant');
+
+  // Password strength indicator (visual only — never blocks submission)
+  const STRENGTH_LEVELS = [
+    { label: '', color: '#e6dcfb' },
+    { label: 'Weak', color: '#ef4444' },
+    { label: 'Fair', color: '#f59e0b' },
+    { label: 'Good', color: '#eab308' },
+    { label: 'Strong', color: '#22c55e' },
+  ];
+
+  function scorePassword(pw) {
+    if (!pw) return 0;
+    let score = 0;
+    if (pw.length >= 6) score++;
+    if (pw.length >= 10) score++;
+    if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score++;
+    if (/\d/.test(pw) && /[^A-Za-z0-9]/.test(pw)) score++;
+    return Math.min(score, 4);
+  }
+
+  const pwInput      = document.getElementById('password');
+  const strengthWrap = document.getElementById('password-strength');
+  const strengthSegs = document.querySelectorAll('#password-strength .strength-seg');
+  const strengthLabel = document.getElementById('strength-label');
+
+  pwInput?.addEventListener('input', () => {
+    const pw = pwInput.value;
+    if (!pw) {
+      strengthWrap.classList.add('hidden');
+      return;
+    }
+    strengthWrap.classList.remove('hidden');
+    const score = scorePassword(pw);
+    const level = STRENGTH_LEVELS[score];
+    strengthSegs.forEach((seg, i) => {
+      seg.style.background = i < score ? level.color : '#e6dcfb';
+    });
+    strengthLabel.textContent = level.label;
+    strengthLabel.style.color = level.color;
+  });
 
   document.querySelectorAll('.role-btn').forEach(btn => {
     btn.addEventListener('click', () => setRole(btn.dataset.role));
