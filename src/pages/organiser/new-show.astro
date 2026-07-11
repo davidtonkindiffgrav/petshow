@@ -111,7 +111,15 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
       <div class="mb-5">
         <label for="s1-description" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Show Description</label>
-        <textarea id="s1-description" rows="3" placeholder="Briefly describe your show — what's special about it, what animals compete, any cause you're supporting…"
+        <p class="text-[12px] text-[#9b94a8] mb-1.5">A short summary shown at the top of your public show page.</p>
+        <textarea id="s1-description" rows="3" placeholder="e.g. Our annual charity dog show raising funds for the local shelter"
+          class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors resize-none"></textarea>
+      </div>
+
+      <div class="mb-5">
+        <label for="s1-about" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Tell Us About Your Cause</label>
+        <p class="text-[12px] text-[#9b94a8] mb-1.5">The full story — what you're raising money for and why it matters. Shown in its own section on your public show page.</p>
+        <textarea id="s1-about" rows="6" placeholder="Share the story behind your cause — who benefits, why it matters, and how funds will be used…"
           class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors resize-none"></textarea>
       </div>
 
@@ -430,6 +438,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           class="border border-[#b8e4e0] rounded-[11px] px-4 py-2.5 text-[14px] font-semibold text-[#1c1626] bg-white focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors">
           <option value="AUD">AUD — A$ Australian Dollar</option>
           <option value="NZD">NZD — NZ$ New Zealand Dollar</option>
+          <option value="GBP">GBP — £ British Pound</option>
+          <option value="USD">USD — $ US Dollar</option>
+          <option value="EUR">EUR — € Euro</option>
+          <option value="CAD">CAD — C$ Canadian Dollar</option>
+          <option value="SGD">SGD — S$ Singapore Dollar</option>
+          <option value="ZAR">ZAR — R South African Rand</option>
         </select>
       </div>
 
@@ -988,6 +1002,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       show.show_time      = document.getElementById('s1-show-time').value || '';
       show.host_org       = document.getElementById('s1-host-org').value.trim();
       show.description    = document.getElementById('s1-description').value.trim() || null;
+      show.about          = document.getElementById('s1-about').value.trim() || null;
       show.website_url    = document.getElementById('s1-website-url').value.trim() || null;
       show.org_type       = getSelectedCard('org-type-cards');
       show.charity_number = document.getElementById('s1-charity-number').value.trim();
@@ -1069,7 +1084,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       prize_source: show.prize_source, is_fundraising: show.is_fundraising,
       donation_type: show.donation_type, fundraising_goal: show.fundraising_goal || null,
       show_fundraising_publicly: show.show_fundraising_publicly, donation_receipts: show.donation_receipts,
-      description: show.description || null, website_url: show.website_url || null,
+      description: show.description || null, about: show.about || null, website_url: show.website_url || null,
       logo_url: show.logo_url || null, banner_url: show.banner_url || null, org_logo_url: show.org_logo_url || null,
       logo_source: show.logo_source || 'show',
       currency: show.currency, entry_fee: show.entry_fee, status: 'draft',
@@ -1623,6 +1638,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.getElementById('s1-title').value         = show.title;
     document.getElementById('s1-host-org').value      = show.host_org;
     document.getElementById('s1-description').value   = show.description || '';
+    document.getElementById('s1-about').value          = show.about || '';
     document.getElementById('s1-website-url').value   = show.website_url || '';
     document.getElementById('s1-entry-open').value       = show.entry_open_date;
     document.getElementById('s1-entry-open-time').value  = show.entry_open_time  || '12:00';

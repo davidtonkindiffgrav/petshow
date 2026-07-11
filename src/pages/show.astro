@@ -410,6 +410,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         </div>
         <div style="display:flex;flex-direction:column;gap:16px">
           ${fundraisingCard()}
+          ${aboutCard()}
           ${meetEntrantsCard()}
         </div>
         <div style="display:flex;flex-direction:column;gap:16px">
@@ -436,6 +437,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         </div>
         <div style="display:flex;flex-direction:column;gap:16px">
           ${fundraisingCard()}
+          ${aboutCard()}
           ${meetEntrantsCard()}
         </div>
         <div style="display:flex;flex-direction:column;gap:16px">
@@ -470,6 +472,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <div>${winnersCard()}</div>
         <div style="display:flex;flex-direction:column;gap:16px">
           ${fundraisingCard()}
+          ${aboutCard()}
           ${sponsorsCard()}
           ${digitalCertCard()}
         </div>
@@ -560,8 +563,20 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <div style="height:100%;border-radius:999px;width:${Math.min(pct, 100)}%;background:linear-gradient(to right,#A6D84A,#5FB23E)"></div>
       </div>
       <p style="font-size:12px;font-weight:700;color:#5FB23E;margin:0 0 10px;text-align:right">${pct}%</p>
-      ${show.description ? `<p style="font-size:12px;color:#6B7C79;margin:0 0 8px">${esc(show.description)}</p>` : ''}
-      ${show.website_url ? `<a href="${esc(absUrl(show.website_url))}" target="_blank" rel="noopener noreferrer" style="font-size:13px;color:#1E8E7E;font-weight:600;text-decoration:none">Learn more about our cause →</a>` : ''}
+    `);
+  }
+
+  // ── About card ─────────────────────────────────────────────────────────────
+
+  function aboutCard() {
+    if (!show.about && !show.website_url) return '';
+    const link = show.website_url
+      ? `<a href="${esc(absUrl(show.website_url))}" target="_blank" rel="noopener noreferrer" style="display:inline-block;font-size:13px;color:#1E8E7E;font-weight:600;text-decoration:none;${show.about ? 'margin-top:10px' : ''}">Learn more about our cause →</a>`
+      : '';
+    return card(`
+      ${show.about ? `<h3 style="font-size:15px;font-weight:700;color:#143A37;margin:0 0 10px">About This Cause</h3>
+      <p style="font-size:13px;color:#6B7C79;margin:0;line-height:1.6;white-space:pre-wrap">${esc(show.about)}</p>` : ''}
+      ${link}
     `);
   }
 
@@ -1142,6 +1157,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     return `
       ${banner}
+      <div style="max-width:min(640px,92vw);margin:0 0 20px">${aboutCard()}</div>
       <div style="margin-bottom:20px">
         <h2 style="font-size:18px;font-weight:800;color:#143A37;margin:0 0 4px">Vote for Your Favourites</h2>
         <p style="font-size:13px;color:#6B7C79;margin:0">Pick your favourite pet in each category, then submit your votes to receive a confirmation email.${show.show_date ? ` Voting closes ${fmt(show.show_date)}${show.show_time ? ' at ' + show.show_time : ''}.` : ''}</p>

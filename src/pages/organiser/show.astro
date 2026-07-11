@@ -93,6 +93,62 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     </div>
   </div>
 
+  <!-- ── Publish Show confirmation modal ─────────────────────────────────────── -->
+  <div id="publish-show-modal" style="display:none"
+    class="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4"
+    role="dialog" aria-modal="true" aria-labelledby="publish-show-title">
+    <div class="bg-white rounded-[20px] w-full max-w-[520px] shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="p-6">
+
+        <div class="flex items-start gap-3 mb-4">
+          <div id="publish-show-icon" class="w-11 h-11 rounded-full bg-brand-tint flex items-center justify-center shrink-0"></div>
+          <div class="min-w-0">
+            <h2 id="publish-show-title" class="text-[18px] font-extrabold text-[#1c1626]">Publish This Show?</h2>
+            <p id="publish-show-subtitle" class="text-[13px] text-[#6f6880] mt-0.5"></p>
+          </div>
+        </div>
+
+        <div id="publish-show-info-box" style="display:none" class="rounded-[12px] bg-[#f0fafa] border border-brand/15 p-4 mb-4">
+          <p class="text-[11px] font-bold text-[#4a4357] uppercase tracking-wider mb-2">What happens when you publish</p>
+          <ul class="space-y-1.5 text-[13px] text-[#4a4357] leading-snug">
+            <li class="flex gap-2"><span class="text-brand font-bold shrink-0">•</span><span>The show becomes <strong>public</strong> and visible to everyone.</span></li>
+            <li class="flex gap-2"><span class="text-brand font-bold shrink-0">•</span><span>Entrants can start entering according to your entry dates.</span></li>
+            <li class="flex gap-2"><span class="text-brand font-bold shrink-0">•</span><span>You can still edit settings after publishing, but changes go live immediately.</span></li>
+          </ul>
+        </div>
+
+        <div id="publish-show-required-wrap" style="display:none" class="mb-4">
+          <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider mb-2">Needs your attention</p>
+          <div id="publish-show-required-list" class="space-y-2"></div>
+        </div>
+
+        <div id="publish-show-optional-wrap" style="display:none" class="mb-4">
+          <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider mb-2">Optional — not set up yet</p>
+          <div id="publish-show-optional-list" class="space-y-2"></div>
+        </div>
+
+        <div id="publish-show-ack-wrap" style="display:none" class="mb-4">
+          <div id="publish-show-ack-list"></div>
+        </div>
+
+        <div id="publish-show-modal-error" style="display:none"
+          class="rounded-[10px] p-3 mb-4 text-[13px] bg-[#fef2f2] border border-[#fecaca] text-[#b91c1c]"></div>
+
+        <div id="publish-show-footer" class="flex gap-3">
+          <button id="publish-show-cancel"
+            class="flex-1 text-[14px] font-semibold text-[#4a4357] border border-[#e0dce8] rounded-[10px] py-2.5 hover:bg-[#f7f5fb] transition-colors">
+            Cancel
+          </button>
+          <button id="publish-show-cta" disabled
+            class="flex-1 text-[14px] font-bold rounded-[10px] py-2.5 transition-colors bg-[#f5f3fa] text-[#c4bed0] cursor-not-allowed">
+            Publish Show
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
   <!-- ── Backdrop ──────────────────────────────────────────────────────────────── -->
   <div id="drawer-backdrop"
     class="fixed inset-0 bg-black/30 z-40 transition-opacity duration-300 opacity-0 pointer-events-none"></div>
@@ -178,7 +234,14 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         </div>
         <div>
           <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Show Description</label>
-          <textarea id="mgmt-description" rows="3" placeholder="Briefly describe your show — what's special about it, what animals compete, any cause you're supporting…"
+          <p class="text-[12px] text-[#9b94a8] mb-1.5">A short summary shown at the top of your public show page.</p>
+          <textarea id="mgmt-description" rows="3" placeholder="e.g. Our annual charity dog show raising funds for the local shelter"
+            class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors resize-none"></textarea>
+        </div>
+        <div>
+          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Tell Us About Your Cause</label>
+          <p class="text-[12px] text-[#9b94a8] mb-1.5">The full story — what you're raising money for and why it matters. Shown in its own section on your public show page.</p>
+          <textarea id="mgmt-about" rows="6" placeholder="Share the story behind your cause — who benefits, why it matters, and how funds will be used…"
             class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors resize-none"></textarea>
         </div>
         <div>
@@ -302,31 +365,19 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       <!-- Panel: Classes -->
       <div id="panel-classes" style="display:none" class="p-6">
 
-        <!-- Fun Stakes chip grid -->
-        <div id="mgmt-classes-fun" style="display:none">
-          <p class="text-[13px] font-semibold text-[#4a4357] mb-3">Competition Categories</p>
-          <div id="mgmt-fun-grid" class="grid grid-cols-2 gap-2 mb-3"></div>
-          <button type="button" id="mgmt-add-fun"
-            class="flex items-center gap-1.5 text-[13px] font-semibold text-brand hover:text-brand-dark transition-colors mt-1">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Add Custom Category
-          </button>
-          <div id="mgmt-fun-custom" class="space-y-2 mt-3"></div>
-        </div>
+        <!-- Your categories (type your own; presets are fill-in suggestions) -->
+        <p class="text-[13px] font-semibold text-[#4a4357] mb-3">Your Categories</p>
+        <div id="mgmt-classes-list" class="space-y-3 mb-3"></div>
+        <button type="button" id="mgmt-add-class"
+          class="flex items-center gap-1.5 text-[13px] font-semibold text-brand hover:text-brand-dark transition-colors mb-6">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add a Category
+        </button>
 
-        <!-- Standard toggle rows -->
-        <div id="mgmt-classes-std" style="display:none">
-          <p class="text-[13px] font-semibold text-[#4a4357] mb-3">Competition Classes</p>
-          <div id="mgmt-std-list" class="space-y-2 mb-3"></div>
-          <button type="button" id="mgmt-add-std"
-            class="flex items-center gap-1.5 text-[13px] font-semibold text-brand hover:text-brand-dark transition-colors mt-1">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Add Custom Class
-          </button>
-          <div id="mgmt-std-custom" class="space-y-2 mt-3"></div>
-        </div>
+        <p class="text-[11.5px] font-bold text-[#9b94a8] uppercase tracking-wide mb-2.5">Need inspiration? Tap one to add it</p>
+        <div id="mgmt-classes-suggestions" class="flex flex-wrap gap-2"></div>
 
-        <p class="panel-error text-[12px] text-red-500 mt-2" style="display:none"></p>
+        <p class="panel-error text-[12px] text-red-500 mt-4" style="display:none"></p>
         <div class="drawer-actions flex justify-end gap-3 mt-6 pb-2">
           <button class="cancel-btn text-[13px] font-semibold text-[#9b94a8] hover:text-[#1c1626] px-3 py-2 transition-colors">Cancel</button>
           <button class="save-btn bg-brand text-white text-[13px] font-bold px-5 py-2.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Save changes</button>
@@ -479,6 +530,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
             class="border border-[#b8e4e0] rounded-[11px] px-3 py-2 text-[13px] font-semibold text-[#1c1626] bg-white focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors">
             <option value="AUD">AUD — A$ Australian Dollar</option>
             <option value="NZD">NZD — NZ$ New Zealand Dollar</option>
+            <option value="GBP">GBP — £ British Pound</option>
+            <option value="USD">USD — $ US Dollar</option>
+            <option value="EUR">EUR — € Euro</option>
+            <option value="CAD">CAD — C$ Canadian Dollar</option>
+            <option value="SGD">SGD — S$ Singapore Dollar</option>
+            <option value="ZAR">ZAR — R South African Rand</option>
           </select>
         </div>
         <div id="mgmt-fundraising-form" class="space-y-4 mb-4">
@@ -636,7 +693,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   import { zonedDateTime } from '../../lib/voteWindow.js';
   import { uploadImage } from '../../lib/storage.js';
   import { showUploadOverlay, hideUploadOverlay } from '../../lib/uploadOverlay.js';
-  import { FUN_STAKES, STANDARD_CLASSES } from '../../lib/show-categories.js';
+  import { FUN_STAKES } from '../../lib/show-categories.js';
   import { minEntryFee, platformFee, stripeFeeEstimate, organiserNet, clampFee } from '../../lib/fees.js';
   import { searchBreeds } from '../../lib/dog-breeds.js';
 
@@ -653,7 +710,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   let serviceFees    = {};
   let savedJudges    = [];
   let maxUploadMb    = 5;
-  let mgmtClasses    = []; // { name, description, enabled, custom }
+  let mgmtClasses    = []; // { name, description }
   let pendingBranding = { logo: null, orgLogo: null, banner: null, sponsorLogo: null };
   let brandingRemoval = { logo: false, orgLogo: false, banner: false, sponsorLogo: false };
 
@@ -988,29 +1045,226 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   async function handlePublish() {
     const btn = document.getElementById('btn-publish');
     if (show.status !== 'published') {
-      const needsNum = show.org_type === 'registered_charity' || show.org_type === 'non_profit';
-      if (needsNum && !show.charity_number) {
-        showPageError('A Charity / Non-Profit Number is required before publishing. Please update Show Basics.');
-        return;
-      }
       const { data: existing } = await supabase
         .from('shows').select('id, title').eq('created_by', uid).eq('status', 'published').neq('id', showId).maybeSingle();
       if (existing) {
         showPageError(`"${existing.title || 'Another show'}" is already published. Unpublish it before publishing this show.`);
         return;
       }
+      openPublishShowModal();
+      return;
     }
-    if (show.status === 'published') {
-      if (!confirm('Unpublish this show? It will be hidden from the public entry page.')) return;
-    }
-    const newStatus = show.status === 'published' ? 'draft' : 'published';
+    if (!confirm('Unpublish this show? It will be hidden from the public entry page.')) return;
     btn.textContent = 'Saving…';
     btn.disabled = true;
-    const { error } = await supabase.from('shows').update({ status: newStatus }).eq('id', showId);
+    const { error } = await supabase.from('shows').update({ status: 'draft' }).eq('id', showId);
     btn.disabled = false;
     if (error) { showPageError(error.message); return; }
-    show.status = newStatus;
+    show.status = 'draft';
     renderPageHeader();
+  }
+
+  async function doPublishShow() {
+    const cta = document.getElementById('publish-show-cta');
+    const errEl = document.getElementById('publish-show-modal-error');
+    errEl.style.display = 'none';
+    cta.textContent = 'Publishing…';
+    cta.disabled = true;
+    const { error } = await supabase.from('shows').update({ status: 'published' }).eq('id', showId);
+    if (error) {
+      errEl.textContent = error.message;
+      errEl.style.display = 'block';
+      cta.textContent = 'Publish Show';
+      cta.disabled = false;
+      return;
+    }
+    show.status = 'published';
+    closePublishShowModal();
+    renderPageHeader();
+  }
+
+  // ── Publish Show readiness checklist ────────────────────────────────────────
+  // Mirrors the amber/"Setup needed" vs grey/"Not used" conditions computed in
+  // renderAllHeaders() below — keep the two in sync if a section's rules change.
+  function getPublishReadiness() {
+    const required = [];
+    const optional = [];
+
+    if (!(show.title && show.show_date && show.entry_close_date)) {
+      required.push({ label: 'Show Basics', detail: 'Show name, show date and entry close date must be set.', panelId: 'basics' });
+    }
+    const needsCharityNum = show.org_type === 'registered_charity' || show.org_type === 'non_profit';
+    if (needsCharityNum && !show.charity_number) {
+      required.push({ label: 'Charity / Non-Profit Number', detail: 'Required for registered charities and non-profits.', panelId: 'basics' });
+    }
+    if (!show.breed_scope) {
+      required.push({ label: 'Breed & Eligibility', detail: 'Choose which breeds or animals are eligible to enter.', panelId: 'breed' });
+    }
+    if (categories.length === 0) {
+      required.push({ label: 'Classes', detail: 'Add at least one class for entrants to enter.', panelId: 'classes' });
+    }
+    if (show.has_sponsor !== true && show.has_sponsor !== false) {
+      required.push({ label: 'Sponsorship', detail: 'Choose whether this show has a sponsor.', panelId: 'sponsorship' });
+    }
+    if (show.is_judged !== true && show.is_judged !== false) {
+      required.push({ label: 'Judging', detail: 'Choose expert judging or public voting.', panelId: 'judging' });
+    }
+    const awardsDecided = show.has_digital_certs === true || show.has_physical_prizes === true
+      || (show.has_digital_certs === false && show.has_physical_prizes === false);
+    if (!awardsDecided) {
+      required.push({ label: 'Awards & Prizes', detail: 'Choose the awards or prizes for this show, or opt out.', panelId: 'awards' });
+    }
+    if (!(show.entry_fee > 0)) {
+      required.push({ label: 'Fundraising & Fees', detail: 'Set an entry fee before publishing.', panelId: 'fundraising' });
+    }
+
+    const uploadedCount = [show.logo_url, show.org_logo_url, show.banner_url].filter(Boolean).length;
+    if (uploadedCount < 3) {
+      optional.push({
+        label: 'Branding',
+        confirmLabel: 'Publish without setting up Branding',
+        detail: uploadedCount === 0 ? 'No logos or banner uploaded yet.' : `${3 - uploadedCount} of 3 images still missing.`,
+        panelId: 'branding',
+      });
+    }
+    if (show.is_judged === true && !judges[0]) {
+      optional.push({
+        label: 'Judge Assignment',
+        confirmLabel: "I'll assign a judge later",
+        detail: 'No judge has been assigned to this show yet.',
+        panelId: 'judging',
+      });
+    }
+
+    return { required, optional };
+  }
+
+  function requiredIssueRow({ label, detail, panelId }) {
+    return `
+      <div class="flex items-start gap-3 p-3 rounded-[10px] border border-[#fde68a] bg-[#fffbeb]">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0" aria-hidden="true">
+          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <span class="min-w-0">
+          <span class="block text-[13px] font-semibold text-[#92400e]">${esc(label)}</span>
+          <span class="block text-[12px] mt-0.5 text-[#92400e]">${esc(detail)}</span>
+          <button type="button" class="fix-link inline-block text-[12px] font-semibold text-brand hover:text-brand-dark mt-1" data-panel="${esc(panelId)}">Set up now →</button>
+        </span>
+      </div>`;
+  }
+
+  function optionalCheckRow({ label, confirmLabel, detail, panelId }) {
+    return `
+      <div class="p-3 rounded-[10px] border border-[#efebf5] hover:border-brand/40 transition-colors">
+        <span class="block text-[10.5px] font-bold text-[#9b94a8] uppercase tracking-wide mb-1">${esc(label)}</span>
+        <label class="flex items-start gap-3 cursor-pointer">
+          <input type="checkbox" class="publish-show-optional-check mt-0.5 w-4 h-4 accent-brand shrink-0" />
+          <span class="min-w-0 text-[13px] font-semibold text-[#1c1626]">${esc(confirmLabel)}</span>
+        </label>
+        <span class="block text-[12px] mt-1 pl-7" style="color:#b45309">⚠ ${esc(detail)}</span>
+        <button type="button" class="fix-link inline-block text-[12px] font-semibold text-brand hover:text-brand-dark mt-1 pl-7" data-panel="${esc(panelId)}">Set up now →</button>
+      </div>`;
+  }
+
+  function publishShowIcon(ready) {
+    return ready
+      ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`
+      : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+  }
+
+  function openPublishShowModal() {
+    const { required, optional } = getPublishReadiness();
+
+    const iconEl      = document.getElementById('publish-show-icon');
+    const titleEl      = document.getElementById('publish-show-title');
+    const subtitleEl   = document.getElementById('publish-show-subtitle');
+    const infoBoxEl    = document.getElementById('publish-show-info-box');
+    const reqWrapEl    = document.getElementById('publish-show-required-wrap');
+    const optWrapEl    = document.getElementById('publish-show-optional-wrap');
+    const ackWrapEl    = document.getElementById('publish-show-ack-wrap');
+    const footerEl     = document.getElementById('publish-show-footer');
+
+    document.getElementById('publish-show-modal-error').style.display = 'none';
+    iconEl.className = `w-11 h-11 rounded-full flex items-center justify-center shrink-0 ${required.length ? 'bg-[#fffbeb]' : 'bg-brand-tint'}`;
+    iconEl.innerHTML = publishShowIcon(required.length === 0);
+
+    if (required.length > 0) {
+      titleEl.textContent = "This Show Isn't Ready to Publish Yet";
+      subtitleEl.textContent = show.title || 'Untitled Show';
+      infoBoxEl.style.display = 'none';
+      reqWrapEl.style.display = 'block';
+      document.getElementById('publish-show-required-list').innerHTML = required.map(requiredIssueRow).join('');
+      optWrapEl.style.display = 'none';
+      ackWrapEl.style.display = 'none';
+      footerEl.innerHTML = `<button id="publish-show-close" class="flex-1 text-[14px] font-semibold text-[#4a4357] border border-[#e0dce8] rounded-[10px] py-2.5 hover:bg-[#f7f5fb] transition-colors">Close</button>`;
+      document.getElementById('publish-show-close').addEventListener('click', closePublishShowModal);
+    } else {
+      reqWrapEl.style.display = 'none';
+      footerEl.innerHTML = `
+        <button id="publish-show-cancel" class="flex-1 text-[14px] font-semibold text-[#4a4357] border border-[#e0dce8] rounded-[10px] py-2.5 hover:bg-[#f7f5fb] transition-colors">Cancel</button>
+        <button id="publish-show-cta" disabled class="flex-1 text-[14px] font-bold rounded-[10px] py-2.5 transition-colors bg-[#f5f3fa] text-[#c4bed0] cursor-not-allowed">Publish Show</button>`;
+      document.getElementById('publish-show-cancel').addEventListener('click', closePublishShowModal);
+      document.getElementById('publish-show-cta').addEventListener('click', doPublishShow);
+
+      if (optional.length > 0) {
+        titleEl.textContent = 'Almost Ready to Publish';
+        subtitleEl.textContent = 'Everything required is set up. Confirm you’re happy to leave these for later.';
+        infoBoxEl.style.display = 'none';
+        optWrapEl.style.display = 'block';
+        document.getElementById('publish-show-optional-list').innerHTML = optional.map(optionalCheckRow).join('');
+        ackWrapEl.style.display = 'none';
+      } else {
+        titleEl.textContent = 'Publish This Show?';
+        subtitleEl.textContent = 'You’re about to make this show public and visible to the world.';
+        infoBoxEl.style.display = 'block';
+        optWrapEl.style.display = 'none';
+        ackWrapEl.style.display = 'block';
+        document.getElementById('publish-show-ack-list').innerHTML =
+          `<label class="flex items-start gap-3 p-3 rounded-[10px] border border-[#efebf5] cursor-pointer hover:border-brand/40 transition-colors">
+            <input type="checkbox" class="publish-show-ack-check mt-0.5 w-4 h-4 accent-brand shrink-0" />
+            <span class="block text-[13px] font-semibold text-[#1c1626]">I've checked all my settings and I'm ready to make this show public</span>
+          </label>`;
+      }
+      updatePublishShowCta();
+    }
+
+    document.getElementById('publish-show-modal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closePublishShowModal() {
+    document.getElementById('publish-show-modal').style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  function updatePublishShowCta() {
+    const cta = document.getElementById('publish-show-cta');
+    if (!cta) return;
+    const optChecks = document.querySelectorAll('.publish-show-optional-check');
+    const ackCheck  = document.querySelector('.publish-show-ack-check');
+    const allChecked = [...optChecks].every(c => c.checked) && (!ackCheck || ackCheck.checked);
+    cta.disabled = !allChecked;
+    cta.className = `flex-1 text-[14px] font-bold rounded-[10px] py-2.5 transition-colors ${
+      allChecked ? 'bg-brand text-white shadow-btn-primary hover:bg-brand-dark' : 'bg-[#f5f3fa] text-[#c4bed0] cursor-not-allowed'
+    }`;
+  }
+
+  function wirePublishShowModal() {
+    const modal = document.getElementById('publish-show-modal');
+    modal.addEventListener('click', e => {
+      if (e.target === e.currentTarget) { closePublishShowModal(); return; }
+      const fixBtn = e.target.closest('.fix-link');
+      if (fixBtn) {
+        closePublishShowModal();
+        openDrawer(fixBtn.dataset.panel);
+      }
+    });
+    modal.addEventListener('change', e => {
+      if (e.target.matches('.publish-show-optional-check, .publish-show-ack-check')) updatePublishShowCta();
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && modal.style.display === 'flex') closePublishShowModal();
+    });
   }
 
   // ── Card header rendering ────────────────────────────────────────────────────
@@ -1278,6 +1532,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (tzSel && show.timezone) (tzSel as HTMLSelectElement).value = show.timezone;
     setField('mgmt-host-org',         show.host_org || '');
     setField('mgmt-description',      show.description || '');
+    setField('mgmt-about',            show.about || '');
     setField('mgmt-contact-email',    show.contact_email || '');
     setField('mgmt-contact-phone',    show.contact_phone || '');
     setField('mgmt-charity-number',   show.charity_number || '');
@@ -1373,6 +1628,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       if (e.target === e.currentTarget) document.getElementById('archive-modal').style.display = 'none';
     });
 
+    // Publish Show modal
+    wirePublishShowModal();
+
     // Close drawer — X button, backdrop, Escape key, cancel buttons
     document.getElementById('drawer-close').addEventListener('click', closeDrawer);
     document.getElementById('drawer-backdrop').addEventListener('click', closeDrawer);
@@ -1423,16 +1681,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     });
     initMgmtBreedCombobox();
 
-    // Classes — custom add buttons
-    document.getElementById('mgmt-add-fun').addEventListener('click', () => {
-      const cat = { name: '', description: '', enabled: true, custom: true };
-      mgmtClasses.push(cat);
-      document.getElementById('mgmt-fun-custom').appendChild(buildCustomRow(cat));
-    });
-    document.getElementById('mgmt-add-std').addEventListener('click', () => {
-      const cat = { name: '', description: '', enabled: true, custom: true };
-      mgmtClasses.push(cat);
-      document.getElementById('mgmt-std-custom').appendChild(buildCustomRow(cat));
+    // Classes — add a category
+    document.getElementById('mgmt-add-class').addEventListener('click', () => {
+      mgmtClasses.push({ name: '', description: '' });
+      renderClassesRows();
     });
 
     // Sponsorship
@@ -1638,6 +1890,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       title, org_type: orgType,
       host_org: document.getElementById('mgmt-host-org').value.trim() || null,
       description: (document.getElementById('mgmt-description') as HTMLTextAreaElement).value.trim() || null,
+      about: (document.getElementById('mgmt-about') as HTMLTextAreaElement).value.trim() || null,
       charity_number: needsNum ? charityNum || null : null,
       contact_email: email,
       contact_phone: document.getElementById('mgmt-contact-phone').value.trim() || null,
@@ -1668,12 +1921,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   }
 
   async function saveClasses() {
-    const enabled = mgmtClasses.filter(c => c.enabled && c.name.trim());
-    if (enabled.length === 0) return showPanelError('classes', 'Please enable at least one class.');
+    const valid = mgmtClasses.filter(c => c.name.trim());
+    if (valid.length === 0) return showPanelError('classes', 'Please add at least one category.');
     await saveSection('classes', {}, async () => {
       await supabase.from('show_categories').delete().eq('show_id', showId);
       await supabase.from('show_categories').insert(
-        enabled.map(c => ({ show_id: showId, name: c.name.trim(), description: c.description || null }))
+        valid.map(c => ({ show_id: showId, name: c.name.trim(), description: c.description || null }))
       );
       const { data } = await supabase.from('show_categories').select('*').eq('show_id', showId);
       categories = data || [];
@@ -1912,118 +2165,82 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   }
 
   // ─── Classes panel ───────────────────────────────────────────────────────────
+  // Mirrors the new-show wizard's type-first flow (new-show.astro's Step 4) —
+  // no preset toggle buttons; organisers type category rows directly, with a
+  // handful of suggested presets offered as fill-in-the-blank shortcuts.
   function initClassesPanel() {
-    const isFun = show.show_type === 'fun_stakes';
-    document.getElementById('mgmt-classes-fun').style.display = isFun ? 'block' : 'none';
-    document.getElementById('mgmt-classes-std').style.display = isFun ? 'none'  : 'block';
-
-    const existingMap = new Map(categories.map(c => [c.name, c.description || '']));
-    const presets     = isFun ? FUN_STAKES : STANDARD_CLASSES;
-    const presetNames = new Set(presets.map(c => c.name));
-    const defaultAll  = categories.length === 0 && !isFun;
-
-    mgmtClasses = presets.map(cat => ({
-      name:        cat.name,
-      description: cat.description,
-      enabled:     defaultAll || existingMap.has(cat.name),
-      custom:      false,
-    }));
-
-    categories.filter(c => !presetNames.has(c.name)).forEach(c => {
-      mgmtClasses.push({ name: c.name, description: c.description || '', enabled: true, custom: true });
-    });
-
-    if (isFun) renderFunPanel(); else renderStdPanel();
+    mgmtClasses = categories.map(c => ({ name: c.name, description: c.description || '' }));
+    if (mgmtClasses.length === 0) mgmtClasses.push({ name: '', description: '' });
+    renderClassesRows();
   }
 
-  function renderFunPanel() {
-    const grid      = document.getElementById('mgmt-fun-grid');
-    const customDiv = document.getElementById('mgmt-fun-custom');
-    grid.innerHTML = '';
-    customDiv.innerHTML = '';
+  function renderClassesRows() {
+    const list = document.getElementById('mgmt-classes-list');
+    list.innerHTML = '';
+    mgmtClasses.forEach((cls, i) => appendClassRow(i, cls.name, cls.description));
+    renderClassesSuggestions();
+  }
 
-    mgmtClasses.filter(c => !c.custom).forEach(cat => {
+  function appendClassRow(idx, name, description) {
+    const list = document.getElementById('mgmt-classes-list');
+    const row = document.createElement('div');
+    row.className = 'border border-[#efebf5] rounded-[13px] p-3.5 bg-[#fafafc]';
+    row.innerHTML = `
+      <div class="flex items-start gap-2 mb-2.5">
+        <div class="flex-1">
+          <label class="block text-[10.5px] font-bold text-[#9b94a8] uppercase tracking-wide mb-1">Category Name</label>
+          <input type="text" value="${esc(name)}" placeholder="e.g. Best Rescue"
+            class="w-full border border-[#b8e4e0] rounded-[11px] px-3 py-2.5 text-[13px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        </div>
+        <button type="button" class="cls-remove shrink-0 text-[#c4bed0] hover:text-red-400 transition-colors mt-[22px]">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div>
+        <label class="block text-[10.5px] font-bold text-[#9b94a8] uppercase tracking-wide mb-1">Description <span class="normal-case font-medium text-[#c4bed0]">(shown as a tooltip to entrants)</span></label>
+        <input type="text" value="${esc(description || '')}" placeholder="Briefly describe this category"
+          class="w-full border border-[#efebf5] rounded-[11px] px-3 py-2 text-[12.5px] text-[#6f6880] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" />
+      </div>
+    `;
+    row.querySelectorAll('input')[0].addEventListener('input', e => { mgmtClasses[idx].name = e.target.value; });
+    row.querySelectorAll('input')[1].addEventListener('input', e => { mgmtClasses[idx].description = e.target.value; });
+    row.querySelector('.cls-remove').addEventListener('click', () => {
+      mgmtClasses.splice(idx, 1);
+      renderClassesRows();
+    });
+    list.appendChild(row);
+  }
+
+  function renderClassesSuggestions() {
+    const wrap = document.getElementById('mgmt-classes-suggestions');
+    wrap.innerHTML = '';
+    const existingNames = new Set(mgmtClasses.map(c => c.name));
+    FUN_STAKES.filter(cat => cat.suggested).forEach(cat => {
+      const already = existingNames.has(cat.name);
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'text-left rounded-[11px] border-2 px-3 py-2.5 text-[12.5px] font-semibold transition-all cursor-pointer';
-      btn.style.borderColor = cat.enabled ? '#1ba89a' : '#b8e4e0';
-      btn.style.background  = cat.enabled ? '#f0fafa' : 'white';
-      btn.style.color       = cat.enabled ? '#1c1626' : '#9b94a8';
-      btn.textContent = cat.name;
+      btn.className = 'rounded-full border-2 px-3.5 py-1.5 text-[12.5px] font-semibold transition-all';
+      btn.style.borderColor = '#b8e4e0';
+      btn.style.background  = 'white';
+      btn.style.color       = already ? '#c4bed0' : '#4a4357';
+      btn.style.cursor      = already ? 'default' : 'pointer';
+      btn.disabled = already;
+      btn.textContent = already ? `${cat.name} ✓` : `+ ${cat.name}`;
       attachTooltip(btn, cat.description);
       btn.addEventListener('click', () => {
-        cat.enabled = !cat.enabled;
-        btn.style.borderColor = cat.enabled ? '#1ba89a' : '#b8e4e0';
-        btn.style.background  = cat.enabled ? '#f0fafa' : 'white';
-        btn.style.color       = cat.enabled ? '#1c1626' : '#9b94a8';
+        if (existingNames.has(cat.name)) return;
+        _tip.style.display = 'none';
+        const blankIdx = mgmtClasses.findIndex(c => !c.name.trim());
+        if (blankIdx !== -1) {
+          mgmtClasses[blankIdx].name = cat.name;
+          mgmtClasses[blankIdx].description = cat.description;
+        } else {
+          mgmtClasses.push({ name: cat.name, description: cat.description });
+        }
+        renderClassesRows();
       });
-      grid.appendChild(btn);
+      wrap.appendChild(btn);
     });
-
-    mgmtClasses.filter(c => c.custom).forEach(cat => customDiv.appendChild(buildCustomRow(cat)));
-  }
-
-  function renderStdPanel() {
-    const list      = document.getElementById('mgmt-std-list');
-    const customDiv = document.getElementById('mgmt-std-custom');
-    list.innerHTML = '';
-    customDiv.innerHTML = '';
-
-    mgmtClasses.filter(c => !c.custom).forEach(cat => {
-      const row = document.createElement('div');
-      row.className = 'flex items-center gap-3 p-3 border border-[#efebf5] rounded-[11px]';
-      row.innerHTML = `
-        <button type="button" class="cls-toggle w-10 h-6 rounded-full ${cat.enabled ? 'bg-brand' : 'bg-[#efebf5]'} transition-colors relative flex items-center px-0.5 shrink-0">
-          <span class="w-5 h-5 rounded-full bg-white shadow transition-transform ${cat.enabled ? 'translate-x-4' : ''}"></span>
-        </button>
-        <span class="text-[13.5px] font-semibold flex-1 ${cat.enabled ? 'text-[#1c1626]' : 'text-[#9b94a8] line-through'}">${cat.name}</span>
-      `;
-      attachTooltip(row, cat.description);
-      row.querySelector('.cls-toggle').addEventListener('click', () => {
-        cat.enabled = !cat.enabled;
-        renderStdPanel();
-      });
-      list.appendChild(row);
-    });
-
-    mgmtClasses.filter(c => c.custom).forEach(cat => customDiv.appendChild(buildCustomRow(cat)));
-  }
-
-  function buildCustomRow(cat) {
-    const row = document.createElement('div');
-    row.className = 'space-y-1.5';
-
-    const nameInput = document.createElement('input');
-    nameInput.type = 'text';
-    nameInput.value = cat.name;
-    nameInput.placeholder = 'Category name';
-    nameInput.className = 'w-full border border-[#b8e4e0] rounded-[11px] px-3 py-2.5 text-[13px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors';
-    nameInput.addEventListener('input', e => { cat.name = e.target.value; });
-
-    const descInput = document.createElement('input');
-    descInput.type = 'text';
-    descInput.value = cat.description || '';
-    descInput.placeholder = 'Description (shown as tooltip to entrants)';
-    descInput.className = 'w-full border border-[#efebf5] rounded-[11px] px-3 py-2 text-[12.5px] text-[#6f6880] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors';
-    descInput.addEventListener('input', e => { cat.description = e.target.value; });
-
-    const rmBtn = document.createElement('button');
-    rmBtn.type = 'button';
-    rmBtn.className = 'shrink-0 text-[#c4bed0] hover:text-red-400 transition-colors p-1';
-    rmBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
-    rmBtn.addEventListener('click', () => {
-      const i = mgmtClasses.indexOf(cat);
-      if (i > -1) mgmtClasses.splice(i, 1);
-      row.remove();
-    });
-
-    const header = document.createElement('div');
-    header.className = 'flex items-center gap-2';
-    header.appendChild(nameInput);
-    header.appendChild(rmBtn);
-    row.appendChild(header);
-    row.appendChild(descInput);
-    return row;
   }
 
   function showDuplicatePrompt(panel, match) {
