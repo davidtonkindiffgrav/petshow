@@ -99,12 +99,65 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     </div>
   </div>
 
+  <!-- Duplicate confirmation modal -->
+  <div id="duplicate-modal" style="display:none" class="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="duplicate-modal-title">
+    <div class="bg-white rounded-[20px] w-full max-w-[480px] shadow-2xl">
+      <div class="p-6">
+        <div class="w-12 h-12 rounded-full bg-[#e0f4f2] flex items-center justify-center mb-4">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+        </div>
+        <h2 id="duplicate-modal-title" style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 8px">Duplicate This Show?</h2>
+        <p style="font-size:14px;color:#6b7c89;line-height:1.55;margin:0 0 16px">Creates a new draft show. Entry dates and the show date are always left blank for you to set. Choose what else to bring over — anything unticked will be left as "not configured" on the new show.</p>
+        <label for="duplicate-title-input" style="display:block;font-size:12px;font-weight:700;color:#4a4357;margin-bottom:6px">New show title</label>
+        <input id="duplicate-title-input" type="text" style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid #e0dce8;font-size:14px;color:#1c1626;margin-bottom:16px;box-sizing:border-box">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span style="font-size:12px;font-weight:700;color:#4a4357">What to copy</span>
+          <button id="duplicate-toggle-all" type="button" style="font-size:12px;font-weight:700;color:#1ba89a;background:none;border:none;cursor:pointer;padding:0">Deselect all</button>
+        </div>
+        <div id="duplicate-sections" style="border:1.5px solid #e0dce8;border-radius:10px;padding:4px 12px;margin-bottom:16px">
+          <label style="display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13.5px;color:#1c1626;cursor:pointer;border-bottom:1px solid #f5f3fa">
+            <input type="checkbox" class="dup-section" data-section="showtype" checked style="width:16px;height:16px;accent-color:#1ba89a">Show Type
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13.5px;color:#1c1626;cursor:pointer;border-bottom:1px solid #f5f3fa">
+            <input type="checkbox" class="dup-section" data-section="breed" checked style="width:16px;height:16px;accent-color:#1ba89a">Breed &amp; Eligibility
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13.5px;color:#1c1626;cursor:pointer;border-bottom:1px solid #f5f3fa">
+            <input type="checkbox" class="dup-section" data-section="classes" checked style="width:16px;height:16px;accent-color:#1ba89a">Classes
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13.5px;color:#1c1626;cursor:pointer;border-bottom:1px solid #f5f3fa">
+            <input type="checkbox" class="dup-section" data-section="sponsorship" checked style="width:16px;height:16px;accent-color:#1ba89a">Sponsorship
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13.5px;color:#1c1626;cursor:pointer;border-bottom:1px solid #f5f3fa">
+            <input type="checkbox" class="dup-section" data-section="judging" checked style="width:16px;height:16px;accent-color:#1ba89a">Judging Method <span style="color:#9b94a8;font-weight:400">(public voting or expert judges — judges' details are never copied and will need manual setup)</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13.5px;color:#1c1626;cursor:pointer;border-bottom:1px solid #f5f3fa">
+            <input type="checkbox" class="dup-section" data-section="awards" checked style="width:16px;height:16px;accent-color:#1ba89a">Awards &amp; Prizes
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13.5px;color:#1c1626;cursor:pointer;border-bottom:1px solid #f5f3fa">
+            <input type="checkbox" class="dup-section" data-section="fundraising" checked style="width:16px;height:16px;accent-color:#1ba89a">Fundraising &amp; Fees
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13.5px;color:#1c1626;cursor:pointer">
+            <input type="checkbox" class="dup-section" data-section="branding" checked style="width:16px;height:16px;accent-color:#1ba89a">Branding (logos &amp; banner)
+          </label>
+        </div>
+        <div id="duplicate-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:#ef4444"></div>
+        <div style="display:flex;gap:12px;margin-top:8px">
+          <button id="duplicate-cancel" style="flex:1;padding:11px;border-radius:10px;border:1.5px solid #e0dce8;background:white;font-size:14px;font-weight:600;color:#4a4357;cursor:pointer">Cancel</button>
+          <button id="duplicate-confirm" style="flex:1;padding:11px;border-radius:10px;border:none;background:#1ba89a;color:white;font-size:14px;font-weight:700;cursor:pointer">Duplicate Show</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </DashboardLayout>
 
 <script>
   import { getAuth } from '../../lib/auth.js';
   import { supabase } from '../../lib/supabase.js';
   import { zonedDateTime } from '../../lib/voteWindow.js';
+  import { copyImage } from '../../lib/storage.js';
 
   const SHOW_TYPE_LABELS   = { beauty_contest: 'Beauty Contest', fun_stakes: 'Fun Stakes', memorial: 'Memorial Show', other: 'Other' };
   const BREED_SCOPE_LABELS = { all: 'All Breeds', breed_specific: 'Breed Specific', group_specific: 'Group Specific' };
@@ -113,6 +166,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   let pendingArchiveShow    = null;
   let pendingArchiveEntries = null;
   let pendingDeleteShow     = null;
+  let pendingDuplicateShow  = null;
 
   const { session, profile, base } = await getAuth();
 
@@ -300,6 +354,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       ? `<button class="btn-delete" style="font-size:13px;font-weight:700;color:white;background:#ef4444;border:none;padding:8px 14px;border-radius:8px;cursor:pointer">Delete</button>`
       : `<button class="btn-delete" disabled title="${esc(deleteDisabledTitle)}" style="font-size:13px;font-weight:600;color:#c4bed0;background:transparent;border:1.5px solid #e0dce8;padding:8px 14px;border-radius:8px;cursor:not-allowed">Delete</button>`;
 
+    const duplicateBtnHtml = `<button class="btn-duplicate" style="font-size:13px;font-weight:600;color:#0f766e;border:1.5px solid #b8e4e0;background:#f0fafa;padding:8px 14px;border-radius:8px;cursor:pointer">Duplicate</button>`;
+
     const row = document.createElement('div');
     row.className = 'bg-white rounded-card border border-[#b8e4e0] overflow-hidden';
     row.innerHTML = `
@@ -350,6 +406,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
                <button class="btn-copy-url text-[13px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-4 py-2 rounded-btn hover:bg-[#f0fafa] transition-colors">Copy URL</button>`
             : `<a href="${previewUrl}" target="_blank" class="btn-preview text-[13px] font-semibold text-[#6f6880] border border-[#b8e4e0] px-4 py-2 rounded-btn hover:bg-[#f0fafa] transition-colors" style="text-decoration:none">Preview Show →</a>`
           }
+          ${duplicateBtnHtml}
           ${archiveBtnHtml}
           ${deleteBtnHtml}
           <div class="ml-auto flex items-center gap-1.5 text-[#9b94a8]">
@@ -396,6 +453,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     row.querySelector('.btn-delete')?.addEventListener('click', e => {
       e.stopPropagation();
       openDeleteModal(show);
+    });
+    row.querySelector('.btn-duplicate')?.addEventListener('click', e => {
+      e.stopPropagation();
+      openDuplicateModal(show);
     });
 
     return row;
@@ -519,6 +580,136 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     }
   }
 
+  // ── Duplicate modal ───────────────────────────────────────────────────────────
+
+  function openDuplicateModal(show) {
+    pendingDuplicateShow = show;
+    const input = document.getElementById('duplicate-title-input');
+    if (input) input.value = `${show.title || 'Untitled Show'} (Copy)`;
+    document.querySelectorAll('.dup-section').forEach(cb => { cb.checked = true; });
+    const toggleBtn = document.getElementById('duplicate-toggle-all');
+    if (toggleBtn) toggleBtn.textContent = 'Deselect all';
+    const errEl = document.getElementById('duplicate-error');
+    if (errEl) errEl.style.display = 'none';
+    const confirmBtn = document.getElementById('duplicate-confirm');
+    if (confirmBtn) { confirmBtn.textContent = 'Duplicate Show'; confirmBtn.disabled = false; }
+    document.getElementById('duplicate-modal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeDuplicateModal() {
+    document.getElementById('duplicate-modal').style.display = 'none';
+    document.body.style.overflow = '';
+    pendingDuplicateShow = null;
+  }
+
+  async function duplicateShow(show, newTitle, sections) {
+    const confirmBtn = document.getElementById('duplicate-confirm');
+    const errEl      = document.getElementById('duplicate-error');
+    if (confirmBtn) { confirmBtn.textContent = 'Duplicating…'; confirmBtn.disabled = true; }
+    if (errEl) errEl.style.display = 'none';
+
+    try {
+      const { data: source, error: srcErr } = await supabase.from('shows').select('*').eq('id', show.id).single();
+      if (srcErr || !source) throw srcErr || new Error('Show not found');
+
+      const clone = { ...source };
+      delete clone.id;
+      delete clone.created_at;
+      clone.title = newTitle || `${source.title || 'Untitled Show'} (Copy)`;
+      clone.created_by = session.user.id;
+      clone.status = 'draft';
+      clone.results_published_at = null;
+      clone.entry_open_date = null;
+      clone.entry_close_date = null;
+      clone.show_date = null;
+      clone.archived_at = null;
+      clone.suspended_at = null;
+      clone.featured = false;
+      clone.admin_notes = null;
+      clone.cert_design_locked_at = null;
+
+      // Unticked sections are reset to their "not configured" values so the
+      // new show's status cards correctly show Setup needed / Not uploaded
+      // rather than falsely appearing configured with stale data.
+      if (!sections.has('showtype')) {
+        clone.show_type = null;
+        clone.animal_type = null;
+      }
+      if (!sections.has('breed')) {
+        clone.breed_scope = null;
+        clone.breed_filter = null;
+        clone.group_filter = null;
+      }
+      if (!sections.has('sponsorship')) {
+        clone.has_sponsor = null;
+      }
+      if (!sections.has('judging')) {
+        clone.is_judged = null;
+        clone.judge_count = null;
+        clone.judge_setup = null;
+      }
+      if (!sections.has('awards')) {
+        clone.has_digital_certs = null;
+        clone.has_physical_prizes = null;
+        clone.prize_source = null;
+      }
+      if (!sections.has('fundraising')) {
+        clone.entry_fee = null;
+        clone.fundraising_goal = null;
+        clone.show_fundraising_publicly = false;
+      }
+      if (!sections.has('branding')) {
+        clone.logo_url = null;
+        clone.banner_url = null;
+        clone.org_logo_url = null;
+      }
+
+      const { data: inserted, error: insErr } = await supabase.from('shows').insert(clone).select('id').single();
+      if (insErr) throw insErr;
+      const newId = inserted.id;
+
+      // Physically copy branding images so the clone's assets are independent
+      // of the source (deleting the source show later won't break them).
+      if (sections.has('branding')) {
+        const [newLogoUrl, newBannerUrl, newOrgLogoUrl] = await Promise.all([
+          copyImage(source.logo_url,     `shows/${newId}/logo`),
+          copyImage(source.banner_url,   `shows/${newId}/banner`),
+          copyImage(source.org_logo_url, `shows/${newId}/org-logo`),
+        ]);
+        await supabase.from('shows').update({
+          logo_url: newLogoUrl, banner_url: newBannerUrl, org_logo_url: newOrgLogoUrl,
+        }).eq('id', newId);
+      }
+
+      if (sections.has('classes')) {
+        const { data: cats } = await supabase.from('show_categories').select('name, description').eq('show_id', show.id);
+        if (cats?.length) await supabase.from('show_categories').insert(cats.map(c => ({ ...c, show_id: newId })));
+      }
+      if (sections.has('awards')) {
+        const { data: prizes } = await supabase.from('show_prizes').select('description').eq('show_id', show.id);
+        if (prizes?.length) await supabase.from('show_prizes').insert(prizes.map(p => ({ ...p, show_id: newId })));
+      }
+      if (sections.has('sponsorship')) {
+        const { data: sponsorsData } = await supabase.from('show_sponsors').select('name, website, logo_url').eq('show_id', show.id);
+        if (sponsorsData?.length) {
+          const sponsors = await Promise.all(sponsorsData.map(async (s, i) => ({
+            ...s,
+            show_id: newId,
+            logo_url: await copyImage(s.logo_url, `sponsors/${newId}/sponsor-${i}`),
+          })));
+          await supabase.from('show_sponsors').insert(sponsors);
+        }
+      }
+
+      closeDuplicateModal();
+      window.location.href = base + `organiser/show/?id=${newId}`;
+    } catch (err) {
+      if (errEl) { errEl.textContent = `Duplicate failed: ${err.message}`; errEl.style.display = 'block'; }
+      if (confirmBtn) { confirmBtn.textContent = 'Duplicate Show'; confirmBtn.disabled = false; }
+    }
+  }
+
   // ── Modal wiring ──────────────────────────────────────────────────────────────
 
   document.getElementById('archive-cancel')?.addEventListener('click', closeArchiveModal);
@@ -533,8 +724,25 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (pendingDeleteShow) await deleteShow(pendingDeleteShow);
   });
 
+  document.getElementById('duplicate-cancel')?.addEventListener('click', closeDuplicateModal);
+  document.getElementById('duplicate-modal')?.addEventListener('click', e => { if (e.target === e.currentTarget) closeDuplicateModal(); });
+  document.getElementById('duplicate-toggle-all')?.addEventListener('click', e => {
+    const boxes    = document.querySelectorAll('.dup-section');
+    const allChecked = Array.from(boxes).every(cb => cb.checked);
+    boxes.forEach(cb => { cb.checked = !allChecked; });
+    e.currentTarget.textContent = allChecked ? 'Select all' : 'Deselect all';
+  });
+  document.getElementById('duplicate-confirm')?.addEventListener('click', async () => {
+    if (!pendingDuplicateShow) return;
+    const sections = new Set(
+      Array.from(document.querySelectorAll('.dup-section:checked')).map(cb => cb.dataset.section)
+    );
+    const newTitle = document.getElementById('duplicate-title-input')?.value?.trim();
+    await duplicateShow(pendingDuplicateShow, newTitle, sections);
+  });
+
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closeArchiveModal(); closeDeleteModal(); }
+    if (e.key === 'Escape') { closeArchiveModal(); closeDeleteModal(); closeDuplicateModal(); }
   });
 
   function esc(s) {

@@ -1086,7 +1086,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       return `${date} at ${t}${abbr ? ' (' + abbr + ')' : ''}`;
     }
 
-    setHeader('basics', '#22c55e', 'Configured', 'Show Basics', [
+    const basicsConfigured = !!(show.title && show.show_date && show.entry_close_date);
+    setHeader('basics', basicsConfigured ? '#22c55e' : '#fbbf24', basicsConfigured ? 'Configured' : 'Setup needed', 'Show Basics', [
       ['Name',      show.title || '—'],
       ['Show day / results', fmtDateTime(show.show_date, show.show_time)],
       ...(show.entry_open_date ? [['Opens', fmtDateTime(show.entry_open_date, show.entry_open_time)]] : []),
