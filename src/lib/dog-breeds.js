@@ -1,4 +1,5 @@
 export const DOG_BREEDS = [
+  'Mixed Breed','Multiple Breeds',
   'Affenpinscher','Afghan Hound','Airedale Terrier','Akita','Akita (Japanese)',
   'Alaskan Malamute','American Hairless Terrier','American Staffordshire Terrier',
   'Anatolian Shepherd Dog','Australasian Bosdog','Australian Cattle Dog',
@@ -43,7 +44,7 @@ export const DOG_BREEDS = [
   'Lagotto Romagnolo','Lakeland Terrier','Landseer (European Continental Type)',
   'Large Munsterlander','Leonberger','Lhasa Apso','Lowchen','Maltese',
   'Manchester Terrier','Maremma Sheepdog','Mastiff','Miniature American Shepherd',
-  'Miniature Pinscher','Mixed Breed','Mudi','Murray River Retriever','Neapolitan Mastiff',
+  'Miniature Pinscher','Mudi','Murray River Retriever','Neapolitan Mastiff',
   'Newfoundland','Norfolk Terrier','Norwegian Buhund','Norwegian Elkhound',
   'Norwich Terrier','Nova Scotia Duck Tolling Retriever','Old English Sheepdog',
   'Otterhound','Papillon','Parson Russell Terrier','Pekingese',
@@ -75,6 +76,7 @@ export const DOG_BREEDS = [
 // breed, so "mutt" or "moggy" still surfaces the "Mixed Breed" suggestion.
 const BREED_SYNONYMS = {
   'Mixed Breed': ['mutt', 'mongrel', 'moggy', 'moggie', 'cross', 'crossbreed', 'cross breed', 'cross-breed'],
+  'Multiple Breeds': ['multiple dogs', 'two dogs', 'several dogs', 'group photo', 'more than one dog'],
 };
 
 export function searchBreeds(query, limit = 60) {
