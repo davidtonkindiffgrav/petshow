@@ -384,46 +384,17 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         </button>
       </div>
 
-      <div id="s7-awards-form" style="display:none" class="space-y-5">
-        <div class="flex items-center justify-between p-4 border border-[#efebf5] rounded-[12px]">
-          <div>
-            <p class="text-[13.5px] font-bold text-[#1c1626]">Digital Certificates</p>
-            <p class="text-[12px] text-[#9b94a8]">Award winners a downloadable certificate</p>
-          </div>
-          <button type="button" id="s7-certs-toggle" data-on="false"
-            class="w-11 h-6 rounded-full bg-[#efebf5] transition-colors relative flex items-center px-0.5">
-            <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
-          </button>
-        </div>
+      <div id="s7-awards-form" style="display:none">
+        <p class="text-[13px] font-semibold text-[#4a4357] mb-3">Your Awards</p>
+        <div id="s7-awards-list" class="space-y-3 mb-3"></div>
+        <button type="button" id="s7-add-award"
+          class="flex items-center gap-1.5 text-[13px] font-semibold text-brand hover:text-brand-dark transition-colors mb-7">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add an Award
+        </button>
 
-        <div class="flex items-center justify-between p-4 border border-[#efebf5] rounded-[12px]">
-          <div>
-            <p class="text-[13.5px] font-bold text-[#1c1626]">Physical Prizes</p>
-            <p class="text-[12px] text-[#9b94a8]">Trophies, vouchers, gift packs, etc.</p>
-          </div>
-          <button type="button" id="s7-physical-toggle" data-on="false"
-            class="w-11 h-6 rounded-full bg-[#efebf5] transition-colors relative flex items-center px-0.5">
-            <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
-          </button>
-        </div>
-
-        <div id="s7-physical-form" style="display:none" class="pl-4 border-l-2 border-brand/20 space-y-4">
-          <p class="text-[13px] font-semibold text-[#4a4357] mb-2">Prize Source</p>
-          <div class="grid grid-cols-3 gap-2" id="prize-source-cards">
-            <button type="button" data-value="sponsor" class="sel-card rounded-[11px] border-2 border-[#b8e4e0] bg-white py-2.5 text-[12px] font-bold text-[#1c1626] transition-all cursor-pointer">Sponsor Supplied</button>
-            <button type="button" data-value="organisation" class="sel-card rounded-[11px] border-2 border-[#b8e4e0] bg-white py-2.5 text-[12px] font-bold text-[#1c1626] transition-all cursor-pointer">Organisation</button>
-            <button type="button" data-value="mixed" class="sel-card rounded-[11px] border-2 border-[#b8e4e0] bg-white py-2.5 text-[12px] font-bold text-[#1c1626] transition-all cursor-pointer">Mixed</button>
-          </div>
-          <div>
-            <p class="text-[13px] font-semibold text-[#4a4357] mb-2">Prize Descriptions</p>
-            <div id="s7-prize-list" class="space-y-2 mb-2"></div>
-            <button type="button" id="s7-add-prize"
-              class="flex items-center gap-1.5 text-[13px] font-semibold text-brand hover:text-brand-dark transition-colors">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Add Prize
-            </button>
-          </div>
-        </div>
+        <p class="text-[13px] font-semibold text-[#4a4357] mb-2">Which categories get which award?</p>
+        <div id="s7-assign-list" class="border border-[#efebf5] rounded-[13px] px-4"></div>
       </div>
     </div>
 
@@ -644,11 +615,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     vote_open_mode: 'after_entries_close',
     show_type: null, animal_type: 'dog',
     breed_scope: 'all', breed_filter: '', group_filter: '',
-    has_sponsor: null, sponsors: [{ name: '', website: '', logo_url: '' }],
+    has_sponsor: null, sponsors: [{ id: null, name: '', website: '', logo_url: '' }],
     is_judged: null, judge_count: 1, judge_setup: 'later',
     judges: [],
-    has_digital_certs: null, has_physical_prizes: null, prize_source: null,
-    prizes: [],
+    awards: [],
     is_fundraising: true,
     fundraising_goal: null,
     show_fundraising_publicly: null,
@@ -715,6 +685,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   let serviceFees    = {};
   let savedJudges    = [];
   let maxUploadMb    = 5;
+  let loadedCategoryIds = new Set();
+  let loadedAwardIds    = new Set();
   const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
   // ─── Auth ───────────────────────────────────────────────────────────────────
@@ -818,6 +790,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     updateNav();
     if (n === 4) initStep4();
     if (n === 6) updateJudgePanels();
+    if (n === 7) initStep7();
     if (n === 8) { applyCurrencySymbol(show.currency || 'AUD'); updatePublicToggleAvailability(); }
     if (n === 10) buildReview();
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1028,7 +1001,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       const choice = getYNAValue('sponsor-choice');
       show.has_sponsor = choice === 'yes' ? true : choice === 'no' ? false : null;
       if (choice === 'yes') {
-        show.sponsors = [{ name: document.getElementById('s5-sponsor-name').value.trim(), website: document.getElementById('s5-sponsor-website').value.trim(), logo_url: show.sponsors[0]?.logo_url || null }];
+        show.sponsors = [{ id: show.sponsors[0]?.id || null, name: document.getElementById('s5-sponsor-name').value.trim(), website: document.getElementById('s5-sponsor-website').value.trim(), logo_url: show.sponsors[0]?.logo_url || null }];
       }
     }
     if (n === 6) {
@@ -1047,13 +1020,6 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           photo_url:  show.judges[0]?.photo_url || '',
         }];
       }
-    }
-    if (n === 7) {
-      const choice = getYNAValue('awards-choice');
-      show.has_digital_certs   = choice === 'yes' ? document.getElementById('s7-certs-toggle').dataset.on === 'true' : null;
-      show.has_physical_prizes = choice === 'yes' ? document.getElementById('s7-physical-toggle').dataset.on === 'true' : null;
-      show.prize_source        = choice === 'yes' ? getSelectedCard('prize-source-cards') : null;
-      if (choice !== 'yes') { show.has_digital_certs = null; show.has_physical_prizes = null; }
     }
     if (n === 8) {
       show.is_fundraising            = true;
@@ -1080,8 +1046,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       breed_scope: show.breed_scope, breed_filter: show.breed_filter || null, group_filter: show.group_filter || null,
       has_sponsor: show.has_sponsor, is_judged: show.is_judged,
       judge_count: 1, judge_setup: show.judge_setup,
-      has_digital_certs: show.has_digital_certs, has_physical_prizes: show.has_physical_prizes,
-      prize_source: show.prize_source, is_fundraising: show.is_fundraising,
+      is_fundraising: show.is_fundraising,
       donation_type: show.donation_type, fundraising_goal: show.fundraising_goal || null,
       show_fundraising_publicly: show.show_fundraising_publicly, donation_receipts: show.donation_receipts,
       description: show.description || null, about: show.about || null, website_url: show.website_url || null,
@@ -1105,11 +1070,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     // Save categories for step 4
     if (completedStep === 4 && show.id) {
-      await supabase.from('show_categories').delete().eq('show_id', show.id);
-      const enabled = show.classes.filter(c => c.enabled);
-      if (enabled.length > 0) {
-        await supabase.from('show_categories').insert(enabled.map(c => ({ show_id: show.id, name: c.name, description: c.description || null })));
-      }
+      await saveCategoriesToDb();
     }
 
     // Save judges for step 6
@@ -1162,25 +1123,57 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     // Save sponsor for step 5
     if (completedStep === 5 && show.id) {
-      await supabase.from('show_sponsors').delete().eq('show_id', show.id);
       if (show.has_sponsor && show.sponsors[0]?.name) {
-        await supabase.from('show_sponsors').insert(show.sponsors.filter(s => s.name).map(s => ({ show_id: show.id, ...s })));
+        if (!show.sponsors[0].id) show.sponsors[0].id = crypto.randomUUID();
+        await supabase.from('show_sponsors').upsert([{
+          id: show.sponsors[0].id, show_id: show.id, name: show.sponsors[0].name,
+          website: show.sponsors[0].website || null, logo_url: show.sponsors[0].logo_url || null,
+        }], { onConflict: 'id' });
+        await supabase.from('show_sponsors').delete().eq('show_id', show.id).neq('id', show.sponsors[0].id);
+      } else {
+        await supabase.from('show_sponsors').delete().eq('show_id', show.id);
+        show.sponsors[0].id = null;
       }
     }
 
-    // Save prizes for step 7
+    // Save awards for step 7 (and persist any award_id links set on categories)
     if (completedStep === 7 && show.id) {
-      await supabase.from('show_prizes').delete().eq('show_id', show.id);
-      if (show.has_physical_prizes && show.prizes.length > 0) {
-        await supabase.from('show_prizes').insert(show.prizes.filter(p => p).map(p => ({ show_id: show.id, description: p })));
+      const validAwards = show.awards.filter(a => a.name.trim());
+      const currentAwardIds = new Set(validAwards.map(a => a.id));
+      const removedAwardIds = [...loadedAwardIds].filter(id => !currentAwardIds.has(id));
+      if (removedAwardIds.length) await supabase.from('awards').delete().in('id', removedAwardIds);
+      if (validAwards.length) {
+        await supabase.from('awards').upsert(validAwards.map(a => ({
+          id: a.id, show_id: show.id, name: a.name.trim(),
+          includes_certificate: a.includes_certificate, includes_physical: a.includes_physical,
+          physical_description: a.includes_physical ? (a.physical_description || null) : null,
+          image_url: a.image_url || null, sponsor_id: a.sponsor_id || null,
+        })), { onConflict: 'id' });
       }
+      loadedAwardIds = currentAwardIds;
+      await saveCategoriesToDb();
     }
+  }
+
+  // ─── Category upsert (stable ids so awards/entries links survive edits) ──────
+  async function saveCategoriesToDb() {
+    const rows = show.classes.filter(c => c.enabled && c.name.trim());
+    const currentIds = new Set(rows.map(c => c.id));
+    const removedIds = [...loadedCategoryIds].filter(id => !currentIds.has(id));
+    if (removedIds.length) await supabase.from('show_categories').delete().in('id', removedIds);
+    if (rows.length) {
+      await supabase.from('show_categories').upsert(
+        rows.map(c => ({ id: c.id, show_id: show.id, name: c.name, description: c.description || null, award_id: c.award_id || null })),
+        { onConflict: 'id' }
+      );
+    }
+    loadedCategoryIds = currentIds;
   }
 
   // ─── Step 4 init ─────────────────────────────────────────────────────────────
   function initStep4() {
     if (show.classes.length === 0) {
-      show.classes.push({ name: '', description: '', enabled: true, custom: true });
+      show.classes.push({ id: crypto.randomUUID(), name: '', description: '', award_id: null, enabled: true, custom: true });
     }
     renderFunStakesCategories();
   }
@@ -1246,7 +1239,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           show.classes[blankIdx].name = cat.name;
           show.classes[blankIdx].description = cat.description;
         } else {
-          show.classes.push({ name: cat.name, description: cat.description, enabled: true, custom: true });
+          show.classes.push({ id: crypto.randomUUID(), name: cat.name, description: cat.description, award_id: null, enabled: true, custom: true });
         }
         renderFunStakesCategories();
       });
@@ -1471,23 +1464,149 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     (emailInput.closest('.grid') || emailInput).after(prompt);
   }
 
-  // ─── Prize rows ──────────────────────────────────────────────────────────────
-  function addPrizeRow() {
-    const idx = show.prizes.length;
-    show.prizes.push('');
-    const list = document.getElementById('s7-prize-list');
+  // ─── Step 7: Awards ──────────────────────────────────────────────────────────
+  function initStep7() {
+    renderAwardRows();
+  }
+
+  function renderAwardRows() {
+    const list = document.getElementById('s7-awards-list');
+    list.innerHTML = '';
+    show.awards.forEach((award, i) => appendAwardRow(i));
+    renderAwardAssignments();
+  }
+
+  function appendAwardRow(idx) {
+    const award = show.awards[idx];
+    const list = document.getElementById('s7-awards-list');
     const row = document.createElement('div');
-    row.className = 'flex items-center gap-2';
+    row.className = 'border border-[#efebf5] rounded-[13px] p-3.5 bg-[#fafafc]';
+    const certId  = `award-cert-${award.id}`;
+    const physId  = `award-physical-${award.id}`;
+    const sponsor = show.sponsors[0];
+    const hasSponsorOption = !!(sponsor?.id && sponsor?.name);
     row.innerHTML = `
-      <input type="text" placeholder="e.g. £50 Pet Store Voucher"
-        class="flex-1 border border-[#b8e4e0] rounded-[11px] px-3 py-2.5 text-[14px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" />
-      <button type="button" class="prize-remove text-[#c4bed0] hover:text-red-400 transition-colors">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
+      <div class="flex items-start gap-2 mb-2.5">
+        <div class="flex-1">
+          <label class="block text-[10.5px] font-bold text-[#9b94a8] uppercase tracking-wide mb-1">Award Name</label>
+          <input type="text" value="${esc(award.name)}" placeholder="e.g. $50 Pet Store Voucher"
+            class="award-name-input w-full border border-[#b8e4e0] rounded-[11px] px-3 py-2.5 text-[13px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        </div>
+        <button type="button" class="award-remove shrink-0 text-[#c4bed0] hover:text-red-400 transition-colors mt-[22px]">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="flex items-center gap-4 mb-2">
+        <label class="flex items-center gap-2 cursor-pointer select-none">
+          <button type="button" id="${certId}" data-on="${award.includes_certificate}"
+            class="w-9 h-5 rounded-full transition-colors relative flex items-center px-0.5" style="background:${award.includes_certificate ? '#1ba89a' : '#efebf5'}">
+            <span class="w-4 h-4 rounded-full bg-white shadow transition-transform" style="transform:translateX(${award.includes_certificate ? '16px' : '0'})"></span>
+          </button>
+          <span class="text-[12.5px] font-semibold text-[#4a4357]">🎓 Certificate</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer select-none">
+          <button type="button" id="${physId}" data-on="${award.includes_physical}"
+            class="w-9 h-5 rounded-full transition-colors relative flex items-center px-0.5" style="background:${award.includes_physical ? '#1ba89a' : '#efebf5'}">
+            <span class="w-4 h-4 rounded-full bg-white shadow transition-transform" style="transform:translateX(${award.includes_physical ? '16px' : '0'})"></span>
+          </button>
+          <span class="text-[12.5px] font-semibold text-[#4a4357]">🎁 Physical Prize</span>
+        </label>
+      </div>
+      <div class="award-physical-fields pl-4 border-l-2 border-brand/20 space-y-3" style="display:${award.includes_physical ? 'block' : 'none'}">
+        <div>
+          <label class="block text-[10.5px] font-bold text-[#9b94a8] uppercase tracking-wide mb-1">Prize Description</label>
+          <input type="text" value="${esc(award.physical_description || '')}" placeholder="e.g. Rosette + squeaky toy pack"
+            class="award-desc-input w-full border border-[#efebf5] rounded-[11px] px-3 py-2 text-[12.5px] text-[#6f6880] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" />
+        </div>
+        <div>
+          <label class="block text-[10.5px] font-bold text-[#9b94a8] uppercase tracking-wide mb-1">Prize Photo <span class="normal-case font-medium text-[#c4bed0]">(optional)</span></label>
+          <div class="award-image-widget">
+            <input type="file" class="upload-input hidden" accept="image/jpeg,image/png,image/webp" />
+            <div class="upload-trigger flex items-center gap-3 border-2 border-dashed border-[#b8e4e0] rounded-[11px] px-3 py-2.5 cursor-pointer hover:bg-brand-tint/50 transition-colors">
+              <img class="upload-preview hidden h-9 rounded object-contain shrink-0" />
+              <svg class="upload-icon shrink-0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <div>
+                <span class="upload-label block text-[12px] text-[#9b94a8]">Click to upload prize photo</span>
+                <span class="upload-size-hint text-[11px] text-[#c4bed0]">JPG, PNG, WebP · max 5 MB</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        ${hasSponsorOption ? `
+        <div>
+          <label class="block text-[10.5px] font-bold text-[#9b94a8] uppercase tracking-wide mb-1">Sponsor <span class="normal-case font-medium text-[#c4bed0]">(optional)</span></label>
+          <select class="award-sponsor-select w-full border border-[#b8e4e0] rounded-[11px] px-3 py-2 text-[12.5px] text-[#1c1626] bg-white focus:outline-none focus:ring-2 focus:ring-brand transition-colors">
+            <option value="">No sponsor attribution</option>
+            <option value="${sponsor.id}" ${award.sponsor_id === sponsor.id ? 'selected' : ''}>${esc(sponsor.name)}</option>
+          </select>
+        </div>` : ''}
+      </div>
+      <button type="button" class="award-apply-all text-[11.5px] font-semibold text-brand hover:underline mt-2">Apply to all categories</button>
     `;
-    row.querySelector('input').addEventListener('input', e => { show.prizes[idx] = e.target.value; });
-    row.querySelector('.prize-remove').addEventListener('click', () => { row.remove(); show.prizes.splice(idx, 1); });
     list.appendChild(row);
+
+    row.querySelector('.award-name-input').addEventListener('input', e => {
+      const hadName = award.name.trim().length > 0;
+      award.name = e.target.value;
+      const hasName = award.name.trim().length > 0;
+      if (!hadName && hasName && show.awards.filter(a => a.name.trim()).length === 1) {
+        show.classes.forEach(c => { if (!c.award_id) c.award_id = award.id; });
+      }
+      renderAwardAssignments();
+    });
+    row.querySelector('.award-remove').addEventListener('click', () => {
+      show.classes.forEach(c => { if (c.award_id === award.id) c.award_id = null; });
+      show.awards.splice(idx, 1);
+      renderAwardRows();
+    });
+    row.querySelector('.award-desc-input').addEventListener('input', e => { award.physical_description = e.target.value; });
+    const sponsorSelect = row.querySelector('.award-sponsor-select');
+    if (sponsorSelect) sponsorSelect.addEventListener('change', e => { award.sponsor_id = e.target.value || null; });
+    row.querySelector('.award-apply-all').addEventListener('click', () => {
+      show.classes.forEach(c => { c.award_id = award.id; });
+      renderAwardAssignments();
+    });
+
+    setupToggle(certId, on => { award.includes_certificate = on; });
+    setupToggle(physId, on => {
+      award.includes_physical = on;
+      row.querySelector('.award-physical-fields').style.display = on ? 'block' : 'none';
+    });
+    initUploadWidget(
+      row.querySelector('.award-image-widget'),
+      () => show.id ? `awards/${show.id}/${award.id}` : null,
+      url => { award.image_url = url; }
+    );
+    if (award.image_url) restoreUploadPreview(row.querySelector('.award-image-widget'), award.image_url);
+  }
+
+  function renderAwardAssignments() {
+    const wrap = document.getElementById('s7-assign-list');
+    if (!wrap) return;
+    const validClasses = show.classes.filter(c => c.name.trim());
+    if (validClasses.length === 0) {
+      wrap.innerHTML = `<p class="text-[12.5px] text-[#9b94a8] py-3">Add categories in Step 4 first.</p>`;
+      return;
+    }
+    const validAwards = show.awards.filter(a => a.name.trim());
+    wrap.innerHTML = validClasses.map(cls => {
+      const i = show.classes.indexOf(cls);
+      const options = ['<option value="">No award</option>']
+        .concat(validAwards.map(a => `<option value="${a.id}" ${cls.award_id === a.id ? 'selected' : ''}>${esc(a.name)}</option>`));
+      return `
+        <div class="flex items-center justify-between gap-3 py-2.5 border-b border-[#f5f3f8] last:border-0">
+          <span class="text-[13px] text-[#1c1626] font-medium">${esc(cls.name)}</span>
+          <select data-class-idx="${i}" class="award-assign-select border border-[#b8e4e0] rounded-[10px] px-2.5 py-1.5 text-[12.5px] text-[#1c1626] bg-white focus:outline-none focus:ring-2 focus:ring-brand">
+            ${options.join('')}
+          </select>
+        </div>`;
+    }).join('');
+    wrap.querySelectorAll('.award-assign-select').forEach(sel => {
+      sel.addEventListener('change', e => {
+        const i = parseInt(e.target.dataset.classIdx, 10);
+        show.classes[i].award_id = e.target.value || null;
+      });
+    });
   }
 
   // ─── Review ─────────────────────────────────────────────────────────────────
@@ -1543,7 +1662,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         <div class="px-5">
           ${reviewRow('Sponsor', show.has_sponsor === true ? (show.sponsors[0]?.name || 'Yes') : show.has_sponsor === false ? 'No sponsor' : null, 5)}
           ${reviewRow('Judging', judges, 6)}
-          ${reviewRow('Awards', show.has_digital_certs === null && show.has_physical_prizes === null && show.has_digital_certs !== false ? null : `Certs: ${show.has_digital_certs ? 'Yes' : 'No'} · Physical: ${show.has_physical_prizes ? 'Yes' : 'No'}`, 7)}
+          ${reviewRow('Awards', show.awards.filter(a => a.name.trim()).length > 0 ? `${show.awards.filter(a => a.name.trim()).length} award(s) defined` : null, 7)}
         </div>
       </div>
       <div class="border border-[#efebf5] rounded-[14px] overflow-hidden">
@@ -1570,12 +1689,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
   // ─── Draft resume ────────────────────────────────────────────────────────────
   async function loadDraft(id) {
-    const [{ data }, { data: sponsorData }, { data: judgesData }, { data: prizesData }, { data: cats }] = await Promise.all([
+    const [{ data }, { data: sponsorData }, { data: judgesData }, { data: awardsData }, { data: cats }] = await Promise.all([
       supabase.from('shows').select('*').eq('id', id).single(),
       supabase.from('show_sponsors').select('*').eq('show_id', id),
       supabase.from('show_judges').select('*').eq('show_id', id),
-      supabase.from('show_prizes').select('description').eq('show_id', id),
-      supabase.from('show_categories').select('name, description').eq('show_id', id),
+      supabase.from('awards').select('*').eq('show_id', id),
+      supabase.from('show_categories').select('id, name, description, award_id').eq('show_id', id),
     ]);
     if (!data) return;
 
@@ -1601,18 +1720,15 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       group_filter: data.group_filter || '',
       has_sponsor: data.has_sponsor,
       sponsors: sponsorData?.length > 0
-        ? sponsorData.map(s => ({ name: s.name || '', website: s.website || '', logo_url: s.logo_url || '' }))
-        : [{ name: '', website: '', logo_url: '' }],
+        ? sponsorData.map(s => ({ id: s.id, name: s.name || '', website: s.website || '', logo_url: s.logo_url || '' }))
+        : [{ id: null, name: '', website: '', logo_url: '' }],
       is_judged: data.is_judged,
       judge_setup: data.judge_setup || 'later',
       judges: judgesData?.length > 0
         ? judgesData.map(j => ({ first_name: j.first_name || '', last_name: j.last_name || '', email: j.email || '', phone: j.phone || '', photo_url: j.photo_url || '' }))
         : [],
-      has_digital_certs: data.has_digital_certs,
-      has_physical_prizes: data.has_physical_prizes,
-      prize_source: data.prize_source,
-      prizes: prizesData?.map(p => p.description) || [],
-      classes: cats?.length > 0 ? cats.map(c => ({ name: c.name, description: c.description || '', enabled: true, custom: false })) : [],
+      awards: awardsData || [],
+      classes: cats?.length > 0 ? cats.map(c => ({ id: c.id, name: c.name, description: c.description || '', award_id: c.award_id || null, enabled: true, custom: false })) : [],
       is_fundraising: data.is_fundraising ?? true,
       fundraising_goal: data.fundraising_goal,
       show_fundraising_publicly: data.show_fundraising_publicly,
@@ -1626,6 +1742,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       entry_open_time: data.entry_open_time || '',
       entry_close_time: data.entry_close_time || '',
     });
+    loadedCategoryIds = new Set(show.classes.map(c => c.id));
+    loadedAwardIds    = new Set(show.awards.map(a => a.id));
 
     // Restore upload previews
     if (show.logo_url)     restoreUploadPreview(document.getElementById('s9-logo-widget'),     show.logo_url);
@@ -1694,33 +1812,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       }
     }
 
-    // Step 7 — awards
-    const awardsSet = data.has_digital_certs !== null || data.has_physical_prizes !== null;
+    // Step 7 — awards (row rendering itself happens in initStep7(), fired by
+    // goToStep(7) — this just restores the YNA + form-visible state, same
+    // pattern as Step 4's initStep4() handling show.classes rendering)
+    const awardsSet = show.awards.length > 0 || data.has_digital_certs !== null || data.has_physical_prizes !== null;
     if (awardsSet) {
       setYNA('awards-choice', 'yes');
       document.getElementById('s7-awards-form').style.display = 'block';
-      setToggle('s7-certs-toggle', !!show.has_digital_certs);
-      setToggle('s7-physical-toggle', !!show.has_physical_prizes);
-      if (show.has_physical_prizes) {
-        document.getElementById('s7-physical-form').style.display = 'block';
-        if (show.prize_source) selectCard(document.getElementById('prize-source-cards'), show.prize_source);
-        const list = document.getElementById('s7-prize-list');
-        list.innerHTML = '';
-        show.prizes.forEach((desc, idx) => {
-          const row = document.createElement('div');
-          row.className = 'flex items-center gap-2';
-          row.innerHTML = `
-            <input type="text" value="${esc(desc)}" placeholder="e.g. $50 Pet Store Voucher"
-              class="flex-1 border border-[#b8e4e0] rounded-[11px] px-3 py-2.5 text-[14px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" />
-            <button type="button" class="prize-remove text-[#c4bed0] hover:text-red-400 transition-colors">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-          `;
-          row.querySelector('input').addEventListener('input', e => { show.prizes[idx] = e.target.value; });
-          row.querySelector('.prize-remove').addEventListener('click', () => { row.remove(); show.prizes.splice(idx, 1); });
-          list.appendChild(row);
-        });
-      }
     }
 
     // Step 8 — fees
@@ -1876,7 +1974,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     selectCard(document.getElementById('breed-scope-cards'), 'all');
     // Step 4: add category
     document.getElementById('s4-add-funstakes').addEventListener('click', () => {
-      show.classes.push({ name: '', description: '', enabled: true, custom: true });
+      show.classes.push({ id: crypto.randomUUID(), name: '', description: '', award_id: null, enabled: true, custom: true });
       renderFunStakesCategories();
     });
     // Step 5: sponsorship YNA
@@ -1905,19 +2003,17 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         if (btn.dataset.value === 'now') updateJudgePanels();
       });
     });
-    // Step 7: awards YNA + toggles + prize source
+    // Step 7: awards YNA + add-award button
     setupYNA('awards-choice', val => {
       document.getElementById('s7-awards-form').style.display = val === 'yes' ? 'block' : 'none';
     });
-    setupToggle('s7-certs-toggle', on => { show.has_digital_certs = on; });
-    setupToggle('s7-physical-toggle', on => {
-      show.has_physical_prizes = on;
-      document.getElementById('s7-physical-form').style.display = on ? 'block' : 'none';
+    document.getElementById('s7-add-award').addEventListener('click', () => {
+      show.awards.push({
+        id: crypto.randomUUID(), name: '', includes_certificate: true, includes_physical: false,
+        physical_description: '', image_url: null, sponsor_id: null,
+      });
+      renderAwardRows();
     });
-    document.getElementById('prize-source-cards').querySelectorAll('[data-value]').forEach(btn => {
-      btn.addEventListener('click', () => { selectCard(document.getElementById('prize-source-cards'), btn.dataset.value); });
-    });
-    document.getElementById('s7-add-prize').addEventListener('click', addPrizeRow);
     // Close judge picker dropdowns when clicking outside
     document.addEventListener('click', () => {
       document.querySelectorAll('.judge-picker-dropdown').forEach(d => { d.style.display = 'none'; });

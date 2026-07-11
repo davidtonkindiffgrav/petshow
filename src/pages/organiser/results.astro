@@ -83,7 +83,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   const PLACE_ICONS  = { 1: '🥇', 2: '🥈', 3: '🥉' };
 
   // Page-level state used by send-cert click handler
-  let _show, _categories, _sponsors, _design, _base;
+  let _show, _categories, _sponsors, _design, _base, _awards;
 
   function esc(s) {
     return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -214,6 +214,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     const catMap = {};
     for (const c of _categories) catMap[c.id] = c;
+    const awardMap = {};
+    for (const a of (_awards || [])) awardMap[a.id] = a;
 
     const byCat = {};
     for (const e of winningEntries) {
@@ -224,12 +226,23 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const sections = Object.entries(byCat).map(([catId, catEntries]) => {
       const cat     = catMap[catId];
       const catName = cat?.name || 'Unknown Category';
+      const award   = cat ? awardMap[cat.award_id] : null;
       const sorted  = [...catEntries].sort((a, b) => a.result_place - b.result_place);
+
+      const awardBadge = award
+        ? `<span class="inline-flex items-center gap-1 text-[11px] font-bold text-brand bg-brand-tint px-2 py-0.5 rounded-full ml-2">
+            ${award.includes_certificate ? '🎓' : ''}${award.includes_physical ? '🎁' : ''} ${esc(award.name)}
+          </span>`
+        : '';
+      const fulfillmentNote = award && award.includes_physical
+        ? `This category's award (${esc(award.name)}) includes a physical prize — copy the winner's email above and reach out directly to arrange delivery.`
+        : `To ask winners for a postal address for physical prizes, copy their email above and reach out directly.`;
 
       return `
         <div class="bg-white rounded-card border border-[#b8e4e0] overflow-hidden">
-          <div class="px-5 py-3.5 border-b border-[#efebf5] bg-[#f9fffe]">
+          <div class="px-5 py-3.5 border-b border-[#efebf5] bg-[#f9fffe] flex items-center flex-wrap">
             <h2 class="text-[14px] font-extrabold text-[#1c1626]">${esc(catName)}</h2>
+            ${awardBadge}
           </div>
           <div class="overflow-x-auto">
             <table class="w-full border-collapse">
@@ -249,7 +262,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
             </table>
           </div>
           <div class="px-5 py-3 border-t border-[#f5f3fa] bg-[#fafffe]">
-            <p class="text-[11px] text-[#9b94a8]">To ask winners for a postal address for physical prizes, copy their email above and reach out directly.</p>
+            <p class="text-[11px] text-[#9b94a8]">${fulfillmentNote}</p>
           </div>
         </div>`;
     });
@@ -349,9 +362,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     if (!showId) { showError('No show specified.'); return; }
 
-    const [showRes, catsRes, entriesRes, sponsorsRes, judgeRes] = await Promise.all([
+    const [showRes, catsRes, entriesRes, sponsorsRes, judgeRes, awardsRes] = await Promise.all([
       supabase.from('shows').select('*').eq('id', showId).eq('created_by', uid).single(),
-      supabase.from('show_categories').select('id, name').eq('show_id', showId).order('name'),
+      supabase.from('show_categories').select('id, name, award_id').eq('show_id', showId).order('name'),
       supabase.from('show_entries')
         .select('id, category_id, animal_name, breed, exhibitor_name, exhibitor_email, photo_url, result_place, cert_email_sent_at, cert_jpg_url')
         .eq('show_id', showId)
@@ -360,6 +373,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         .order('result_place'),
       supabase.from('show_sponsors').select('name, logo_url').eq('show_id', showId),
       supabase.from('show_judges').select('first_name, last_name').eq('show_id', showId).limit(1).maybeSingle(),
+      supabase.from('awards').select('*').eq('show_id', showId),
     ]);
 
     if (showRes.error || !showRes.data) {
@@ -382,6 +396,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     _categories  = catsRes.data  || [];
     _entries     = entriesRes.data || [];
     _sponsors    = sponsorsRes.data || [];
+    _awards      = awardsRes.data || [];
     _certEnabled = !!show.cert_design_locked_at;
     try { _design = { ...CERT_DEFAULTS, ...JSON.parse(show.cert_design_json || '{}') }; }
     catch { _design = { ...CERT_DEFAULTS }; }

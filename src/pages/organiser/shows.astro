@@ -232,13 +232,16 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       } else {
         const catCounts = {};
         const confirmedCounts = {};
+        const awardedCounts = {};
         await Promise.all(list.map(async s => {
-          const [catRes, entryRes] = await Promise.all([
+          const [catRes, entryRes, awardedRes] = await Promise.all([
             supabase.from('show_categories').select('*', { count: 'exact', head: true }).eq('show_id', s.id),
             supabase.from('show_entries').select('*', { count: 'exact', head: true }).eq('show_id', s.id).eq('status', 'confirmed'),
+            supabase.from('show_categories').select('*', { count: 'exact', head: true }).eq('show_id', s.id).not('award_id', 'is', null),
           ]);
           catCounts[s.id]       = catRes.count  || 0;
           confirmedCounts[s.id] = entryRes.count || 0;
+          awardedCounts[s.id]   = awardedRes.count || 0;
         }));
         if (listEl) listEl.style.display = 'block';
         const container = document.getElementById('shows-list');
@@ -246,24 +249,27 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         heading.className = 'text-[12px] font-bold text-[#9b94a8] uppercase tracking-wider mb-3';
         heading.textContent = 'Archived Shows';
         container.appendChild(heading);
-        list.forEach(s => container.appendChild(buildRow(s, catCounts[s.id] || 0, confirmedCounts[s.id] || 0)));
+        list.forEach(s => container.appendChild(buildRow(s, catCounts[s.id] || 0, confirmedCounts[s.id] || 0, awardedCounts[s.id] || 0)));
       }
     } else if (!shows.length) {
       if (emptyEl) emptyEl.style.display = 'flex';
     } else {
       const catCounts = {};
       const confirmedCounts = {};
+      const awardedCounts = {};
       await Promise.all(shows.map(async s => {
-        const [catRes, entryRes] = await Promise.all([
+        const [catRes, entryRes, awardedRes] = await Promise.all([
           supabase.from('show_categories').select('*', { count: 'exact', head: true }).eq('show_id', s.id),
           supabase.from('show_entries').select('*', { count: 'exact', head: true }).eq('show_id', s.id).eq('status', 'confirmed'),
+          supabase.from('show_categories').select('*', { count: 'exact', head: true }).eq('show_id', s.id).not('award_id', 'is', null),
         ]);
         catCounts[s.id]       = catRes.count  || 0;
         confirmedCounts[s.id] = entryRes.count || 0;
+        awardedCounts[s.id]   = awardedRes.count || 0;
       }));
       if (listEl) listEl.style.display = 'block';
       const container = document.getElementById('shows-list');
-      shows.forEach(show => container.appendChild(buildRow(show, catCounts[show.id] || 0, confirmedCounts[show.id] || 0)));
+      shows.forEach(show => container.appendChild(buildRow(show, catCounts[show.id] || 0, confirmedCounts[show.id] || 0, awardedCounts[show.id] || 0)));
     }
   }
 
@@ -291,7 +297,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     return state === 'ok' ? '#22c55e' : state === 'pending' ? '#fbbf24' : '#c4bed0';
   }
 
-  function sectionTiles(show, catCount) {
+  function sectionTiles(show, catCount, awardedCatCount = 0) {
     function tile(label, state, summary) {
       return `<div class="flex items-center gap-2 py-1.5 min-w-0">
         <span class="w-2 h-2 rounded-full shrink-0" style="background:${dot(state)}"></span>
@@ -312,16 +318,15 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
                           show.has_sponsor === true ? 'Sponsor added' : show.has_sponsor === false ? 'No sponsor' : null),
       tile('Judging',     show.is_judged === true ? 'ok' : show.is_judged === false ? 'off' : 'pending',
                           show.is_judged === true ? 'Expert judges' : show.is_judged === false ? 'Public voting' : null),
-      tile('Awards',      (show.has_digital_certs === true || show.has_physical_prizes === true) ? 'ok'
-                          : (show.has_digital_certs === false && show.has_physical_prizes === false) ? 'off' : 'pending',
-                          (show.has_digital_certs || show.has_physical_prizes) ? 'Configured' : (show.has_digital_certs === false) ? 'No awards' : null),
+      tile('Awards',      awardedCatCount > 0 ? 'ok' : 'pending',
+                          awardedCatCount > 0 ? `${awardedCatCount} of ${catCount} classes` : null),
       tile('Fundraising', show.entry_fee > 0 ? 'ok' : 'pending',
                           show.entry_fee > 0 ? 'Active' : null),
       tile('Branding',    'pending', 'Upload coming soon'),
     ].join('');
   }
 
-  function buildRow(show, catCount, confirmedEntryCount = 0) {
+  function buildRow(show, catCount, confirmedEntryCount = 0, awardedCatCount = 0) {
     const showUrl    = `${window.location.origin}${base}show?id=${show.id}`;
     const previewUrl = `${base}show?id=${show.id}&preview=1`;
     const status     = showStatus(show);
@@ -387,7 +392,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-4 px-5 py-3 border-b border-[#efebf5]">
-          ${sectionTiles(show, catCount)}
+          ${sectionTiles(show, catCount, awardedCatCount)}
         </div>
 
         <div class="flex items-center gap-3 px-5 py-4 flex-wrap">
@@ -544,10 +549,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     try {
       const { data: entries  } = await supabase.from('show_entries').select('id, photo_url').eq('show_id', show.id);
       const { data: sponsors } = await supabase.from('show_sponsors').select('logo_url').eq('show_id', show.id);
+      const { data: awardRows } = await supabase.from('awards').select('image_url').eq('show_id', show.id);
 
       const photoUrls = [
         ...(entries  || []).map(e => e.photo_url),
         ...(sponsors || []).map(s => s.logo_url),
+        ...(awardRows || []).map(a => a.image_url),
         show.logo_url, show.banner_url, show.org_logo_url,
       ].filter(Boolean);
 
@@ -559,6 +566,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         supabase.from('judge_scores').delete().eq('show_id', show.id),
         supabase.from('judge_rankings').delete().eq('show_id', show.id),
       ]);
+
+      // Awards before categories — show_categories.award_id references awards,
+      // and clearing awards first avoids relying on the FK's ON DELETE SET NULL
+      // ordering during the parallel category delete below.
+      await supabase.from('awards').delete().eq('show_id', show.id);
 
       // All remaining child records
       await Promise.all([
@@ -582,11 +594,30 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
   // ── Duplicate modal ───────────────────────────────────────────────────────────
 
+  // Awards now live via show_categories.award_id — cloning Awards without
+  // Classes has nothing to attach to, so keep the Awards checkbox disabled
+  // (and unticked) whenever Classes is unticked.
+  function syncAwardsCheckboxAvailability() {
+    const classesCb = document.querySelector('.dup-section[data-section="classes"]');
+    const awardsCb  = document.querySelector('.dup-section[data-section="awards"]');
+    if (!classesCb || !awardsCb) return;
+    const label = awardsCb.closest('label');
+    if (!classesCb.checked) {
+      awardsCb.checked = false;
+      awardsCb.disabled = true;
+      if (label) { label.style.opacity = '0.5'; label.style.cursor = 'not-allowed'; }
+    } else {
+      awardsCb.disabled = false;
+      if (label) { label.style.opacity = ''; label.style.cursor = ''; }
+    }
+  }
+
   function openDuplicateModal(show) {
     pendingDuplicateShow = show;
     const input = document.getElementById('duplicate-title-input');
     if (input) input.value = `${show.title || 'Untitled Show'} (Copy)`;
     document.querySelectorAll('.dup-section').forEach(cb => { cb.checked = true; });
+    syncAwardsCheckboxAvailability();
     const toggleBtn = document.getElementById('duplicate-toggle-all');
     if (toggleBtn) toggleBtn.textContent = 'Deselect all';
     const errEl = document.getElementById('duplicate-error');
@@ -649,11 +680,6 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         clone.judge_count = null;
         clone.judge_setup = null;
       }
-      if (!sections.has('awards')) {
-        clone.has_digital_certs = null;
-        clone.has_physical_prizes = null;
-        clone.prize_source = null;
-      }
       if (!sections.has('fundraising')) {
         clone.entry_fee = null;
         clone.fundraising_goal = null;
@@ -682,23 +708,53 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         }).eq('id', newId);
       }
 
-      if (sections.has('classes')) {
-        const { data: cats } = await supabase.from('show_categories').select('name, description').eq('show_id', show.id);
-        if (cats?.length) await supabase.from('show_categories').insert(cats.map(c => ({ ...c, show_id: newId })));
-      }
-      if (sections.has('awards')) {
-        const { data: prizes } = await supabase.from('show_prizes').select('description').eq('show_id', show.id);
-        if (prizes?.length) await supabase.from('show_prizes').insert(prizes.map(p => ({ ...p, show_id: newId })));
-      }
+      // Sponsors clone first (and capture an old->new id map) — a cloned
+      // award's sponsor_id must point at the new show's sponsor row, not the
+      // source show's, so this has to run before the awards clone below.
+      let sponsorIdMap = new Map();
       if (sections.has('sponsorship')) {
-        const { data: sponsorsData } = await supabase.from('show_sponsors').select('name, website, logo_url').eq('show_id', show.id);
+        const { data: sponsorsData } = await supabase.from('show_sponsors').select('id, name, website, logo_url').eq('show_id', show.id);
         if (sponsorsData?.length) {
-          const sponsors = await Promise.all(sponsorsData.map(async (s, i) => ({
-            ...s,
-            show_id: newId,
-            logo_url: await copyImage(s.logo_url, `sponsors/${newId}/sponsor-${i}`),
+          const pairs = await Promise.all(sponsorsData.map(async (s, i) => {
+            const { data: newSponsor } = await supabase.from('show_sponsors').insert({
+              show_id: newId, name: s.name, website: s.website,
+              logo_url: await copyImage(s.logo_url, `sponsors/${newId}/sponsor-${i}`),
+            }).select('id').single();
+            return newSponsor ? [s.id, newSponsor.id] : null;
+          }));
+          sponsorIdMap = new Map(pairs.filter(Boolean));
+        }
+      }
+
+      // Classes + Awards: cloning categories needs a category always
+      // (Awards has nothing to attach to otherwise — the picker UI already
+      // disables the Awards checkbox whenever Classes is unticked). Awards
+      // clone first so category rows can resolve their new award_id.
+      if (sections.has('classes')) {
+        const { data: cats } = await supabase.from('show_categories').select('id, name, description, award_id').eq('show_id', show.id);
+        if (cats?.length) {
+          let awardIdMap = new Map();
+          if (sections.has('awards')) {
+            const { data: sourceAwards } = await supabase.from('awards').select('*').eq('show_id', show.id);
+            if (sourceAwards?.length) {
+              const pairs = await Promise.all(sourceAwards.map(async a => {
+                const { data: newAward } = await supabase.from('awards').insert({
+                  show_id: newId, name: a.name, includes_certificate: a.includes_certificate,
+                  includes_physical: a.includes_physical, physical_description: a.physical_description,
+                  sponsor_id: a.sponsor_id ? (sponsorIdMap.get(a.sponsor_id) || null) : null,
+                }).select('id').single();
+                if (!newAward) return null;
+                const newImageUrl = await copyImage(a.image_url, `awards/${newId}/${newAward.id}`);
+                if (newImageUrl) await supabase.from('awards').update({ image_url: newImageUrl }).eq('id', newAward.id);
+                return [a.id, newAward.id];
+              }));
+              awardIdMap = new Map(pairs.filter(Boolean));
+            }
+          }
+          await supabase.from('show_categories').insert(cats.map(c => ({
+            show_id: newId, name: c.name, description: c.description,
+            award_id: c.award_id ? (awardIdMap.get(c.award_id) || null) : null,
           })));
-          await supabase.from('show_sponsors').insert(sponsors);
         }
       }
 
@@ -731,7 +787,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const allChecked = Array.from(boxes).every(cb => cb.checked);
     boxes.forEach(cb => { cb.checked = !allChecked; });
     e.currentTarget.textContent = allChecked ? 'Select all' : 'Deselect all';
+    syncAwardsCheckboxAvailability();
   });
+  document.querySelector('.dup-section[data-section="classes"]')?.addEventListener('change', syncAwardsCheckboxAvailability);
   document.getElementById('duplicate-confirm')?.addEventListener('click', async () => {
     if (!pendingDuplicateShow) return;
     const sections = new Set(

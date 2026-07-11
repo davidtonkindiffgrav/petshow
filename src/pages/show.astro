@@ -77,6 +77,19 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     </div>
   </div>
 
+  <!-- Award info modal (opens on top of the Classes modal — same layered pattern as the image lightbox over the voting/entries modals) -->
+  <div id="award-info-modal" style="display:none;position:fixed;inset:0;z-index:110;background:rgba(14,42,42,0.55);backdrop-filter:blur(3px)" role="dialog" aria-modal="true" aria-labelledby="award-info-modal-title">
+    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border-radius:20px;width:min(420px,92vw);max-height:85vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(14,42,42,0.22)">
+      <div style="padding:20px 24px 16px;border-bottom:1px solid #E6EEEC;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+        <h2 id="award-info-modal-title" style="font-size:17px;font-weight:800;color:#143A37;margin:0">What You Could Win</h2>
+        <button id="close-award-info-modal" style="background:none;border:none;cursor:pointer;color:#9BB4AF;padding:4px;display:flex;align-items:center;justify-content:center" aria-label="Close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div id="award-info-modal-body" style="overflow-y:auto;padding:20px 24px 24px"></div>
+    </div>
+  </div>
+
   <!-- Sponsors modal -->
   <div id="sponsors-modal" style="display:none;position:fixed;inset:0;z-index:100;background:rgba(14,42,42,0.55);backdrop-filter:blur(3px)" role="dialog" aria-modal="true" aria-labelledby="sponsors-modal-title">
     <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border-radius:20px;width:min(560px,92vw);max-height:85vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(14,42,42,0.22)">
@@ -189,7 +202,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   const CURRENCY_SYMBOLS = { GBP: '£', USD: '$', EUR: '€', AUD: 'A$', CAD: 'C$', NZD: 'NZ$', ZAR: 'R', SGD: 'S$' };
   const SHOW_TYPE_LABELS = { beauty_contest: 'Beauty Contest', fun_stakes: 'Fun Stakes', memorial: 'Memorial Show', other: 'Other' };
 
-  let show, categories, entries, sponsors, showState, base, showId, sym, totalRaised, displayFee, isPreview;
+  let show, categories, entries, sponsors, awards, awardsById, showState, base, showId, sym, totalRaised, displayFee, isPreview;
   let earlyVoting = false;   // vote show accepting votes while entries are still open
   let votingActive = false;  // any state where the ballot UI is live
   let enterBtnVisible = false;
@@ -214,13 +227,14 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     let showQ = supabase.from('shows').select('*').eq('id', showId);
     if (!isPreview) showQ = showQ.eq('status', 'published');
 
-    const [showRes, catsRes, entriesRes, sponsorsRes, feesRes] = await Promise.all([
+    const [showRes, catsRes, entriesRes, sponsorsRes, awardsRes, feesRes] = await Promise.all([
       showQ.single(),
-      supabase.from('show_categories').select('id, name').eq('show_id', showId),
+      supabase.from('show_categories').select('id, name, award_id').eq('show_id', showId),
       supabase.from('show_entries')
         .select('id, animal_name, breed, photo_url, category_id, entry_number, exhibitor_name, result_place')
         .eq('show_id', showId).eq('status', 'confirmed').order('entry_number'),
-      supabase.from('show_sponsors').select('name, website, logo_url').eq('show_id', showId),
+      supabase.from('show_sponsors').select('id, name, website, logo_url').eq('show_id', showId),
+      supabase.from('awards').select('*').eq('show_id', showId),
       supabase.from('platform_settings').select('key, value').or('key.like.service_fee_%,key.like.stripe_fee_%'),
     ]);
 
@@ -249,6 +263,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     categories  = catsRes.data    || [];
     entries     = entriesRes.data  || [];
     sponsors    = sponsorsRes.data || [];
+    awards      = awardsRes.data   || [];
+    awardsById  = Object.fromEntries(awards.map(a => [a.id, a]));
     sym         = CURRENCY_SYMBOLS[show.currency] || '£';
     showState   = getShowState(show);
     earlyVoting  = showState === 'entries_open' && show.is_judged === false && show.vote_open_mode === 'on_entries_open';
@@ -498,11 +514,13 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     bullets.push('Fun, friendly & open to everyone');
 
-    if (show.has_digital_certs && show.has_physical_prizes) {
+    const anyCert     = categories.some(c => awardsById[c.award_id]?.includes_certificate);
+    const anyPhysical = categories.some(c => awardsById[c.award_id]?.includes_physical);
+    if (anyCert && anyPhysical) {
       bullets.push('Digital certificates & physical prizes for winners');
-    } else if (show.has_digital_certs) {
-      bullets.push('Digital certificates for all winners');
-    } else if (show.has_physical_prizes) {
+    } else if (anyCert) {
+      bullets.push('Digital certificates for winners');
+    } else if (anyPhysical) {
       bullets.push('Physical prizes for winners');
     }
 
@@ -627,6 +645,17 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
   // ── Entry Classes card ────────────────────────────────────────────────────────
 
+  // Small icon cluster showing what a category's linked award includes —
+  // reused by both the in-page Entry Classes card and the View All Classes modal.
+  function awardIcons(cat) {
+    const a = awardsById[cat.award_id];
+    if (!a) return '';
+    const icons = [];
+    if (a.includes_certificate) icons.push('🎓');
+    if (a.includes_physical) icons.push('🎁');
+    return icons.length ? `<span style="font-size:11px;flex-shrink:0" title="${esc(a.name)}">${icons.join('')}</span>` : '';
+  }
+
   function entryClassesCard(resultsMode) {
     const fee = displayFee;
     if (!categories.length) return card(`
@@ -642,6 +671,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;${border}">
         <span style="color:#1E8E7E;font-size:14px;flex-shrink:0">🐾</span>
         <span style="flex:1;font-size:13px;font-weight:600;color:#143A37;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(cat.name)}</span>
+        ${awardIcons(cat)}
         ${!resultsMode ? `<span style="font-size:12px;color:#6B7C79;flex-shrink:0">${fee != null ? sym + fee.toFixed(2) : '—'}</span>` : ''}
         <span style="font-size:12px;color:#6B7C79;flex-shrink:0;min-width:20px;text-align:right">${count}</span>
       </div>`;
@@ -858,7 +888,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   // ── Results: digital cert card ────────────────────────────────────────────────
 
   function digitalCertCard() {
-    if (!show.has_digital_certs) return '';
+    if (!categories.some(c => awardsById[c.award_id]?.includes_certificate)) return '';
     return card(`
       <h3 style="font-size:14px;font-weight:700;color:#143A37;margin:0 0 6px">Your Digital Certificate</h3>
       <p style="font-size:12px;color:#6B7C79;margin:0 0 12px">All participants receive a beautiful digital certificate.</p>
@@ -942,7 +972,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const header = `
       <div style="display:flex;justify-content:space-between;padding:12px 0 6px;border-bottom:1px solid #E6EEEC;margin-bottom:4px">
         <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9BB4AF">Class</span>
-        <div style="display:flex;gap:24px">
+        <div style="display:flex;gap:16px;align-items:center">
+          <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9BB4AF">Award</span>
           ${!resultsMode ? `<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9BB4AF">Fee</span>` : ''}
           <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9BB4AF">Entries</span>
         </div>
@@ -951,10 +982,18 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const rows = categories.map((cat, i) => {
       const count  = entries.filter(e => e.category_id === cat.id).length;
       const border = i > 0 ? 'border-top:1px solid #F0F4F3;' : '';
+      const award  = awardsById[cat.award_id];
+      const awardCell = award
+        ? `<button class="award-info-btn" data-award-id="${esc(award.id)}" aria-label="What ${esc(cat.name)} winners receive"
+            style="background:none;border:none;cursor:pointer;padding:2px;font-size:14px;min-width:34px;text-align:right" title="${esc(award.name)}">
+            ${award.includes_certificate ? '🎓' : ''}${award.includes_physical ? '🎁' : ''}
+          </button>`
+        : `<span style="min-width:34px;display:inline-block"></span>`;
       return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;${border}">
         <span style="color:#1E8E7E;font-size:14px;flex-shrink:0">🐾</span>
         <span style="flex:1;font-size:14px;font-weight:600;color:#143A37">${esc(cat.name)}</span>
-        <div style="display:flex;gap:24px;align-items:center;flex-shrink:0">
+        <div style="display:flex;gap:16px;align-items:center;flex-shrink:0">
+          ${awardCell}
           ${!resultsMode ? `<span style="font-size:13px;color:#6B7C79;min-width:40px;text-align:right">${displayFee != null ? sym + displayFee.toFixed(2) : '—'}</span>` : ''}
           <span style="font-size:13px;color:#6B7C79;min-width:40px;text-align:right">${count}</span>
         </div>
@@ -968,6 +1007,30 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
   function closeClassesModal() {
     document.getElementById('classes-modal').style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  function openAwardInfoModal(awardId) {
+    const award = awardsById[awardId];
+    if (!award) return;
+    const sponsor = award.sponsor_id ? sponsors.find(s => s.id === award.sponsor_id) : null;
+    const badge = (label) => `<span style="display:inline-flex;align-items:center;gap:5px;background:#F0F7F5;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:#1E8E7E">${label}</span>`;
+    document.getElementById('award-info-modal-body').innerHTML = `
+      ${award.image_url ? `<img src="${esc(award.image_url)}" style="width:100%;border-radius:12px;margin-bottom:14px;max-height:200px;object-fit:cover">` : ''}
+      <p style="font-size:16px;font-weight:800;color:#143A37;margin:0 0 10px">${esc(award.name)}</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        ${award.includes_certificate ? badge('🎓 Certificate included') : ''}
+        ${award.includes_physical    ? badge('🎁 Physical prize')      : ''}
+      </div>
+      ${award.includes_physical && award.physical_description ? `<p style="font-size:13px;color:#6B7C79;margin:0 0 12px;line-height:1.5">${esc(award.physical_description)}</p>` : ''}
+      ${sponsor ? `<p style="font-size:12px;color:#9BB4AF;margin:0">Sponsored by <strong style="color:#143A37">${esc(sponsor.name)}</strong></p>` : ''}
+    `;
+    document.getElementById('award-info-modal').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeAwardInfoModal() {
+    document.getElementById('award-info-modal').style.display = 'none';
     document.body.style.overflow = '';
   }
 
@@ -1052,6 +1115,14 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     document.getElementById('classes-modal').addEventListener('click', e => {
       if (e.target === e.currentTarget) closeClassesModal();
     });
+    document.getElementById('classes-modal-body').addEventListener('click', e => {
+      const btn = e.target.closest('.award-info-btn');
+      if (btn) openAwardInfoModal(btn.dataset.awardId);
+    });
+    document.getElementById('close-award-info-modal').addEventListener('click', closeAwardInfoModal);
+    document.getElementById('award-info-modal').addEventListener('click', e => {
+      if (e.target === e.currentTarget) closeAwardInfoModal();
+    });
     document.getElementById('btn-view-all-entries')?.addEventListener('click', e => { e.preventDefault(); openEntriesModal(); });
     document.getElementById('close-entries-modal').addEventListener('click', closeEntriesModal);
     document.getElementById('entries-modal').addEventListener('click', e => {
@@ -1087,6 +1158,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') {
         closeClassesModal();
+        closeAwardInfoModal();
         closeEntriesModal();
         closeResultsModal();
         closeVoteModal();

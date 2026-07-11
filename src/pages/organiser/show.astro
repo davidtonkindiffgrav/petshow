@@ -476,47 +476,20 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
             <span class="text-[12px] font-bold text-[#1c1626]">No awards</span>
           </button>
         </div>
-        <div id="mgmt-awards-form" style="display:none" class="space-y-4 mb-4">
-          <div class="flex items-center justify-between p-3 border border-[#efebf5] rounded-[11px]">
-            <div>
-              <p class="text-[13px] font-bold text-[#1c1626]">Digital Certificates</p>
-              <p class="text-[11.5px] text-[#9b94a8]">Downloadable certificate for winners</p>
-            </div>
-            <button type="button" id="mgmt-certs-toggle" data-on="false"
-              class="w-11 h-6 rounded-full bg-[#efebf5] transition-colors relative flex items-center px-0.5 shrink-0">
-              <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
-            </button>
-          </div>
-          <div class="flex items-center justify-between p-3 border border-[#efebf5] rounded-[11px]">
-            <div>
-              <p class="text-[13px] font-bold text-[#1c1626]">Physical Prizes</p>
-              <p class="text-[11.5px] text-[#9b94a8]">Trophies, vouchers, gift packs, etc.</p>
-            </div>
-            <button type="button" id="mgmt-physical-toggle" data-on="false"
-              class="w-11 h-6 rounded-full bg-[#efebf5] transition-colors relative flex items-center px-0.5 shrink-0">
-              <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
-            </button>
-          </div>
-          <div id="mgmt-physical-form" style="display:none" class="pl-4 border-l-2 border-brand/20 space-y-3">
-            <p class="text-[12.5px] font-semibold text-[#4a4357]">Prize Source</p>
-            <div class="grid grid-cols-3 gap-2" id="mgmt-prize-source-cards">
-              <button type="button" data-value="sponsor" class="sel-card rounded-[10px] border-2 border-[#b8e4e0] bg-white py-2 text-[11.5px] font-bold text-[#1c1626] transition-all cursor-pointer">Sponsor</button>
-              <button type="button" data-value="organisation" class="sel-card rounded-[10px] border-2 border-[#b8e4e0] bg-white py-2 text-[11.5px] font-bold text-[#1c1626] transition-all cursor-pointer">Organisation</button>
-              <button type="button" data-value="mixed" class="sel-card rounded-[10px] border-2 border-[#b8e4e0] bg-white py-2 text-[11.5px] font-bold text-[#1c1626] transition-all cursor-pointer">Mixed</button>
-            </div>
-            <div>
-              <p class="text-[12.5px] font-semibold text-[#4a4357] mb-2">Prize Descriptions</p>
-              <div id="mgmt-prize-list" class="space-y-2 mb-2"></div>
-              <button type="button" id="mgmt-add-prize"
-                class="flex items-center gap-1.5 text-[12px] font-semibold text-brand hover:text-brand-dark transition-colors">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Add Prize
-              </button>
-            </div>
-          </div>
+        <div id="mgmt-awards-form" style="display:none">
+          <p class="text-[13px] font-semibold text-[#4a4357] mb-3">Your Awards</p>
+          <div id="mgmt-awards-list" class="space-y-3 mb-3"></div>
+          <button type="button" id="mgmt-add-award"
+            class="flex items-center gap-1.5 text-[13px] font-semibold text-brand hover:text-brand-dark transition-colors mb-6">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add an Award
+          </button>
+
+          <p class="text-[13px] font-semibold text-[#4a4357] mb-2">Which categories get which award?</p>
+          <div id="mgmt-assign-list" class="border border-[#efebf5] rounded-[13px] px-4"></div>
         </div>
-        <p class="panel-error text-[12px] text-red-500 mt-1" style="display:none"></p>
-        <div class="drawer-actions flex justify-end gap-3 pb-2">
+        <p class="panel-error text-[12px] text-red-500 mt-4" style="display:none"></p>
+        <div class="drawer-actions flex justify-end gap-3 mt-4 pb-2">
           <button class="cancel-btn text-[13px] font-semibold text-[#9b94a8] hover:text-[#1c1626] px-3 py-2 transition-colors">Cancel</button>
           <button class="save-btn bg-brand text-white text-[13px] font-bold px-5 py-2.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Save changes</button>
         </div>
@@ -702,7 +675,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   let categories  = [];
   let judges      = [];
   let sponsors    = [];
-  let prizes      = [];
+  let awards      = [];
   let showId      = null;
   let mgmtBase    = '';
   let uid         = '';
@@ -710,7 +683,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   let serviceFees    = {};
   let savedJudges    = [];
   let maxUploadMb    = 5;
-  let mgmtClasses    = []; // { name, description }
+  let mgmtClasses    = []; // { id, name, description, award_id }
+  let mgmtAwards     = []; // { id, name, includes_certificate, includes_physical, physical_description, image_url, sponsor_id }
+  let mgmtAssignments = []; // { id, name, award_id } — Awards panel's own staged copy of category->award links
+  let loadedCategoryIds = new Set();
+  let loadedAwardIds    = new Set();
   let pendingBranding = { logo: null, orgLogo: null, banner: null, sponsorLogo: null };
   let brandingRemoval = { logo: false, orgLogo: false, banner: false, sponsorLogo: false };
 
@@ -799,12 +776,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (!showId) { window.location.replace(mgmtBase + 'organiser/shows'); return; }
 
     uid = auth.session.user.id;
-    const [showRes, catsRes, judgesRes, sponsorsRes, prizesRes, feeRes, sjRes] = await Promise.all([
+    const [showRes, catsRes, judgesRes, sponsorsRes, awardsRes, feeRes, sjRes] = await Promise.all([
       supabase.from('shows').select('*').eq('id', showId).eq('created_by', uid).single(),
       supabase.from('show_categories').select('*').eq('show_id', showId),
       supabase.from('show_judges').select('*').eq('show_id', showId),
       supabase.from('show_sponsors').select('*').eq('show_id', showId),
-      supabase.from('show_prizes').select('description').eq('show_id', showId),
+      supabase.from('awards').select('*').eq('show_id', showId),
       supabase.from('platform_settings').select('key, value').or('key.like.service_fee_%,key.like.min_entry_fee_%,key.like.stripe_fee_%,key.eq.max_upload_mb'),
       supabase.from('saved_judges').select('*').eq('organiser_id', uid).order('first_name'),
     ]);
@@ -815,8 +792,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     categories  = catsRes.data     || [];
     judges      = judgesRes.data   || [];
     sponsors    = sponsorsRes.data || [];
-    prizes      = prizesRes.data   || [];
+    awards      = awardsRes.data   || [];
     savedJudges = sjRes.data       || [];
+    loadedCategoryIds = new Set(categories.map(c => c.id));
+    loadedAwardIds    = new Set(awards.map(a => a.id));
     (feeRes.data || []).forEach(r => {
       if (r.key === 'max_upload_mb') maxUploadMb = parseFloat(r.value) || 5;
       else serviceFees[r.key] = parseFloat(r.value) || 0;
@@ -852,6 +831,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     // Re-init panels that need fresh state each open
     if (id === 'classes')  initClassesPanel();
+    if (id === 'awards')   initAwardsPanel();
     if (id === 'judging' && show.is_judged === true) {
       rebuildJudgePanels();
       renderMgmtJudgeDisplay();
@@ -1109,11 +1089,6 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (show.is_judged !== true && show.is_judged !== false) {
       required.push({ label: 'Judging', detail: 'Choose expert judging or public voting.', panelId: 'judging' });
     }
-    const awardsDecided = show.has_digital_certs === true || show.has_physical_prizes === true
-      || (show.has_digital_certs === false && show.has_physical_prizes === false);
-    if (!awardsDecided) {
-      required.push({ label: 'Awards & Prizes', detail: 'Choose the awards or prizes for this show, or opt out.', panelId: 'awards' });
-    }
     if (!(show.entry_fee > 0)) {
       required.push({ label: 'Fundraising & Fees', detail: 'Set an entry fee before publishing.', panelId: 'fundraising' });
     }
@@ -1133,6 +1108,16 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         confirmLabel: "I'll assign a judge later",
         detail: 'No judge has been assigned to this show yet.',
         panelId: 'judging',
+      });
+    }
+    // Awards are per-category and optional now (no forced whole-show yes/no
+    // decision, unlike Sponsorship/Judging) — flagged as a soft nudge only.
+    if (categories.filter(c => c.award_id).length === 0) {
+      optional.push({
+        label: 'Awards & Prizes',
+        confirmLabel: 'Publish without setting up Awards & Prizes',
+        detail: 'No categories have an award assigned yet.',
+        panelId: 'awards',
       });
     }
 
@@ -1394,24 +1379,18 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       ], 'Set Up');
     }
 
-    const hasCerts    = show.has_digital_certs === true;
-    const hasPhysical = show.has_physical_prizes === true;
-    const noAwards    = show.has_digital_certs === false && show.has_physical_prizes === false;
-    if (hasCerts || hasPhysical) {
-      const rows = [
-        ['Certs',    hasCerts    ? 'Digital certificates' : 'None'],
-        ['Physical', hasPhysical ? 'Physical prizes'      : 'None'],
-      ];
-      if (hasPhysical && show.prize_source) rows.push(['Source', show.prize_source.charAt(0).toUpperCase() + show.prize_source.slice(1)]);
-      setHeader('awards', '#22c55e', 'Configured', 'Awards & Prizes', rows, 'Edit');
-    } else if (noAwards) {
-      setHeader('awards', '#c4bed0', 'Not used', 'Awards & Prizes', [
-        ['Status', 'No awards for this show'],
-      ], 'Enable');
+    // Awards are now inherently per-category and optional (no whole-show
+    // yes/no fact to key off, unlike the old has_digital_certs/has_physical_prizes
+    // booleans this replaced) — so this simplifies to two states.
+    const awardedCount = categories.filter(c => c.award_id).length;
+    if (awardedCount > 0) {
+      setHeader('awards', '#22c55e', 'Configured', 'Awards & Prizes', [
+        ['Awards defined', String(awards.length)],
+        ['Categories covered', `${awardedCount} of ${categories.length}`],
+      ], 'Edit');
     } else {
       setHeader('awards', '#fbbf24', 'Setup needed', 'Awards & Prizes', [
-        ['Certs',    '—'],
-        ['Physical', '—'],
+        ['Status', '—'],
       ], 'Set Up');
     }
 
@@ -1572,22 +1551,14 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       selectCard(document.getElementById('mgmt-vote-timing-cards'), show.vote_open_mode || 'after_entries_close');
     }
 
-    const anyAwards = show.has_digital_certs === true || show.has_physical_prizes === true;
-    const noAwards  = show.has_digital_certs === false && show.has_physical_prizes === false;
-    if (anyAwards || noAwards) {
-      setYN('mgmt-awards-yn', anyAwards ? 'yes' : 'no');
-      if (anyAwards) {
-        const awardsForm = document.getElementById('mgmt-awards-form');
-        if (awardsForm) awardsForm.style.display = 'block';
-        setToggle('mgmt-certs-toggle', show.has_digital_certs === true);
-        setToggle('mgmt-physical-toggle', show.has_physical_prizes === true);
-        if (show.has_physical_prizes === true) {
-          const physicalForm = document.getElementById('mgmt-physical-form');
-          if (physicalForm) physicalForm.style.display = 'block';
-          if (show.prize_source) selectCard(document.getElementById('mgmt-prize-source-cards'), show.prize_source);
-          prizes.forEach(p => addPrizeRow(p.description));
-        }
-      }
+    // Award row rendering itself happens in initAwardsPanel(), fired when the
+    // drawer opens (mirrors Classes' initClassesPanel() pattern) — this just
+    // restores the Yes/No + form-visible state.
+    const anyAwards = awards.length > 0 || show.has_digital_certs === true || show.has_physical_prizes === true;
+    if (anyAwards) {
+      setYN('mgmt-awards-yn', 'yes');
+      const awardsForm = document.getElementById('mgmt-awards-form');
+      if (awardsForm) awardsForm.style.display = 'block';
     }
 
     setField('mgmt-currency', show.currency || 'AUD');
@@ -1683,7 +1654,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     // Classes — add a category
     document.getElementById('mgmt-add-class').addEventListener('click', () => {
-      mgmtClasses.push({ name: '', description: '' });
+      mgmtClasses.push({ id: crypto.randomUUID(), name: '', description: '', award_id: null });
       renderClassesRows();
     });
 
@@ -1714,14 +1685,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     setupYN('mgmt-awards-yn', val => {
       document.getElementById('mgmt-awards-form').style.display = val === 'yes' ? 'block' : 'none';
     });
-    setupToggle('mgmt-certs-toggle', () => {});
-    setupToggle('mgmt-physical-toggle', on => {
-      document.getElementById('mgmt-physical-form').style.display = on ? 'block' : 'none';
+    document.getElementById('mgmt-add-award').addEventListener('click', () => {
+      mgmtAwards.push({
+        id: crypto.randomUUID(), name: '', includes_certificate: true, includes_physical: false,
+        physical_description: '', image_url: null, sponsor_id: null,
+      });
+      renderAwardRows();
     });
-    document.getElementById('mgmt-prize-source-cards').querySelectorAll('[data-value]').forEach(btn => {
-      btn.addEventListener('click', () => selectCard(document.getElementById('mgmt-prize-source-cards'), btn.dataset.value));
-    });
-    document.getElementById('mgmt-add-prize').addEventListener('click', () => addPrizeRow(''));
 
     // Fundraising
     setupToggle('mgmt-public-toggle', () => {});
@@ -1920,17 +1890,29 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     });
   }
 
+  // Upserts by stable client-generated id (instead of delete+reinsert) so
+  // show_entries.category_id / awards.award_id links survive an edit that
+  // only touches an unrelated row. Shared by the Classes panel save and the
+  // Awards panel save (which only changes award_id on rows Classes owns).
+  async function upsertCategories(rows) {
+    const currentIds = new Set(rows.map(c => c.id));
+    const removedIds = [...loadedCategoryIds].filter(id => !currentIds.has(id));
+    if (removedIds.length) await supabase.from('show_categories').delete().in('id', removedIds);
+    if (rows.length) {
+      await supabase.from('show_categories').upsert(
+        rows.map(c => ({ id: c.id, show_id: showId, name: c.name.trim(), description: c.description || null, award_id: c.award_id || null })),
+        { onConflict: 'id' }
+      );
+    }
+    const { data } = await supabase.from('show_categories').select('*').eq('show_id', showId);
+    categories = data || [];
+    loadedCategoryIds = new Set(categories.map(c => c.id));
+  }
+
   async function saveClasses() {
     const valid = mgmtClasses.filter(c => c.name.trim());
     if (valid.length === 0) return showPanelError('classes', 'Please add at least one category.');
-    await saveSection('classes', {}, async () => {
-      await supabase.from('show_categories').delete().eq('show_id', showId);
-      await supabase.from('show_categories').insert(
-        valid.map(c => ({ show_id: showId, name: c.name.trim(), description: c.description || null }))
-      );
-      const { data } = await supabase.from('show_categories').select('*').eq('show_id', showId);
-      categories = data || [];
-    });
+    await saveSection('classes', {}, async () => { await upsertCategories(valid); });
   }
 
   async function saveSponsorship() {
@@ -1949,8 +1931,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         } finally { hideUploadOverlay(); }
       }
       await saveSection('sponsorship', { has_sponsor: true }, async () => {
-        await supabase.from('show_sponsors').delete().eq('show_id', showId);
-        await supabase.from('show_sponsors').insert([{ show_id: showId, name, website: document.getElementById('mgmt-sponsor-website').value.trim() || null, logo_url: logoUrl }]);
+        const sponsorId = sponsors[0]?.id || crypto.randomUUID();
+        await supabase.from('show_sponsors').upsert([{
+          id: sponsorId, show_id: showId, name,
+          website: document.getElementById('mgmt-sponsor-website').value.trim() || null, logo_url: logoUrl,
+        }], { onConflict: 'id' });
+        await supabase.from('show_sponsors').delete().eq('show_id', showId).neq('id', sponsorId);
         const { data } = await supabase.from('show_sponsors').select('*').eq('show_id', showId);
         sponsors = data || [];
         pendingBranding.sponsorLogo = null;
@@ -2036,20 +2022,37 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const val = getYNValue('mgmt-awards-yn');
     if (!val) return showPanelError('awards', 'Please make a selection.');
     if (val === 'yes') {
-      const hasCerts    = document.getElementById('mgmt-certs-toggle').dataset.on    === 'true';
-      const hasPhysical = document.getElementById('mgmt-physical-toggle').dataset.on === 'true';
-      const prizeDescs  = Array.from(document.querySelectorAll('#mgmt-prize-list input')).map(i => i.value.trim()).filter(Boolean);
-      await saveSection('awards', {
-        has_digital_certs: hasCerts, has_physical_prizes: hasPhysical,
-        prize_source: hasPhysical ? getSelectedCard('mgmt-prize-source-cards') : null,
-      }, async () => {
-        await supabase.from('show_prizes').delete().eq('show_id', showId);
-        if (prizeDescs.length) await supabase.from('show_prizes').insert(prizeDescs.map(d => ({ show_id: showId, description: d })));
-        const { data } = await supabase.from('show_prizes').select('description').eq('show_id', showId);
-        prizes = data || [];
+      const validAwards = mgmtAwards.filter(a => a.name.trim());
+      await saveSection('awards', {}, async () => {
+        const currentAwardIds = new Set(validAwards.map(a => a.id));
+        const removedAwardIds = [...loadedAwardIds].filter(id => !currentAwardIds.has(id));
+        if (removedAwardIds.length) await supabase.from('awards').delete().in('id', removedAwardIds);
+        if (validAwards.length) {
+          await supabase.from('awards').upsert(validAwards.map(a => ({
+            id: a.id, show_id: showId, name: a.name.trim(),
+            includes_certificate: a.includes_certificate, includes_physical: a.includes_physical,
+            physical_description: a.includes_physical ? (a.physical_description || null) : null,
+            image_url: a.image_url || null, sponsor_id: a.sponsor_id || null,
+          })), { onConflict: 'id' });
+        }
+        const { data } = await supabase.from('awards').select('*').eq('show_id', showId);
+        awards = data || [];
+        loadedAwardIds = currentAwardIds;
+        // Persist the category -> award_id assignments staged in mgmtAssignments
+        const catRows = mgmtAssignments.map(a => {
+          const src = categories.find(c => c.id === a.id);
+          return { id: a.id, name: src?.name || a.name, description: src?.description || null, award_id: a.award_id };
+        });
+        await upsertCategories(catRows);
       });
     } else {
-      await saveSection('awards', { has_digital_certs: false, has_physical_prizes: false, prize_source: null });
+      await saveSection('awards', {}, async () => {
+        await supabase.from('awards').delete().eq('show_id', showId);
+        awards = [];
+        loadedAwardIds = new Set();
+        const catRows = categories.map(c => ({ id: c.id, name: c.name, description: c.description, award_id: null }));
+        await upsertCategories(catRows);
+      });
     }
   }
 
@@ -2169,8 +2172,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   // no preset toggle buttons; organisers type category rows directly, with a
   // handful of suggested presets offered as fill-in-the-blank shortcuts.
   function initClassesPanel() {
-    mgmtClasses = categories.map(c => ({ name: c.name, description: c.description || '' }));
-    if (mgmtClasses.length === 0) mgmtClasses.push({ name: '', description: '' });
+    mgmtClasses = categories.map(c => ({ id: c.id, name: c.name, description: c.description || '', award_id: c.award_id || null }));
+    if (mgmtClasses.length === 0) mgmtClasses.push({ id: crypto.randomUUID(), name: '', description: '', award_id: null });
     renderClassesRows();
   }
 
@@ -2235,7 +2238,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           mgmtClasses[blankIdx].name = cat.name;
           mgmtClasses[blankIdx].description = cat.description;
         } else {
-          mgmtClasses.push({ name: cat.name, description: cat.description });
+          mgmtClasses.push({ id: crypto.randomUUID(), name: cat.name, description: cat.description, award_id: null });
         }
         renderClassesRows();
       });
@@ -2431,18 +2434,162 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     }
   }
 
-  function addPrizeRow(description) {
-    const list = document.getElementById('mgmt-prize-list');
-    const row  = document.createElement('div');
-    row.className = 'flex items-center gap-2';
+  // ─── Awards panel ────────────────────────────────────────────────────────────
+  // Mirrors the wizard's Step 7 (new-show.astro) — award "definition" rows
+  // (Tier 1) plus a category->award assignment list (Tier 2). Rebuilds its
+  // working arrays fresh from the shared categories/awards/sponsors module
+  // state every time the drawer opens, decoupled from the Classes panel's
+  // own mgmtClasses scratch state (these are independently-opened panels).
+  function initAwardsPanel() {
+    mgmtAwards      = awards.map(a => ({ ...a }));
+    mgmtAssignments = categories.map(c => ({ id: c.id, name: c.name, award_id: c.award_id || null }));
+    renderAwardRows();
+  }
+
+  function renderAwardRows() {
+    const list = document.getElementById('mgmt-awards-list');
+    list.innerHTML = '';
+    mgmtAwards.forEach((award, i) => appendAwardRow(i));
+    renderAwardAssignments();
+  }
+
+  function appendAwardRow(idx) {
+    const award = mgmtAwards[idx];
+    const list = document.getElementById('mgmt-awards-list');
+    const row = document.createElement('div');
+    row.className = 'border border-[#efebf5] rounded-[13px] p-3.5 bg-[#fafafc]';
+    const certId  = `mgmt-award-cert-${award.id}`;
+    const physId  = `mgmt-award-physical-${award.id}`;
+    const sponsor = sponsors[0];
+    const hasSponsorOption = !!(sponsor?.id && sponsor?.name);
     row.innerHTML = `
-      <input type="text" value="${escAttr(description)}" placeholder="e.g. £50 Pet Store Voucher"
-        class="flex-1 border border-[#b8e4e0] rounded-[10px] px-3 py-2 text-[13px] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" />
-      <button type="button" class="rm-prize text-[#c4bed0] hover:text-red-400 transition-colors p-1">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>`;
-    row.querySelector('.rm-prize').addEventListener('click', () => row.remove());
+      <div class="flex items-start gap-2 mb-2.5">
+        <div class="flex-1">
+          <label class="block text-[10.5px] font-bold text-[#9b94a8] uppercase tracking-wide mb-1">Award Name</label>
+          <input type="text" value="${esc(award.name)}" placeholder="e.g. $50 Pet Store Voucher"
+            class="award-name-input w-full border border-[#b8e4e0] rounded-[11px] px-3 py-2.5 text-[13px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+        </div>
+        <button type="button" class="award-remove shrink-0 text-[#c4bed0] hover:text-red-400 transition-colors mt-[22px]">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="flex items-center gap-4 mb-2">
+        <label class="flex items-center gap-2 cursor-pointer select-none">
+          <button type="button" id="${certId}" data-on="${award.includes_certificate}"
+            class="w-9 h-5 rounded-full transition-colors relative flex items-center px-0.5" style="background:${award.includes_certificate ? '#1ba89a' : '#efebf5'}">
+            <span class="w-4 h-4 rounded-full bg-white shadow transition-transform" style="transform:translateX(${award.includes_certificate ? '16px' : '0'})"></span>
+          </button>
+          <span class="text-[12.5px] font-semibold text-[#4a4357]">🎓 Certificate</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer select-none">
+          <button type="button" id="${physId}" data-on="${award.includes_physical}"
+            class="w-9 h-5 rounded-full transition-colors relative flex items-center px-0.5" style="background:${award.includes_physical ? '#1ba89a' : '#efebf5'}">
+            <span class="w-4 h-4 rounded-full bg-white shadow transition-transform" style="transform:translateX(${award.includes_physical ? '16px' : '0'})"></span>
+          </button>
+          <span class="text-[12.5px] font-semibold text-[#4a4357]">🎁 Physical Prize</span>
+        </label>
+      </div>
+      <div class="award-physical-fields pl-4 border-l-2 border-brand/20 space-y-3" style="display:${award.includes_physical ? 'block' : 'none'}">
+        <div>
+          <label class="block text-[10.5px] font-bold text-[#9b94a8] uppercase tracking-wide mb-1">Prize Description</label>
+          <input type="text" value="${esc(award.physical_description || '')}" placeholder="e.g. Rosette + squeaky toy pack"
+            class="award-desc-input w-full border border-[#efebf5] rounded-[11px] px-3 py-2 text-[12.5px] text-[#6f6880] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" />
+        </div>
+        <div>
+          <label class="block text-[10.5px] font-bold text-[#9b94a8] uppercase tracking-wide mb-1">Prize Photo <span class="normal-case font-medium text-[#c4bed0]">(optional)</span></label>
+          <div class="flex items-center gap-3">
+            <img class="award-image-preview ${award.image_url ? '' : 'hidden'} h-9 rounded object-contain shrink-0" src="${award.image_url ? esc(award.image_url) : ''}" />
+            <button type="button" class="award-image-btn text-[12px] font-semibold text-brand hover:underline">${award.image_url ? 'Replace photo' : 'Upload photo'}</button>
+            <input type="file" class="award-image-input hidden" accept="image/jpeg,image/png,image/webp" />
+          </div>
+        </div>
+        ${hasSponsorOption ? `
+        <div>
+          <label class="block text-[10.5px] font-bold text-[#9b94a8] uppercase tracking-wide mb-1">Sponsor <span class="normal-case font-medium text-[#c4bed0]">(optional)</span></label>
+          <select class="award-sponsor-select w-full border border-[#b8e4e0] rounded-[11px] px-3 py-2 text-[12.5px] text-[#1c1626] bg-white focus:outline-none focus:ring-2 focus:ring-brand transition-colors">
+            <option value="">No sponsor attribution</option>
+            <option value="${sponsor.id}" ${award.sponsor_id === sponsor.id ? 'selected' : ''}>${esc(sponsor.name)}</option>
+          </select>
+        </div>` : ''}
+      </div>
+      <button type="button" class="award-apply-all text-[11.5px] font-semibold text-brand hover:underline mt-2">Apply to all categories</button>
+    `;
     list.appendChild(row);
+
+    row.querySelector('.award-name-input').addEventListener('input', e => {
+      const hadName = award.name.trim().length > 0;
+      award.name = e.target.value;
+      const hasName = award.name.trim().length > 0;
+      if (!hadName && hasName && mgmtAwards.filter(a => a.name.trim()).length === 1) {
+        mgmtAssignments.forEach(a => { if (!a.award_id) a.award_id = award.id; });
+      }
+      renderAwardAssignments();
+    });
+    row.querySelector('.award-remove').addEventListener('click', () => {
+      mgmtAssignments.forEach(a => { if (a.award_id === award.id) a.award_id = null; });
+      mgmtAwards.splice(idx, 1);
+      renderAwardRows();
+    });
+    row.querySelector('.award-desc-input').addEventListener('input', e => { award.physical_description = e.target.value; });
+    const sponsorSelect = row.querySelector('.award-sponsor-select');
+    if (sponsorSelect) sponsorSelect.addEventListener('change', e => { award.sponsor_id = e.target.value || null; });
+    row.querySelector('.award-apply-all').addEventListener('click', () => {
+      mgmtAssignments.forEach(a => { a.award_id = award.id; });
+      renderAwardAssignments();
+    });
+
+    setupToggle(certId, on => { award.includes_certificate = on; });
+    setupToggle(physId, on => {
+      award.includes_physical = on;
+      row.querySelector('.award-physical-fields').style.display = on ? 'block' : 'none';
+    });
+
+    const imgInput = row.querySelector('.award-image-input');
+    const imgBtn   = row.querySelector('.award-image-btn');
+    const imgPreview = row.querySelector('.award-image-preview');
+    imgBtn.addEventListener('click', () => imgInput.click());
+    imgInput.addEventListener('change', async () => {
+      const file = imgInput.files[0];
+      if (!file) return;
+      if (file.size > maxUploadMb * 1024 * 1024) { imgBtn.textContent = `File too large (max ${maxUploadMb} MB)`; return; }
+      imgBtn.textContent = 'Uploading…';
+      showUploadOverlay();
+      try {
+        const url = await uploadImage(`awards/${showId}/${award.id}`, file);
+        award.image_url = url;
+        imgPreview.src = url;
+        imgPreview.classList.remove('hidden');
+        imgBtn.textContent = 'Replace photo';
+      } catch { imgBtn.textContent = 'Upload failed — try again'; }
+      finally { hideUploadOverlay(); }
+    });
+  }
+
+  function renderAwardAssignments() {
+    const wrap = document.getElementById('mgmt-assign-list');
+    if (!wrap) return;
+    if (mgmtAssignments.length === 0) {
+      wrap.innerHTML = `<p class="text-[12.5px] text-[#9b94a8] py-3">Add categories in the Classes panel first.</p>`;
+      return;
+    }
+    const validAwards = mgmtAwards.filter(a => a.name.trim());
+    wrap.innerHTML = mgmtAssignments.map((cls, i) => {
+      const options = ['<option value="">No award</option>']
+        .concat(validAwards.map(a => `<option value="${a.id}" ${cls.award_id === a.id ? 'selected' : ''}>${esc(a.name)}</option>`));
+      return `
+        <div class="flex items-center justify-between gap-3 py-2.5 border-b border-[#f5f3f8] last:border-0">
+          <span class="text-[13px] text-[#1c1626] font-medium">${esc(cls.name)}</span>
+          <select data-idx="${i}" class="award-assign-select border border-[#b8e4e0] rounded-[10px] px-2.5 py-1.5 text-[12.5px] text-[#1c1626] bg-white focus:outline-none focus:ring-2 focus:ring-brand">
+            ${options.join('')}
+          </select>
+        </div>`;
+    }).join('');
+    wrap.querySelectorAll('.award-assign-select').forEach(sel => {
+      sel.addEventListener('change', e => {
+        const i = parseInt(e.target.dataset.idx, 10);
+        mgmtAssignments[i].award_id = e.target.value || null;
+      });
+    });
   }
 
   function getFeeValue() {

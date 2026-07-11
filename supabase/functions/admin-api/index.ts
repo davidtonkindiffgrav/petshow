@@ -23,6 +23,20 @@ function stripeFeeEstimate(total: number, currency: string, settings: Record<str
   return total * pct / 100 + fixed;
 }
 
+// Mirrors src/lib/storage.js's copyImage() — Deno can't import a browser ES
+// module across the Astro/Supabase-functions boundary (same reasoning as
+// platformFee/stripeFeeEstimate above).
+async function copyStorageImage(supabase: any, oldUrl: string | null, newPath: string): Promise<string | null> {
+  if (!oldUrl) return null;
+  const oldPath = oldUrl.match(/\/show-assets\/(.+)/)?.[1];
+  if (!oldPath) return oldUrl;
+  const ext = oldPath.split('.').pop();
+  const fullNewPath = `${newPath}.${ext}`;
+  const { error } = await supabase.storage.from('show-assets').copy(oldPath, fullNewPath);
+  if (error) return null;
+  return supabase.storage.from('show-assets').getPublicUrl(fullNewPath).data.publicUrl;
+}
+
 function stripeClient(): Stripe {
   return new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2024-04-10' });
 }
@@ -938,19 +952,50 @@ async function duplicateShow(supabase: any, payload: any, actorId: string) {
   if (insErr) throw new Error('Failed to duplicate show: ' + insErr.message);
   const newId = inserted.id;
 
-  // Clone structural/template content only — categories, sponsors, prizes.
+  // Clone structural/template content only — categories, sponsors, awards.
   // Explicitly NOT show_entries/show_judges/judge_scores/judge_rankings,
   // which are per-run data (same split already implied by the delete-cascade
-  // in organiser/shows.astro).
-  const [catsRes, sponsorsRes, prizesRes] = await Promise.all([
-    supabase.from('show_categories').select('name, description').eq('show_id', show_id),
-    supabase.from('show_sponsors').select('name, website, logo_url').eq('show_id', show_id),
-    supabase.from('show_prizes').select('description').eq('show_id', show_id),
+  // in organiser/shows.astro). show_prizes is legacy (superseded by awards)
+  // and no longer cloned — no UI writes new rows to it anymore.
+  const [catsRes, sponsorsRes] = await Promise.all([
+    supabase.from('show_categories').select('name, description, award_id').eq('show_id', show_id),
+    supabase.from('show_sponsors').select('id, name, website, logo_url').eq('show_id', show_id),
   ]);
 
-  if (catsRes.data?.length) await supabase.from('show_categories').insert(catsRes.data.map((c: any) => ({ ...c, show_id: newId })));
-  if (sponsorsRes.data?.length) await supabase.from('show_sponsors').insert(sponsorsRes.data.map((s: any) => ({ ...s, show_id: newId })));
-  if (prizesRes.data?.length) await supabase.from('show_prizes').insert(prizesRes.data.map((p: any) => ({ ...p, show_id: newId })));
+  // Sponsors clone first (capturing an old->new id map) — a cloned award's
+  // sponsor_id must point at the new show's sponsor row, not the source's.
+  const sponsorIdMap = new Map<string, string>();
+  if (sponsorsRes.data?.length) {
+    for (const s of sponsorsRes.data) {
+      const { data: newSponsor } = await supabase.from('show_sponsors')
+        .insert({ show_id: newId, name: s.name, website: s.website, logo_url: s.logo_url }).select('id').single();
+      if (newSponsor) sponsorIdMap.set(s.id, newSponsor.id);
+    }
+  }
+
+  const { data: sourceAwards } = await supabase.from('awards').select('*').eq('show_id', show_id);
+  const awardIdMap = new Map<string, string>();
+  if (sourceAwards?.length) {
+    for (const a of sourceAwards) {
+      const { data: newAward } = await supabase.from('awards').insert({
+        show_id: newId, name: a.name, includes_certificate: a.includes_certificate,
+        includes_physical: a.includes_physical, physical_description: a.physical_description,
+        sponsor_id: a.sponsor_id ? (sponsorIdMap.get(a.sponsor_id) ?? null) : null,
+      }).select('id').single();
+      if (newAward) {
+        awardIdMap.set(a.id, newAward.id);
+        const newImageUrl = await copyStorageImage(supabase, a.image_url, `awards/${newId}/${newAward.id}`);
+        if (newImageUrl) await supabase.from('awards').update({ image_url: newImageUrl }).eq('id', newAward.id);
+      }
+    }
+  }
+
+  if (catsRes.data?.length) {
+    await supabase.from('show_categories').insert(catsRes.data.map((c: any) => ({
+      show_id: newId, name: c.name, description: c.description,
+      award_id: c.award_id ? (awardIdMap.get(c.award_id) ?? null) : null,
+    })));
+  }
 
   await writeAudit(supabase, actorId, 'show.duplicated', 'show', newId, { source_show_id: show_id });
   return { show_id: newId };
