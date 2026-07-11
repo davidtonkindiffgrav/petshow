@@ -163,31 +163,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     <!-- ─── Step 2: Show Type ──────────────────────────────────────────────── -->
     <div id="step-2" style="display:none" class="bg-white rounded-card shadow-winner-card p-8">
-      <h2 class="text-[21px] font-extrabold text-[#1c1626] tracking-[-0.02em] mb-1">Show Type</h2>
-      <p class="text-[14px] text-[#6f6880] mb-7">What kind of competition are you running?</p>
-
-      <p class="text-[13px] font-semibold text-[#4a4357] mb-2.5">Type of Show <span class="text-red-400">*</span></p>
-      <div class="grid grid-cols-2 gap-3 mb-7" id="show-type-cards">
-        <button type="button" data-value="beauty_contest" disabled class="sel-card flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#efebf5] bg-[#fafafa] p-4 text-center opacity-50 cursor-not-allowed relative">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          <span class="text-[13px] font-bold text-[#9b94a8]">Beauty Contest</span>
-          <span class="absolute top-2 right-2 text-[10px] font-bold bg-[#efebf5] text-[#9b94a8] px-1.5 py-0.5 rounded-full">Soon</span>
-        </button>
-        <button type="button" data-value="fun_stakes" class="sel-card flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#b8e4e0] bg-white p-4 text-center transition-all cursor-pointer">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-          <span class="text-[13px] font-bold text-[#1c1626]">Fun Stakes</span>
-        </button>
-        <button type="button" data-value="memorial" disabled class="sel-card flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#efebf5] bg-[#fafafa] p-4 text-center opacity-50 cursor-not-allowed relative">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21C12 21 3.5 15.5 3.5 9A4.5 4.5 0 0 1 12 6.1 4.5 4.5 0 0 1 20.5 9C20.5 15.5 12 21 12 21z"/></svg>
-          <span class="text-[13px] font-bold text-[#9b94a8]">Memorial Show<br><span class="text-[11px] text-[#c4bed0] font-normal">"Over the Rainbow Bridge"</span></span>
-          <span class="absolute top-2 right-2 text-[10px] font-bold bg-[#efebf5] text-[#9b94a8] px-1.5 py-0.5 rounded-full">Soon</span>
-        </button>
-        <button type="button" data-value="other" disabled class="sel-card flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#efebf5] bg-[#fafafa] p-4 text-center opacity-50 cursor-not-allowed relative">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9b94a8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <span class="text-[13px] font-bold text-[#9b94a8]">Other</span>
-          <span class="absolute top-2 right-2 text-[10px] font-bold bg-[#efebf5] text-[#9b94a8] px-1.5 py-0.5 rounded-full">Soon</span>
-        </button>
-      </div>
+      <h2 class="text-[21px] font-extrabold text-[#1c1626] tracking-[-0.02em] mb-1">Animal Type</h2>
+      <p class="text-[14px] text-[#6f6880] mb-7">What kind of animal is this show for?</p>
 
       <p class="text-[13px] font-semibold text-[#4a4357] mb-2.5">Animal Type <span class="text-red-400">*</span></p>
       <div class="grid grid-cols-4 gap-2" id="animal-type-cards">
@@ -255,21 +232,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     <!-- ─── Step 4: Competition Classes ───────────────────────────────────── -->
     <div id="step-4" style="display:none" class="bg-white rounded-card shadow-winner-card p-8">
       <h2 class="text-[21px] font-extrabold text-[#1c1626] tracking-[-0.02em] mb-1">Competition Classes</h2>
-      <p id="s4-desc" class="text-[14px] text-[#6f6880] mb-7">Select and customise the classes for your show.</p>
+      <p id="s4-desc" class="text-[14px] text-[#6f6880] mb-7">Add the fun categories for your show — type your own, or tap a suggestion below to get started.</p>
 
-      <!-- Beauty / Memorial: standard age classes -->
-      <div id="s4-standard" style="display:none">
-        <p class="text-[13px] font-semibold text-[#4a4357] mb-3">Standard Age Classes</p>
-        <div id="s4-class-list" class="space-y-2 mb-4"></div>
-        <button type="button" id="s4-add-class"
-          class="flex items-center gap-1.5 text-[13px] font-semibold text-brand hover:text-brand-dark transition-colors mt-2">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Add Custom Class
-        </button>
-      </div>
-
-      <!-- Fun Stakes: your categories (type your own; presets are fill-in suggestions) -->
-      <div id="s4-funstakes" style="display:none">
+      <!-- Your categories (type your own; presets are fill-in suggestions) -->
+      <div id="s4-funstakes">
         <p class="text-[13px] font-semibold text-[#4a4357] mb-3">Your Categories</p>
         <div id="s4-funstakes-list" class="space-y-3 mb-3"></div>
         <button type="button" id="s4-add-funstakes"
@@ -644,13 +610,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   import { supabase } from '../../lib/supabase.js';
   import { uploadImage } from '../../lib/storage.js';
   import { showUploadOverlay, hideUploadOverlay } from '../../lib/uploadOverlay.js';
-  import { FUN_STAKES, STANDARD_CLASSES } from '../../lib/show-categories.js';
+  import { FUN_STAKES } from '../../lib/show-categories.js';
   import { minEntryFee, platformFee, stripeFeeEstimate, organiserNet, clampFee } from '../../lib/fees.js';
   import { searchBreeds } from '../../lib/dog-breeds.js';
 
   // ─── Constants ──────────────────────────────────────────────────────────────
   const STEP_NAMES = [
-    'Show Basics', 'Show Type', 'Breed & Eligibility', 'Classes',
+    'Show Basics', 'Animal Type', 'Breed & Eligibility', 'Classes',
     'Sponsorship', 'Judging', 'Awards & Prizes', 'Fundraising',
     'Branding', 'Review & Publish',
   ];
@@ -953,7 +919,6 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       return true;
     }
     if (n === 2) {
-      if (!getSelectedCard('show-type-cards')) return showError('Please select a show type.'), false;
       return true;
     }
     if (n === 3) {
@@ -1033,12 +998,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       show.entry_close_time = document.getElementById('s1-entry-close-time').value || '';
     }
     if (n === 2) {
-      const prevIsFun  = show.show_type === 'fun_stakes';
-      show.show_type   = getSelectedCard('show-type-cards');
+      show.show_type   = 'fun_stakes';
       show.animal_type = getSelectedCard('animal-type-cards') || 'dog';
-      const nowIsFun   = show.show_type === 'fun_stakes';
-      // Clear stale classes when switching between incompatible class sets
-      if (prevIsFun !== nowIsFun) show.classes = [];
     }
     if (n === 3) {
       show.breed_scope  = getSelectedCard('breed-scope-cards') || 'all';
@@ -1203,82 +1164,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
   // ─── Step 4 init ─────────────────────────────────────────────────────────────
   function initStep4() {
-    const isBeauty  = show.show_type === 'beauty_contest' || show.show_type === 'memorial';
-    const isFun     = show.show_type === 'fun_stakes';
-    document.getElementById('s4-standard').style.display  = isBeauty ? 'block' : 'none';
-    document.getElementById('s4-funstakes').style.display = isFun    ? 'block' : 'none';
-    document.getElementById('s4-desc').textContent = isFun
-      ? 'Add the fun categories for your show — type your own, or tap a suggestion below to get started.'
-      : 'Select the classes for your show. Disable any you don\'t need, or add custom ones.';
-
-    if (isBeauty) {
-      if (show.classes.length === 0) {
-        show.classes = STANDARD_CLASSES.map(cat => ({ name: cat.name, description: cat.description, enabled: true, custom: false }));
-      }
-      renderStandardClasses();
+    if (show.classes.length === 0) {
+      show.classes.push({ name: '', description: '', enabled: true, custom: true });
     }
-    if (isFun) {
-      if (show.classes.length === 0) {
-        show.classes.push({ name: '', description: '', enabled: true, custom: true });
-      }
-      renderFunStakesCategories();
-    }
-  }
-
-  function renderStandardClasses() {
-    const list = document.getElementById('s4-class-list');
-    list.innerHTML = '';
-    show.classes.forEach((cls, i) => {
-      if (cls.custom) return;
-      const row = document.createElement('div');
-      row.className = 'flex items-center gap-3 p-3 border border-[#efebf5] rounded-[11px]';
-      row.innerHTML = `
-        <button type="button" data-idx="${i}" class="cls-toggle w-10 h-6 rounded-full ${cls.enabled ? 'bg-brand' : 'bg-[#efebf5]'} transition-colors relative flex items-center px-0.5 shrink-0">
-          <span class="w-5 h-5 rounded-full bg-white shadow transition-transform ${cls.enabled ? 'translate-x-4' : ''}"></span>
-        </button>
-        <span class="text-[13.5px] font-semibold flex-1 ${cls.enabled ? 'text-[#1c1626]' : 'text-[#9b94a8] line-through'}">${cls.name}</span>
-      `;
-      if (cls.description) attachTooltip(row, cls.description);
-      list.appendChild(row);
-    });
-    // Re-append custom classes
-    show.classes.forEach((cls, i) => {
-      if (!cls.custom) return;
-      appendCustomClassRow(i, cls.name, cls.description);
-    });
-    // Toggle handlers
-    list.querySelectorAll('.cls-toggle').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const i = parseInt(btn.dataset.idx);
-        show.classes[i].enabled = !show.classes[i].enabled;
-        renderStandardClasses();
-      });
-    });
-  }
-
-  function appendCustomClassRow(idx, name, description) {
-    const list = document.getElementById('s4-class-list');
-    const row = document.createElement('div');
-    row.dataset.customIdx = String(idx);
-    row.className = 'space-y-1.5';
-    row.innerHTML = `
-      <div class="flex items-center gap-2">
-        <input type="text" value="${name}" placeholder="Class name"
-          class="flex-1 border border-[#b8e4e0] rounded-[11px] px-3 py-2.5 text-[13px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
-        <button type="button" data-idx="${idx}" class="custom-remove shrink-0 text-[#c4bed0] hover:text-red-400 transition-colors">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-      <input type="text" value="${description || ''}" placeholder="Description (shown as tooltip to entrants)"
-        class="w-full border border-[#efebf5] rounded-[11px] px-3 py-2 text-[12.5px] text-[#6f6880] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" />
-    `;
-    row.querySelectorAll('input')[0].addEventListener('input', e => { show.classes[idx].name = e.target.value; });
-    row.querySelectorAll('input')[1].addEventListener('input', e => { show.classes[idx].description = e.target.value; });
-    row.querySelector('.custom-remove').addEventListener('click', () => {
-      show.classes.splice(idx, 1);
-      renderStandardClasses();
-    });
-    list.appendChild(row);
+    renderFunStakesCategories();
   }
 
   function renderFunStakesCategories() {
@@ -1602,7 +1491,6 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   }
 
   function buildReview() {
-    const SHOW_TYPE_LABELS = { beauty_contest: 'Beauty Contest', fun_stakes: 'Fun Stakes', memorial: 'Memorial Show', other: 'Other' };
     const ORG_TYPE_LABELS  = { non_profit: 'Non-Profit Fundraiser', registered_charity: 'Registered Charity', commercial: 'Commercial Organisation' };
     const SCOPE_LABELS     = { all: 'All Breeds', breed_specific: `Breed Specific: ${show.breed_filter || '—'}`, group_specific: `Group Specific: ${show.group_filter || '—'}` };
     const classes = show.classes.filter(c => c.enabled).map(c => c.name).join(', ') || '—';
@@ -1625,10 +1513,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       </div>
       <div class="border border-[#efebf5] rounded-[14px] overflow-hidden">
         <div class="bg-[#f0fafa] px-5 py-3 border-b border-[#efebf5]">
-          <p class="text-[12px] font-bold text-brand uppercase tracking-wide">Show Type & Classes</p>
+          <p class="text-[12px] font-bold text-brand uppercase tracking-wide">Animal Type & Classes</p>
         </div>
         <div class="px-5">
-          ${reviewRow('Show Type', SHOW_TYPE_LABELS[show.show_type] || '—', 2)}
           ${reviewRow('Animal Type', show.animal_type || 'Dog', 2)}
           ${reviewRow('Breed Scope', SCOPE_LABELS[show.breed_scope] || '—', 3)}
           ${reviewRow('Classes', classes, 4)}
@@ -1754,7 +1641,6 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     }
 
     // Step 2
-    if (show.show_type)   selectCard(document.getElementById('show-type-cards'),   show.show_type);
     if (show.animal_type) selectCard(document.getElementById('animal-type-cards'), show.animal_type);
 
     // Step 3
@@ -1957,10 +1843,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         document.getElementById('s1-charity-field').style.display = needsNum ? 'block' : 'none';
       });
     });
-    // Step 2: show type + animal type
-    document.getElementById('show-type-cards').querySelectorAll('[data-value]').forEach(btn => {
-      btn.addEventListener('click', () => { selectCard(document.getElementById('show-type-cards'), btn.dataset.value); });
-    });
+    // Step 2: animal type
     document.getElementById('animal-type-cards').querySelectorAll('[data-value]').forEach(btn => {
       btn.addEventListener('click', () => { selectCard(document.getElementById('animal-type-cards'), btn.dataset.value); });
     });
@@ -1975,12 +1858,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       });
     });
     selectCard(document.getElementById('breed-scope-cards'), 'all');
-    // Step 4: add custom class
-    document.getElementById('s4-add-class').addEventListener('click', () => {
-      const idx = show.classes.length;
-      show.classes.push({ name: '', description: '', enabled: true, custom: true });
-      appendCustomClassRow(idx, '', '');
-    });
+    // Step 4: add category
     document.getElementById('s4-add-funstakes').addEventListener('click', () => {
       show.classes.push({ name: '', description: '', enabled: true, custom: true });
       renderFunStakesCategories();
