@@ -469,7 +469,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
       <!-- Panel: Physical Prizes -->
       <div id="panel-awards" style="display:none" class="p-6">
-        <p class="text-[12.5px] text-[#9b94a8] mb-4">Certificates are set per category back in the Classes panel. This is just for physical prizes.</p>
+        <p class="text-[12.5px] text-[#9b94a8] mb-4">Certificates are set per category back in the Categories panel. This is just for physical prizes.</p>
         <div class="grid grid-cols-2 gap-3 mb-5" id="mgmt-awards-yn">
           <button type="button" data-value="yes" class="yn flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#b8e4e0] bg-white p-3 transition-all cursor-pointer">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
@@ -918,7 +918,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   ];
   const SECTION_TITLES    = {
     basics: 'Show Basics', showtype: 'Animal Type', breed: 'Breed & Eligibility',
-    classes: 'Classes', sponsorship: 'Sponsorship', judging: 'Judging',
+    classes: 'Categories', sponsorship: 'Sponsorship', judging: 'Judging',
     awards: 'Physical Prizes', fundraising: 'Fundraising & Fees', branding: 'Branding',
     payout: 'Payout Details',
   };
@@ -1051,7 +1051,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const dateText = show.show_date
       ? new Date(show.show_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
       : 'Date not set';
-    document.getElementById('show-meta').textContent = `${dateText} · ${categories.length} class${categories.length !== 1 ? 'es' : ''}${feeText}`;
+    document.getElementById('show-meta').textContent = `${dateText} · ${categories.length} categor${categories.length !== 1 ? 'ies' : 'y'}${feeText}`;
 
     const publishBtn = document.getElementById('btn-publish');
     if (show.status === 'published') {
@@ -1258,7 +1258,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       required.push({ label: 'Breed & Eligibility', detail: 'Choose which breeds or animals are eligible to enter.', panelId: 'breed' });
     }
     if (categories.length === 0) {
-      required.push({ label: 'Classes', detail: 'Add at least one class for entrants to enter.', panelId: 'classes' });
+      required.push({ label: 'Categories', detail: 'Add at least one category for entrants to enter.', panelId: 'classes' });
     }
     if (show.has_sponsor !== true && show.has_sponsor !== false) {
       required.push({ label: 'Sponsorship', detail: 'Choose whether this show has a sponsor.', panelId: 'sponsorship' });
@@ -1511,12 +1511,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (categories.length > 0) {
       const preview = categories.slice(0, 3).map(c => c.name).join(', ')
         + (categories.length > 3 ? ` +${categories.length - 3} more` : '');
-      setHeader('classes', '#22c55e', 'Configured', 'Classes', [
-        ['Count',   `${categories.length} class${categories.length !== 1 ? 'es' : ''}`],
-        ['Classes', preview],
+      setHeader('classes', '#22c55e', 'Configured', 'Categories', [
+        ['Count',      `${categories.length} categor${categories.length !== 1 ? 'ies' : 'y'}`],
+        ['Categories', preview],
       ], 'Edit');
     } else {
-      setHeader('classes', '#fbbf24', 'Setup needed', 'Classes', [
+      setHeader('classes', '#fbbf24', 'Setup needed', 'Categories', [
         ['Count', 'None added yet'],
       ], 'Set Up');
     }
@@ -1564,8 +1564,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const physicalCount = categories.filter(c => c.award_id).length;
     if (certCount > 0 || physicalCount > 0) {
       setHeader('awards', '#22c55e', 'Configured', 'Awards & Prizes', [
-        ['Certificates', `${certCount} of ${categories.length} classes`],
-        ['Physical prizes', `${physicalCount} of ${categories.length} classes`],
+        ['Certificates', `${certCount} of ${categories.length} categories`],
+        ['Physical prizes', `${physicalCount} of ${categories.length} categories`],
       ], 'Edit');
     } else {
       setHeader('awards', '#fbbf24', 'Setup needed', 'Awards & Prizes', [
@@ -2845,7 +2845,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const wrap = document.getElementById('mgmt-assign-list');
     if (!wrap) return;
     if (mgmtAssignments.length === 0) {
-      wrap.innerHTML = `<p class="text-[12.5px] text-[#9b94a8] py-3">Add categories in the Classes panel first.</p>`;
+      wrap.innerHTML = `<p class="text-[12.5px] text-[#9b94a8] py-3">Add categories in the Categories panel first.</p>`;
       return;
     }
     const validAwards = mgmtAwards.filter(a => a.name.trim());
