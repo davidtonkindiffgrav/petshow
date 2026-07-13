@@ -294,7 +294,7 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
         ${renderBreedInput()}
 
         ${errorEl()}
-        <button id="btn-next" style="${nextBtnStyle}width:100%;">Next: Choose Class →</button>
+        <button id="btn-next" style="${nextBtnStyle}width:100%;">Next: Choose Category →</button>
       </div>`;
   }
 
@@ -312,7 +312,7 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
     if (!categories.length) {
       return `
         <div style="background:white;border-radius:16px;border:1px solid #e7eef0;box-shadow:0 4px 16px rgba(10,31,68,0.06);padding:28px;text-align:center;">
-          <p style="color:#6b7c89;font-size:15px;margin-bottom:20px;">No entry classes have been set up for this show yet.</p>
+          <p style="color:#6b7c89;font-size:15px;margin-bottom:20px;">No entry categories have been set up for this show yet.</p>
           <button id="btn-back" style="${backBtnStyle}">← Back</button>
         </div>`;
     }
@@ -322,13 +322,13 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
     ).join('');
     return `
       <div style="background:white;border-radius:16px;border:1px solid #e7eef0;box-shadow:0 4px 16px rgba(10,31,68,0.06);padding:28px;">
-        <h2 style="font-size:20px;font-weight:800;color:#1c1626;margin:0 0 4px;">Choose a Class</h2>
-        <p style="font-size:14px;color:#6b7c89;margin:0 0 20px;">Select the class you'd like to enter.</p>
+        <h2 style="font-size:20px;font-weight:800;color:#1c1626;margin:0 0 4px;">Choose a Category</h2>
+        <p style="font-size:14px;color:#6b7c89;margin:0 0 20px;">Select the category you'd like to enter.</p>
 
         <div style="margin-bottom:24px;">
-          <label for="f-category" style="display:block;font-size:13px;font-weight:700;color:#4a4357;margin-bottom:6px;">Select Class <span style="color:#f87171;">*</span></label>
+          <label for="f-category" style="display:block;font-size:13px;font-weight:700;color:#4a4357;margin-bottom:6px;">Select Category <span style="color:#f87171;">*</span></label>
           <select id="f-category" style="${inputStyle}appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%228%22 viewBox=%220 0 12 8%22><path d=%22M1 1l5 5 5-5%22 stroke=%22%236b7c89%22 stroke-width=%221.6%22 fill=%22none%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/></svg>');background-repeat:no-repeat;background-position:right 16px center;padding-right:40px;">
-            <option value="" ${categoryId ? '' : 'selected'} disabled>Select a class…</option>
+            <option value="" ${categoryId ? '' : 'selected'} disabled>Select a category…</option>
             ${opts}
           </select>
           <div id="f-category-award-info">${awardInfoHtml(categoryId)}</div>
@@ -436,7 +436,7 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
         </div>
 
         <button id="btn-add-another" style="${backBtnStyle}width:100%;margin-bottom:10px;border:1.5px dashed #b8e4e0;" ${submitting ? 'disabled' : ''}>
-          + Add another Class or Pet
+          + Add another Category or Pet
         </button>
 
         <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;cursor:pointer;">
@@ -504,7 +504,7 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
       });
       document.getElementById('btn-next')?.addEventListener('click', () => {
         categoryId = catSelect?.value || null;
-        if (!categoryId) return showErr('Please select a class before continuing.');
+        if (!categoryId) return showErr('Please select a category before continuing.');
         step = 3; render();
       });
     }

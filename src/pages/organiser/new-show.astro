@@ -239,7 +239,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     <!-- ─── Step 4: Competition Classes ───────────────────────────────────── -->
     <div id="step-4" style="display:none" class="bg-white rounded-card shadow-winner-card p-8">
-      <h2 class="text-[21px] font-extrabold text-[#1c1626] tracking-[-0.02em] mb-1">Competition Classes</h2>
+      <h2 class="text-[21px] font-extrabold text-[#1c1626] tracking-[-0.02em] mb-1">Competition Categories</h2>
       <p id="s4-desc" class="text-[14px] text-[#6f6880] mb-7">Add the fun categories for your show — type your own, or tap a suggestion below to get started.</p>
 
       <!-- Your categories (type your own; presets are fill-in suggestions) -->
@@ -367,7 +367,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     <!-- ─── Step 7: Physical Prizes ────────────────────────────────────────── -->
     <div id="step-7" style="display:none" class="bg-white rounded-card shadow-winner-card p-8">
       <h2 class="text-[21px] font-extrabold text-[#1c1626] tracking-[-0.02em] mb-1">Physical Prizes</h2>
-      <p class="text-[14px] text-[#6f6880] mb-7">Will any categories have a physical prize? <span class="text-[#9b94a8] font-normal">(Certificates are set per category back in Classes.)</span></p>
+      <p class="text-[14px] text-[#6f6880] mb-7">Will any categories have a physical prize? <span class="text-[#9b94a8] font-normal">(Certificates are set per category back in Categories.)</span></p>
 
       <div class="grid grid-cols-3 gap-3 mb-6" id="awards-choice">
         <button type="button" data-value="yes" class="yna flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#b8e4e0] bg-white p-4 transition-all cursor-pointer">
@@ -601,7 +601,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
   // ─── Constants ──────────────────────────────────────────────────────────────
   const STEP_NAMES = [
-    'Show Basics', 'Animal Type', 'Breed & Eligibility', 'Classes',
+    'Show Basics', 'Animal Type', 'Breed & Eligibility', 'Categories',
     'Sponsorship', 'Judging', 'Awards & Prizes', 'Fundraising',
     'Branding', 'Review & Publish',
   ];
@@ -916,7 +916,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       return true;
     }
     if (n === 4) {
-      if (show.classes.filter(c => c.enabled).length === 0) return showError('Please enable at least one class.'), false;
+      if (show.classes.filter(c => c.enabled).length === 0) return showError('Please enable at least one category.'), false;
       return true;
     }
     if (n === 5) {
@@ -1627,12 +1627,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       </div>
       <div class="border border-[#efebf5] rounded-[14px] overflow-hidden">
         <div class="bg-[#f0fafa] px-5 py-3 border-b border-[#efebf5]">
-          <p class="text-[12px] font-bold text-brand uppercase tracking-wide">Animal Type & Classes</p>
+          <p class="text-[12px] font-bold text-brand uppercase tracking-wide">Animal Type & Categories</p>
         </div>
         <div class="px-5">
           ${reviewRow('Animal Type', show.animal_type || 'Dog', 2)}
           ${reviewRow('Breed Scope', SCOPE_LABELS[show.breed_scope] || '—', 3)}
-          ${reviewRow('Classes', classes, 4)}
+          ${reviewRow('Categories', classes, 4)}
         </div>
       </div>
       <div class="border border-[#efebf5] rounded-[14px] overflow-hidden">
@@ -1642,7 +1642,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         <div class="px-5">
           ${reviewRow('Sponsor', show.has_sponsor === true ? (show.sponsors[0]?.name || 'Yes') : show.has_sponsor === false ? 'No sponsor' : null, 5)}
           ${reviewRow('Judging', judges, 6)}
-          ${reviewRow('Certificates', `${show.classes.filter(c => c.enabled && c.has_certificate).length} of ${show.classes.filter(c => c.enabled).length} classes`, 4)}
+          ${reviewRow('Certificates', `${show.classes.filter(c => c.enabled && c.has_certificate).length} of ${show.classes.filter(c => c.enabled).length} categories`, 4)}
           ${reviewRow('Physical Prizes', show.awards.filter(a => a.name.trim()).length > 0 ? `${show.awards.filter(a => a.name.trim()).length} prize(s) defined` : null, 7)}
         </div>
       </div>

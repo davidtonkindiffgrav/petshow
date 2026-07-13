@@ -86,7 +86,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         <ul style="margin:0 0 16px;padding:0 0 0 20px;font-size:13px;color:#4a4357;line-height:2">
           <li>All entries and participant data</li>
           <li>All uploaded photos and images</li>
-          <li>All categories and class settings</li>
+          <li>All categories and their settings</li>
           <li>All judging scores and results</li>
           <li>All payout and financial records</li>
         </ul>
@@ -124,7 +124,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
             <input type="checkbox" class="dup-section" data-section="breed" checked style="width:16px;height:16px;accent-color:#1ba89a">Breed &amp; Eligibility
           </label>
           <label style="display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13.5px;color:#1c1626;cursor:pointer;border-bottom:1px solid #f5f3fa">
-            <input type="checkbox" class="dup-section" data-section="classes" checked style="width:16px;height:16px;accent-color:#1ba89a">Classes
+            <input type="checkbox" class="dup-section" data-section="classes" checked style="width:16px;height:16px;accent-color:#1ba89a">Categories
           </label>
           <label style="display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13.5px;color:#1c1626;cursor:pointer;border-bottom:1px solid #f5f3fa">
             <input type="checkbox" class="dup-section" data-section="sponsorship" checked style="width:16px;height:16px;accent-color:#1ba89a">Sponsorship
@@ -313,13 +313,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     return [
       tile('Show Type',   show.show_type ? 'ok' : 'pending',    show.show_type ? SHOW_TYPE_LABELS[show.show_type] : null),
       tile('Breed',       show.breed_scope ? 'ok' : 'pending',  breedSummary),
-      tile('Classes',     catCount > 0 ? 'ok' : 'pending',      catCount > 0 ? `${catCount} class${catCount !== 1 ? 'es' : ''}` : null),
+      tile('Categories',  catCount > 0 ? 'ok' : 'pending',      catCount > 0 ? `${catCount} categor${catCount !== 1 ? 'ies' : 'y'}` : null),
       tile('Sponsor',     show.has_sponsor === true ? 'ok' : show.has_sponsor === false ? 'off' : 'pending',
                           show.has_sponsor === true ? 'Sponsor added' : show.has_sponsor === false ? 'No sponsor' : null),
       tile('Judging',     show.is_judged === true ? 'ok' : show.is_judged === false ? 'off' : 'pending',
                           show.is_judged === true ? 'Expert judges' : show.is_judged === false ? 'Public voting' : null),
       tile('Awards',      awardedCatCount > 0 ? 'ok' : 'pending',
-                          awardedCatCount > 0 ? `${awardedCatCount} of ${catCount} classes` : null),
+                          awardedCatCount > 0 ? `${awardedCatCount} of ${catCount} categories` : null),
       tile('Fundraising', show.entry_fee > 0 ? 'ok' : 'pending',
                           show.entry_fee > 0 ? 'Active' : null),
       tile('Branding',    'pending', 'Upload coming soon'),
@@ -379,7 +379,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         <div class="flex flex-wrap gap-4 px-5 py-3.5 bg-[#f0fafa] border-b border-[#efebf5]">
           <span class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#4a4357]">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            ${catCount} class${catCount !== 1 ? 'es' : ''}
+            ${catCount} categor${catCount !== 1 ? 'ies' : 'y'}
           </span>
           <span class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#4a4357]">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>

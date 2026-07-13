@@ -400,10 +400,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     } else {
       const js = judgingStatus(show);
       firstRow = publishCheckRow({
-        label: 'Judging is complete — all classes have been scored',
+        label: 'Judging is complete — all categories have been scored',
         hint: js.done
-          ? `All ${js.total} ${js.total === 1 ? 'class' : 'classes'} scored`
-          : `${js.pending} of ${js.total} ${js.total === 1 ? 'class' : 'classes'} still pending`,
+          ? `All ${js.total} categor${js.total === 1 ? 'y' : 'ies'} scored`
+          : `${js.pending} of ${js.total} categor${js.total === 1 ? 'y' : 'ies'} still pending`,
         hintOk: js.done,
         link: `${base}organiser/show?id=${show.id}`,
         linkText: 'Manage judges & settings',
@@ -755,7 +755,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
                 ${badge}
               </div>`;
           }).join('')
-        : `<p class="text-[13px] text-[#9b94a8]">No classes configured for this show.</p>`;
+        : `<p class="text-[13px] text-[#9b94a8]">No categories configured for this show.</p>`;
 
       const nowMs          = Date.now();
       const showAt         = zonedDateTime(show.show_date, show.show_time, show.timezone);
@@ -769,7 +769,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       const disabledReason   = alreadyPublished ? ''
         : !showDayArrived ? 'Available on show day'
         : judgeTotal === 0 ? 'No judges assigned'
-        : !allJudgingDone ? 'Judging not yet complete for all classes'
+        : !allJudgingDone ? 'Judging not yet complete for all categories'
         : '';
 
       bodyHTML = `
@@ -867,7 +867,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
                 ${bars}
               </div>`;
           }).join('')
-        : `<p class="text-[12px] mb-1" style="color:#9b94a8">No classes configured yet.</p>`;
+        : `<p class="text-[12px] mb-1" style="color:#9b94a8">No categories configured yet.</p>`;
 
       const alreadyPublished = !!show.results_published_at;
       const canPublish       = totalConfirmed > 0 && !alreadyPublished;
