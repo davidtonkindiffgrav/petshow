@@ -82,7 +82,7 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
     supabase.from('shows')
       .select('id,title,host_org,entry_fee,currency,animal_type,breed_scope,breed_filter,entry_close_date,entry_close_time,timezone,logo_url,status,suspended_at')
       .eq('id', showId).single(),
-    supabase.from('show_categories').select('id,name,award_id').eq('show_id', showId),
+    supabase.from('show_categories').select('id,name,award_id,has_certificate').eq('show_id', showId),
     supabase.from('awards').select('*').eq('show_id', showId),
   ]);
 
@@ -300,11 +300,11 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
 
   function awardInfoHtml(catId: string | null) {
     const cat = categories.find((c: any) => c.id === catId);
-    const award = cat && awardsById[cat.award_id];
-    if (!award) return '';
+    if (!cat) return '';
+    const award = cat.award_id ? awardsById[cat.award_id] : null;
     const parts = [];
-    if (award.includes_certificate) parts.push('🎓 Certificate included');
-    if (award.includes_physical) parts.push(`🎁 ${esc(award.name)}${award.physical_description ? ' — ' + esc(award.physical_description) : ''}`);
+    if (cat.has_certificate) parts.push('🎓 Certificate included');
+    if (award) parts.push(`🎁 ${esc(award.name)}${award.physical_description ? ' — ' + esc(award.physical_description) : ''}`);
     return parts.length ? `<p style="font-size:12.5px;color:#1ba89a;font-weight:600;margin:8px 0 0;">${parts.join(' · ')}</p>` : '';
   }
 

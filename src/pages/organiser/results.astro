@@ -226,16 +226,17 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const sections = Object.entries(byCat).map(([catId, catEntries]) => {
       const cat     = catMap[catId];
       const catName = cat?.name || 'Unknown Category';
-      const award   = cat ? awardMap[cat.award_id] : null;
+      const award   = cat?.award_id ? awardMap[cat.award_id] : null;
       const sorted  = [...catEntries].sort((a, b) => a.result_place - b.result_place);
 
-      const awardBadge = award
-        ? `<span class="inline-flex items-center gap-1 text-[11px] font-bold text-brand bg-brand-tint px-2 py-0.5 rounded-full ml-2">
-            ${award.includes_certificate ? '🎓' : ''}${award.includes_physical ? '🎁' : ''} ${esc(award.name)}
-          </span>`
+      const badgeParts = [];
+      if (cat?.has_certificate) badgeParts.push('🎓');
+      if (award) badgeParts.push(`🎁 ${esc(award.name)}`);
+      const awardBadge = badgeParts.length
+        ? `<span class="inline-flex items-center gap-1 text-[11px] font-bold text-brand bg-brand-tint px-2 py-0.5 rounded-full ml-2">${badgeParts.join(' ')}</span>`
         : '';
-      const fulfillmentNote = award && award.includes_physical
-        ? `This category's award (${esc(award.name)}) includes a physical prize — copy the winner's email above and reach out directly to arrange delivery.`
+      const fulfillmentNote = award
+        ? `This category's prize (${esc(award.name)}) is a physical prize — copy the winner's email above and reach out directly to arrange delivery.`
         : `To ask winners for a postal address for physical prizes, copy their email above and reach out directly.`;
 
       return `
@@ -364,7 +365,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     const [showRes, catsRes, entriesRes, sponsorsRes, judgeRes, awardsRes] = await Promise.all([
       supabase.from('shows').select('*').eq('id', showId).eq('created_by', uid).single(),
-      supabase.from('show_categories').select('id, name, award_id').eq('show_id', showId).order('name'),
+      supabase.from('show_categories').select('id, name, award_id, has_certificate').eq('show_id', showId).order('name'),
       supabase.from('show_entries')
         .select('id, category_id, animal_name, breed, exhibitor_name, exhibitor_email, photo_url, result_place, cert_email_sent_at, cert_jpg_url')
         .eq('show_id', showId)

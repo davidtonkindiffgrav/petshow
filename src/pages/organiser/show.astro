@@ -464,28 +464,29 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         </div>
       </div>
 
-      <!-- Panel: Awards & Prizes -->
+      <!-- Panel: Physical Prizes -->
       <div id="panel-awards" style="display:none" class="p-6">
+        <p class="text-[12.5px] text-[#9b94a8] mb-4">Certificates are set per category back in the Classes panel. This is just for physical prizes.</p>
         <div class="grid grid-cols-2 gap-3 mb-5" id="mgmt-awards-yn">
           <button type="button" data-value="yes" class="yn flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#b8e4e0] bg-white p-3 transition-all cursor-pointer">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-            <span class="text-[12px] font-bold text-[#1c1626]">Yes, awards &amp; prizes</span>
+            <span class="text-[12px] font-bold text-[#1c1626]">Yes, physical prizes</span>
           </button>
           <button type="button" data-value="no" class="yn flex flex-col items-center gap-2 rounded-[13px] border-2 border-[#b8e4e0] bg-white p-3 transition-all cursor-pointer">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            <span class="text-[12px] font-bold text-[#1c1626]">No awards</span>
+            <span class="text-[12px] font-bold text-[#1c1626]">No physical prizes</span>
           </button>
         </div>
         <div id="mgmt-awards-form" style="display:none">
-          <p class="text-[13px] font-semibold text-[#4a4357] mb-3">Your Awards</p>
+          <p class="text-[13px] font-semibold text-[#4a4357] mb-3">Your Physical Prizes</p>
           <div id="mgmt-awards-list" class="space-y-3 mb-3"></div>
           <button type="button" id="mgmt-add-award"
             class="flex items-center gap-1.5 text-[13px] font-semibold text-brand hover:text-brand-dark transition-colors mb-6">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Add an Award
+            Add a Physical Prize
           </button>
 
-          <p class="text-[13px] font-semibold text-[#4a4357] mb-2">Which categories get which award?</p>
+          <p class="text-[13px] font-semibold text-[#4a4357] mb-2">Which categories get which prize?</p>
           <div id="mgmt-assign-list" class="border border-[#efebf5] rounded-[13px] px-4"></div>
         </div>
         <p class="panel-error text-[12px] text-red-500 mt-4" style="display:none"></p>
@@ -684,7 +685,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   let savedJudges    = [];
   let maxUploadMb    = 5;
   let mgmtClasses    = []; // { id, name, description, award_id }
-  let mgmtAwards     = []; // { id, name, includes_certificate, includes_physical, physical_description, image_url, sponsor_id }
+  let mgmtAwards     = []; // { id, name, physical_description, image_url, sponsor_id } — physical prizes only
   let mgmtAssignments = []; // { id, name, award_id } — Awards panel's own staged copy of category->award links
   let loadedCategoryIds = new Set();
   let loadedAwardIds    = new Set();
@@ -745,7 +746,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   const SECTION_TITLES    = {
     basics: 'Show Basics', showtype: 'Animal Type', breed: 'Breed & Eligibility',
     classes: 'Classes', sponsorship: 'Sponsorship', judging: 'Judging',
-    awards: 'Awards & Prizes', fundraising: 'Fundraising & Fees', branding: 'Branding',
+    awards: 'Physical Prizes', fundraising: 'Fundraising & Fees', branding: 'Branding',
   };
 
   // ── Init ─────────────────────────────────────────────────────────────────────
@@ -1110,13 +1111,14 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         panelId: 'judging',
       });
     }
-    // Awards are per-category and optional now (no forced whole-show yes/no
-    // decision, unlike Sponsorship/Judging) — flagged as a soft nudge only.
-    if (categories.filter(c => c.award_id).length === 0) {
+    // Certificates/physical prizes are per-category and optional now (no
+    // forced whole-show yes/no decision, unlike Sponsorship/Judging) —
+    // flagged as a soft nudge only.
+    if (categories.filter(c => c.has_certificate || c.award_id).length === 0) {
       optional.push({
         label: 'Awards & Prizes',
         confirmLabel: 'Publish without setting up Awards & Prizes',
-        detail: 'No categories have an award assigned yet.',
+        detail: 'No categories have a certificate or physical prize set up yet.',
         panelId: 'awards',
       });
     }
@@ -1379,14 +1381,15 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       ], 'Set Up');
     }
 
-    // Awards are now inherently per-category and optional (no whole-show
-    // yes/no fact to key off, unlike the old has_digital_certs/has_physical_prizes
-    // booleans this replaced) — so this simplifies to two states.
-    const awardedCount = categories.filter(c => c.award_id).length;
-    if (awardedCount > 0) {
+    // Certificates and physical prizes are independent per-category facts
+    // now, each optional (no whole-show yes/no to key off) — so this
+    // simplifies to two states covering either one.
+    const certCount     = categories.filter(c => c.has_certificate).length;
+    const physicalCount = categories.filter(c => c.award_id).length;
+    if (certCount > 0 || physicalCount > 0) {
       setHeader('awards', '#22c55e', 'Configured', 'Awards & Prizes', [
-        ['Awards defined', String(awards.length)],
-        ['Categories covered', `${awardedCount} of ${categories.length}`],
+        ['Certificates', `${certCount} of ${categories.length} classes`],
+        ['Physical prizes', `${physicalCount} of ${categories.length} classes`],
       ], 'Edit');
     } else {
       setHeader('awards', '#fbbf24', 'Setup needed', 'Awards & Prizes', [
@@ -1654,7 +1657,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     // Classes — add a category
     document.getElementById('mgmt-add-class').addEventListener('click', () => {
-      mgmtClasses.push({ id: crypto.randomUUID(), name: '', description: '', award_id: null });
+      mgmtClasses.push({ id: crypto.randomUUID(), name: '', description: '', award_id: null, has_certificate: true });
       renderClassesRows();
     });
 
@@ -1687,8 +1690,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     });
     document.getElementById('mgmt-add-award').addEventListener('click', () => {
       mgmtAwards.push({
-        id: crypto.randomUUID(), name: '', includes_certificate: true, includes_physical: false,
-        physical_description: '', image_url: null, sponsor_id: null,
+        id: crypto.randomUUID(), name: '', physical_description: '', image_url: null, sponsor_id: null,
       });
       renderAwardRows();
     });
@@ -1900,7 +1902,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (removedIds.length) await supabase.from('show_categories').delete().in('id', removedIds);
     if (rows.length) {
       await supabase.from('show_categories').upsert(
-        rows.map(c => ({ id: c.id, show_id: showId, name: c.name.trim(), description: c.description || null, award_id: c.award_id || null })),
+        rows.map(c => ({ id: c.id, show_id: showId, name: c.name.trim(), description: c.description || null, award_id: c.award_id || null, has_certificate: !!c.has_certificate })),
         { onConflict: 'id' }
       );
     }
@@ -2030,18 +2032,19 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         if (validAwards.length) {
           await supabase.from('awards').upsert(validAwards.map(a => ({
             id: a.id, show_id: showId, name: a.name.trim(),
-            includes_certificate: a.includes_certificate, includes_physical: a.includes_physical,
-            physical_description: a.includes_physical ? (a.physical_description || null) : null,
+            physical_description: a.physical_description || null,
             image_url: a.image_url || null, sponsor_id: a.sponsor_id || null,
           })), { onConflict: 'id' });
         }
         const { data } = await supabase.from('awards').select('*').eq('show_id', showId);
         awards = data || [];
         loadedAwardIds = currentAwardIds;
-        // Persist the category -> award_id assignments staged in mgmtAssignments
+        // Persist the category -> award_id assignments staged in mgmtAssignments.
+        // has_certificate isn't editable from this panel (that's Classes' job) —
+        // carry the current value through unchanged rather than defaulting it.
         const catRows = mgmtAssignments.map(a => {
           const src = categories.find(c => c.id === a.id);
-          return { id: a.id, name: src?.name || a.name, description: src?.description || null, award_id: a.award_id };
+          return { id: a.id, name: src?.name || a.name, description: src?.description || null, award_id: a.award_id, has_certificate: !!src?.has_certificate };
         });
         await upsertCategories(catRows);
       });
@@ -2050,7 +2053,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         await supabase.from('awards').delete().eq('show_id', showId);
         awards = [];
         loadedAwardIds = new Set();
-        const catRows = categories.map(c => ({ id: c.id, name: c.name, description: c.description, award_id: null }));
+        const catRows = categories.map(c => ({ id: c.id, name: c.name, description: c.description, award_id: null, has_certificate: !!c.has_certificate }));
         await upsertCategories(catRows);
       });
     }
@@ -2172,19 +2175,20 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   // no preset toggle buttons; organisers type category rows directly, with a
   // handful of suggested presets offered as fill-in-the-blank shortcuts.
   function initClassesPanel() {
-    mgmtClasses = categories.map(c => ({ id: c.id, name: c.name, description: c.description || '', award_id: c.award_id || null }));
-    if (mgmtClasses.length === 0) mgmtClasses.push({ id: crypto.randomUUID(), name: '', description: '', award_id: null });
+    mgmtClasses = categories.map(c => ({ id: c.id, name: c.name, description: c.description || '', award_id: c.award_id || null, has_certificate: !!c.has_certificate }));
+    if (mgmtClasses.length === 0) mgmtClasses.push({ id: crypto.randomUUID(), name: '', description: '', award_id: null, has_certificate: true });
     renderClassesRows();
   }
 
   function renderClassesRows() {
     const list = document.getElementById('mgmt-classes-list');
     list.innerHTML = '';
-    mgmtClasses.forEach((cls, i) => appendClassRow(i, cls.name, cls.description));
+    mgmtClasses.forEach((cls, i) => appendClassRow(i));
     renderClassesSuggestions();
   }
 
-  function appendClassRow(idx, name, description) {
+  function appendClassRow(idx) {
+    const cls = mgmtClasses[idx];
     const list = document.getElementById('mgmt-classes-list');
     const row = document.createElement('div');
     row.className = 'border border-[#efebf5] rounded-[13px] p-3.5 bg-[#fafafc]';
@@ -2192,21 +2196,26 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       <div class="flex items-start gap-2 mb-2.5">
         <div class="flex-1">
           <label class="block text-[10.5px] font-bold text-[#9b94a8] uppercase tracking-wide mb-1">Category Name</label>
-          <input type="text" value="${esc(name)}" placeholder="e.g. Best Rescue"
-            class="w-full border border-[#b8e4e0] rounded-[11px] px-3 py-2.5 text-[13px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+          <input type="text" value="${esc(cls.name)}" placeholder="e.g. Best Rescue"
+            class="cls-name-input w-full border border-[#b8e4e0] rounded-[11px] px-3 py-2.5 text-[13px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
         </div>
         <button type="button" class="cls-remove shrink-0 text-[#c4bed0] hover:text-red-400 transition-colors mt-[22px]">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
-      <div>
+      <div class="mb-2.5">
         <label class="block text-[10.5px] font-bold text-[#9b94a8] uppercase tracking-wide mb-1">Description <span class="normal-case font-medium text-[#c4bed0]">(shown as a tooltip to entrants)</span></label>
-        <input type="text" value="${esc(description || '')}" placeholder="Briefly describe this category"
-          class="w-full border border-[#efebf5] rounded-[11px] px-3 py-2 text-[12.5px] text-[#6f6880] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" />
+        <input type="text" value="${esc(cls.description || '')}" placeholder="Briefly describe this category"
+          class="cls-desc-input w-full border border-[#efebf5] rounded-[11px] px-3 py-2 text-[12.5px] text-[#6f6880] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" />
       </div>
+      <label class="flex items-center gap-2 cursor-pointer select-none">
+        <input type="checkbox" class="cls-cert-checkbox w-4 h-4 accent-brand" ${cls.has_certificate ? 'checked' : ''} />
+        <span class="text-[12px] font-semibold text-[#4a4357]">🎓 Award a certificate to this category's winners</span>
+      </label>
     `;
-    row.querySelectorAll('input')[0].addEventListener('input', e => { mgmtClasses[idx].name = e.target.value; });
-    row.querySelectorAll('input')[1].addEventListener('input', e => { mgmtClasses[idx].description = e.target.value; });
+    row.querySelector('.cls-name-input').addEventListener('input', e => { mgmtClasses[idx].name = e.target.value; });
+    row.querySelector('.cls-desc-input').addEventListener('input', e => { mgmtClasses[idx].description = e.target.value; });
+    row.querySelector('.cls-cert-checkbox').addEventListener('change', e => { mgmtClasses[idx].has_certificate = e.target.checked; });
     row.querySelector('.cls-remove').addEventListener('click', () => {
       mgmtClasses.splice(idx, 1);
       renderClassesRows();
@@ -2238,7 +2247,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           mgmtClasses[blankIdx].name = cat.name;
           mgmtClasses[blankIdx].description = cat.description;
         } else {
-          mgmtClasses.push({ id: crypto.randomUUID(), name: cat.name, description: cat.description, award_id: null });
+          mgmtClasses.push({ id: crypto.randomUUID(), name: cat.name, description: cat.description, award_id: null, has_certificate: true });
         }
         renderClassesRows();
       });
@@ -2458,14 +2467,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const list = document.getElementById('mgmt-awards-list');
     const row = document.createElement('div');
     row.className = 'border border-[#efebf5] rounded-[13px] p-3.5 bg-[#fafafc]';
-    const certId  = `mgmt-award-cert-${award.id}`;
-    const physId  = `mgmt-award-physical-${award.id}`;
     const sponsor = sponsors[0];
     const hasSponsorOption = !!(sponsor?.id && sponsor?.name);
     row.innerHTML = `
       <div class="flex items-start gap-2 mb-2.5">
         <div class="flex-1">
-          <label class="block text-[10.5px] font-bold text-[#9b94a8] uppercase tracking-wide mb-1">Award Name</label>
+          <label class="block text-[10.5px] font-bold text-[#9b94a8] uppercase tracking-wide mb-1">Prize Name</label>
           <input type="text" value="${esc(award.name)}" placeholder="e.g. $50 Pet Store Voucher"
             class="award-name-input w-full border border-[#b8e4e0] rounded-[11px] px-3 py-2.5 text-[13px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
         </div>
@@ -2473,45 +2480,27 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
-      <div class="flex items-center gap-4 mb-2">
-        <label class="flex items-center gap-2 cursor-pointer select-none">
-          <button type="button" id="${certId}" data-on="${award.includes_certificate}"
-            class="w-9 h-5 rounded-full transition-colors relative flex items-center px-0.5" style="background:${award.includes_certificate ? '#1ba89a' : '#efebf5'}">
-            <span class="w-4 h-4 rounded-full bg-white shadow transition-transform" style="transform:translateX(${award.includes_certificate ? '16px' : '0'})"></span>
-          </button>
-          <span class="text-[12.5px] font-semibold text-[#4a4357]">🎓 Certificate</span>
-        </label>
-        <label class="flex items-center gap-2 cursor-pointer select-none">
-          <button type="button" id="${physId}" data-on="${award.includes_physical}"
-            class="w-9 h-5 rounded-full transition-colors relative flex items-center px-0.5" style="background:${award.includes_physical ? '#1ba89a' : '#efebf5'}">
-            <span class="w-4 h-4 rounded-full bg-white shadow transition-transform" style="transform:translateX(${award.includes_physical ? '16px' : '0'})"></span>
-          </button>
-          <span class="text-[12.5px] font-semibold text-[#4a4357]">🎁 Physical Prize</span>
-        </label>
+      <div class="mb-2.5">
+        <label class="block text-[10.5px] font-bold text-[#9b94a8] uppercase tracking-wide mb-1">Prize Description</label>
+        <input type="text" value="${esc(award.physical_description || '')}" placeholder="e.g. Rosette + squeaky toy pack"
+          class="award-desc-input w-full border border-[#efebf5] rounded-[11px] px-3 py-2 text-[12.5px] text-[#6f6880] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" />
       </div>
-      <div class="award-physical-fields pl-4 border-l-2 border-brand/20 space-y-3" style="display:${award.includes_physical ? 'block' : 'none'}">
-        <div>
-          <label class="block text-[10.5px] font-bold text-[#9b94a8] uppercase tracking-wide mb-1">Prize Description</label>
-          <input type="text" value="${esc(award.physical_description || '')}" placeholder="e.g. Rosette + squeaky toy pack"
-            class="award-desc-input w-full border border-[#efebf5] rounded-[11px] px-3 py-2 text-[12.5px] text-[#6f6880] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" />
+      <div class="mb-2.5">
+        <label class="block text-[10.5px] font-bold text-[#9b94a8] uppercase tracking-wide mb-1">Prize Photo <span class="normal-case font-medium text-[#c4bed0]">(optional)</span></label>
+        <div class="flex items-center gap-3">
+          <img class="award-image-preview ${award.image_url ? '' : 'hidden'} h-9 rounded object-contain shrink-0" src="${award.image_url ? esc(award.image_url) : ''}" />
+          <button type="button" class="award-image-btn text-[12px] font-semibold text-brand hover:underline">${award.image_url ? 'Replace photo' : 'Upload photo'}</button>
+          <input type="file" class="award-image-input hidden" accept="image/jpeg,image/png,image/webp" />
         </div>
-        <div>
-          <label class="block text-[10.5px] font-bold text-[#9b94a8] uppercase tracking-wide mb-1">Prize Photo <span class="normal-case font-medium text-[#c4bed0]">(optional)</span></label>
-          <div class="flex items-center gap-3">
-            <img class="award-image-preview ${award.image_url ? '' : 'hidden'} h-9 rounded object-contain shrink-0" src="${award.image_url ? esc(award.image_url) : ''}" />
-            <button type="button" class="award-image-btn text-[12px] font-semibold text-brand hover:underline">${award.image_url ? 'Replace photo' : 'Upload photo'}</button>
-            <input type="file" class="award-image-input hidden" accept="image/jpeg,image/png,image/webp" />
-          </div>
-        </div>
-        ${hasSponsorOption ? `
-        <div>
-          <label class="block text-[10.5px] font-bold text-[#9b94a8] uppercase tracking-wide mb-1">Sponsor <span class="normal-case font-medium text-[#c4bed0]">(optional)</span></label>
-          <select class="award-sponsor-select w-full border border-[#b8e4e0] rounded-[11px] px-3 py-2 text-[12.5px] text-[#1c1626] bg-white focus:outline-none focus:ring-2 focus:ring-brand transition-colors">
-            <option value="">No sponsor attribution</option>
-            <option value="${sponsor.id}" ${award.sponsor_id === sponsor.id ? 'selected' : ''}>${esc(sponsor.name)}</option>
-          </select>
-        </div>` : ''}
       </div>
+      ${hasSponsorOption ? `
+      <div class="mb-1">
+        <label class="block text-[10.5px] font-bold text-[#9b94a8] uppercase tracking-wide mb-1">Sponsor <span class="normal-case font-medium text-[#c4bed0]">(optional)</span></label>
+        <select class="award-sponsor-select w-full border border-[#b8e4e0] rounded-[11px] px-3 py-2 text-[12.5px] text-[#1c1626] bg-white focus:outline-none focus:ring-2 focus:ring-brand transition-colors">
+          <option value="">No sponsor attribution</option>
+          <option value="${sponsor.id}" ${award.sponsor_id === sponsor.id ? 'selected' : ''}>${esc(sponsor.name)}</option>
+        </select>
+      </div>` : ''}
       <button type="button" class="award-apply-all text-[11.5px] font-semibold text-brand hover:underline mt-2">Apply to all categories</button>
     `;
     list.appendChild(row);
@@ -2536,12 +2525,6 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     row.querySelector('.award-apply-all').addEventListener('click', () => {
       mgmtAssignments.forEach(a => { a.award_id = award.id; });
       renderAwardAssignments();
-    });
-
-    setupToggle(certId, on => { award.includes_certificate = on; });
-    setupToggle(physId, on => {
-      award.includes_physical = on;
-      row.querySelector('.award-physical-fields').style.display = on ? 'block' : 'none';
     });
 
     const imgInput = row.querySelector('.award-image-input');

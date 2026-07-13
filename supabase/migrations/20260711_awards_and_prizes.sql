@@ -1,11 +1,18 @@
--- Awards & Prizes redesign: per-category awards.
+-- Awards & Prizes redesign: per-category certificates + physical prizes.
 --
--- Replaces the flat, disconnected `show_prizes` free-text list with a proper
--- awards catalogue that categories can reference. One row per distinct
--- award/prize an organiser defines for a show; show_categories.award_id lets
--- multiple categories point at the same award (reuse), and a single award
--- row bundles both a certificate and a physical prize via its two boolean
--- flags rather than needing two separate rows.
+-- Replaces the flat, disconnected `show_prizes` free-text list with two
+-- independent per-category facts instead of one combined "award" concept:
+--   - show_categories.has_certificate — a plain yes/no, since a digital
+--     certificate is just *the* certificate (one design per show,
+--     cert_design_json), it never needs its own name/description/image.
+--   - awards — a catalogue of physical prizes only (name, description,
+--     image, sponsor); show_categories.award_id lets multiple categories
+--     point at the same physical prize (reuse). A category can have a
+--     certificate, a physical prize, both, or neither, independently.
+--
+-- (Earlier version of this migration combined certificate+physical into one
+-- `awards` row via two booleans — reworked before ever going live, in favour
+-- of the simpler split above.)
 --
 -- show_prizes and shows.prize_source/has_digital_certs/has_physical_prizes
 -- are NOT touched here and become legacy/unused columns going forward — no
@@ -16,18 +23,23 @@ CREATE TABLE IF NOT EXISTS awards (
   id                    uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   show_id               uuid        NOT NULL REFERENCES shows(id) ON DELETE CASCADE,
   name                  text        NOT NULL,
-  includes_certificate  boolean     NOT NULL DEFAULT true,
-  includes_physical     boolean     NOT NULL DEFAULT false,
   physical_description  text,
   image_url             text,
   sponsor_id            uuid        REFERENCES show_sponsors(id) ON DELETE SET NULL,
   created_at            timestamptz NOT NULL DEFAULT now()
 );
 
+-- Safety net in case an earlier run of this migration already created the
+-- table with the old combined-flags shape.
+ALTER TABLE awards DROP COLUMN IF EXISTS includes_certificate;
+ALTER TABLE awards DROP COLUMN IF EXISTS includes_physical;
+
 CREATE INDEX IF NOT EXISTS awards_show_id_idx ON awards(show_id);
 
 ALTER TABLE show_categories
   ADD COLUMN IF NOT EXISTS award_id uuid REFERENCES awards(id) ON DELETE SET NULL;
+ALTER TABLE show_categories
+  ADD COLUMN IF NOT EXISTS has_certificate boolean NOT NULL DEFAULT true;
 
 CREATE INDEX IF NOT EXISTS show_categories_award_id_idx ON show_categories(award_id);
 

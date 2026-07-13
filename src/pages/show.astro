@@ -229,7 +229,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     const [showRes, catsRes, entriesRes, sponsorsRes, awardsRes, feesRes] = await Promise.all([
       showQ.single(),
-      supabase.from('show_categories').select('id, name, award_id').eq('show_id', showId),
+      supabase.from('show_categories').select('id, name, award_id, has_certificate').eq('show_id', showId),
       supabase.from('show_entries')
         .select('id, animal_name, breed, photo_url, category_id, entry_number, exhibitor_name, result_place')
         .eq('show_id', showId).eq('status', 'confirmed').order('entry_number'),
@@ -514,8 +514,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     bullets.push('Fun, friendly & open to everyone');
 
-    const anyCert     = categories.some(c => awardsById[c.award_id]?.includes_certificate);
-    const anyPhysical = categories.some(c => awardsById[c.award_id]?.includes_physical);
+    const anyCert     = categories.some(c => c.has_certificate);
+    const anyPhysical = categories.some(c => c.award_id && awardsById[c.award_id]);
     if (anyCert && anyPhysical) {
       bullets.push('Digital certificates & physical prizes for winners');
     } else if (anyCert) {
@@ -648,12 +648,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   // Small icon cluster showing what a category's linked award includes —
   // reused by both the in-page Entry Classes card and the View All Classes modal.
   function awardIcons(cat) {
-    const a = awardsById[cat.award_id];
-    if (!a) return '';
+    const award = cat.award_id ? awardsById[cat.award_id] : null;
     const icons = [];
-    if (a.includes_certificate) icons.push('🎓');
-    if (a.includes_physical) icons.push('🎁');
-    return icons.length ? `<span style="font-size:11px;flex-shrink:0" title="${esc(a.name)}">${icons.join('')}</span>` : '';
+    const titleParts = [];
+    if (cat.has_certificate) { icons.push('🎓'); titleParts.push('Certificate'); }
+    if (award) { icons.push('🎁'); titleParts.push(award.name); }
+    return icons.length ? `<span style="font-size:11px;flex-shrink:0" title="${esc(titleParts.join(' + '))}">${icons.join('')}</span>` : '';
   }
 
   function entryClassesCard(resultsMode) {
@@ -888,7 +888,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   // ── Results: digital cert card ────────────────────────────────────────────────
 
   function digitalCertCard() {
-    if (!categories.some(c => awardsById[c.award_id]?.includes_certificate)) return '';
+    if (!categories.some(c => c.has_certificate)) return '';
     return card(`
       <h3 style="font-size:14px;font-weight:700;color:#143A37;margin:0 0 6px">Your Digital Certificate</h3>
       <p style="font-size:12px;color:#6B7C79;margin:0 0 12px">All participants receive a beautiful digital certificate.</p>
@@ -982,11 +982,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const rows = categories.map((cat, i) => {
       const count  = entries.filter(e => e.category_id === cat.id).length;
       const border = i > 0 ? 'border-top:1px solid #F0F4F3;' : '';
-      const award  = awardsById[cat.award_id];
-      const awardCell = award
-        ? `<button class="award-info-btn" data-award-id="${esc(award.id)}" aria-label="What ${esc(cat.name)} winners receive"
-            style="background:none;border:none;cursor:pointer;padding:2px;font-size:14px;min-width:34px;text-align:right" title="${esc(award.name)}">
-            ${award.includes_certificate ? '🎓' : ''}${award.includes_physical ? '🎁' : ''}
+      const award  = cat.award_id ? awardsById[cat.award_id] : null;
+      const awardCell = (cat.has_certificate || award)
+        ? `<button class="award-info-btn" data-category-id="${esc(cat.id)}" aria-label="What ${esc(cat.name)} winners receive"
+            style="background:none;border:none;cursor:pointer;padding:2px;font-size:14px;min-width:34px;text-align:right">
+            ${cat.has_certificate ? '🎓' : ''}${award ? '🎁' : ''}
           </button>`
         : `<span style="min-width:34px;display:inline-block"></span>`;
       return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;${border}">
@@ -1010,19 +1010,21 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     document.body.style.overflow = '';
   }
 
-  function openAwardInfoModal(awardId) {
-    const award = awardsById[awardId];
-    if (!award) return;
-    const sponsor = award.sponsor_id ? sponsors.find(s => s.id === award.sponsor_id) : null;
+  function openAwardInfoModal(categoryId) {
+    const cat = categories.find(c => c.id === categoryId);
+    if (!cat) return;
+    const award = cat.award_id ? awardsById[cat.award_id] : null;
+    if (!cat.has_certificate && !award) return;
+    const sponsor = award?.sponsor_id ? sponsors.find(s => s.id === award.sponsor_id) : null;
     const badge = (label) => `<span style="display:inline-flex;align-items:center;gap:5px;background:#F0F7F5;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:#1E8E7E">${label}</span>`;
     document.getElementById('award-info-modal-body').innerHTML = `
-      ${award.image_url ? `<img src="${esc(award.image_url)}" style="width:100%;border-radius:12px;margin-bottom:14px;max-height:200px;object-fit:cover">` : ''}
-      <p style="font-size:16px;font-weight:800;color:#143A37;margin:0 0 10px">${esc(award.name)}</p>
+      ${award?.image_url ? `<img src="${esc(award.image_url)}" style="width:100%;border-radius:12px;margin-bottom:14px;max-height:200px;object-fit:cover">` : ''}
+      <p style="font-size:16px;font-weight:800;color:#143A37;margin:0 0 10px">${esc(award ? award.name : cat.name)}</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-        ${award.includes_certificate ? badge('🎓 Certificate included') : ''}
-        ${award.includes_physical    ? badge('🎁 Physical prize')      : ''}
+        ${cat.has_certificate ? badge('🎓 Certificate included') : ''}
+        ${award ? badge('🎁 Physical prize') : ''}
       </div>
-      ${award.includes_physical && award.physical_description ? `<p style="font-size:13px;color:#6B7C79;margin:0 0 12px;line-height:1.5">${esc(award.physical_description)}</p>` : ''}
+      ${award?.physical_description ? `<p style="font-size:13px;color:#6B7C79;margin:0 0 12px;line-height:1.5">${esc(award.physical_description)}</p>` : ''}
       ${sponsor ? `<p style="font-size:12px;color:#9BB4AF;margin:0">Sponsored by <strong style="color:#143A37">${esc(sponsor.name)}</strong></p>` : ''}
     `;
     document.getElementById('award-info-modal').style.display = 'block';
@@ -1117,7 +1119,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     });
     document.getElementById('classes-modal-body').addEventListener('click', e => {
       const btn = e.target.closest('.award-info-btn');
-      if (btn) openAwardInfoModal(btn.dataset.awardId);
+      if (btn) openAwardInfoModal(btn.dataset.categoryId);
     });
     document.getElementById('close-award-info-modal').addEventListener('click', closeAwardInfoModal);
     document.getElementById('award-info-modal').addEventListener('click', e => {

@@ -958,7 +958,7 @@ async function duplicateShow(supabase: any, payload: any, actorId: string) {
   // in organiser/shows.astro). show_prizes is legacy (superseded by awards)
   // and no longer cloned — no UI writes new rows to it anymore.
   const [catsRes, sponsorsRes] = await Promise.all([
-    supabase.from('show_categories').select('name, description, award_id').eq('show_id', show_id),
+    supabase.from('show_categories').select('name, description, award_id, has_certificate').eq('show_id', show_id),
     supabase.from('show_sponsors').select('id, name, website, logo_url').eq('show_id', show_id),
   ]);
 
@@ -978,8 +978,7 @@ async function duplicateShow(supabase: any, payload: any, actorId: string) {
   if (sourceAwards?.length) {
     for (const a of sourceAwards) {
       const { data: newAward } = await supabase.from('awards').insert({
-        show_id: newId, name: a.name, includes_certificate: a.includes_certificate,
-        includes_physical: a.includes_physical, physical_description: a.physical_description,
+        show_id: newId, name: a.name, physical_description: a.physical_description,
         sponsor_id: a.sponsor_id ? (sponsorIdMap.get(a.sponsor_id) ?? null) : null,
       }).select('id').single();
       if (newAward) {
@@ -994,6 +993,7 @@ async function duplicateShow(supabase: any, payload: any, actorId: string) {
     await supabase.from('show_categories').insert(catsRes.data.map((c: any) => ({
       show_id: newId, name: c.name, description: c.description,
       award_id: c.award_id ? (awardIdMap.get(c.award_id) ?? null) : null,
+      has_certificate: !!c.has_certificate,
     })));
   }
 

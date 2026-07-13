@@ -237,7 +237,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           const [catRes, entryRes, awardedRes] = await Promise.all([
             supabase.from('show_categories').select('*', { count: 'exact', head: true }).eq('show_id', s.id),
             supabase.from('show_entries').select('*', { count: 'exact', head: true }).eq('show_id', s.id).eq('status', 'confirmed'),
-            supabase.from('show_categories').select('*', { count: 'exact', head: true }).eq('show_id', s.id).not('award_id', 'is', null),
+            supabase.from('show_categories').select('*', { count: 'exact', head: true }).eq('show_id', s.id).or('award_id.not.is.null,has_certificate.eq.true'),
           ]);
           catCounts[s.id]       = catRes.count  || 0;
           confirmedCounts[s.id] = entryRes.count || 0;
@@ -261,7 +261,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         const [catRes, entryRes, awardedRes] = await Promise.all([
           supabase.from('show_categories').select('*', { count: 'exact', head: true }).eq('show_id', s.id),
           supabase.from('show_entries').select('*', { count: 'exact', head: true }).eq('show_id', s.id).eq('status', 'confirmed'),
-          supabase.from('show_categories').select('*', { count: 'exact', head: true }).eq('show_id', s.id).not('award_id', 'is', null),
+          supabase.from('show_categories').select('*', { count: 'exact', head: true }).eq('show_id', s.id).or('award_id.not.is.null,has_certificate.eq.true'),
         ]);
         catCounts[s.id]       = catRes.count  || 0;
         confirmedCounts[s.id] = entryRes.count || 0;
@@ -731,7 +731,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       // disables the Awards checkbox whenever Classes is unticked). Awards
       // clone first so category rows can resolve their new award_id.
       if (sections.has('classes')) {
-        const { data: cats } = await supabase.from('show_categories').select('id, name, description, award_id').eq('show_id', show.id);
+        const { data: cats } = await supabase.from('show_categories').select('id, name, description, award_id, has_certificate').eq('show_id', show.id);
         if (cats?.length) {
           let awardIdMap = new Map();
           if (sections.has('awards')) {
@@ -739,8 +739,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
             if (sourceAwards?.length) {
               const pairs = await Promise.all(sourceAwards.map(async a => {
                 const { data: newAward } = await supabase.from('awards').insert({
-                  show_id: newId, name: a.name, includes_certificate: a.includes_certificate,
-                  includes_physical: a.includes_physical, physical_description: a.physical_description,
+                  show_id: newId, name: a.name, physical_description: a.physical_description,
                   sponsor_id: a.sponsor_id ? (sponsorIdMap.get(a.sponsor_id) || null) : null,
                 }).select('id').single();
                 if (!newAward) return null;
@@ -754,6 +753,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           await supabase.from('show_categories').insert(cats.map(c => ({
             show_id: newId, name: c.name, description: c.description,
             award_id: c.award_id ? (awardIdMap.get(c.award_id) || null) : null,
+            has_certificate: sections.has('awards') ? !!c.has_certificate : true,
           })));
         }
       }
