@@ -646,6 +646,25 @@ async function updateSettlementStatus(supabase: any, payload: any, actorId: stri
   return { success: true };
 }
 
+// show_payout_details has no admin UPDATE policy (only an admin SELECT
+// policy, mirroring settlements) — verification writes go through here with
+// the service-role client, same reasoning as updateSettlementStatus above.
+async function verifyPayoutDetails(supabase: any, payload: any, actorId: string) {
+  const { show_id } = payload || {};
+  if (!show_id) throw new Error('Missing show_id');
+
+  const { data: row, error } = await supabase.from('show_payout_details').select('id').eq('show_id', show_id).single();
+  if (error || !row) throw new Error('No payout details found for this show');
+
+  const { error: updErr } = await supabase.from('show_payout_details')
+    .update({ verified_at: new Date().toISOString(), verified_by: actorId })
+    .eq('show_id', show_id);
+  if (updErr) throw new Error('Failed to verify payout details: ' + updErr.message);
+
+  await writeAudit(supabase, actorId, 'payout_details.verified', 'show_payout_details', row.id, { show_id });
+  return { success: true };
+}
+
 // Shows/organisations have no admin RLS bypass policy (only settlements/
 // settlement_adjustments/audit_log do) — admin pages must never rely on
 // direct client-side supabase.from('shows')/('organisations') queries, since
@@ -1463,6 +1482,9 @@ serve(async (req: Request) => {
         break;
       case 'update-settlement-status':
         result = await updateSettlementStatus(supabase, payload, user.id);
+        break;
+      case 'verify-payout-details':
+        result = await verifyPayoutDetails(supabase, payload, user.id);
         break;
       case 'health-check':
         result = await runHealthCheck(supabase, stripeClient());

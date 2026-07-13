@@ -43,33 +43,36 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       class="text-[13px] text-red-500 bg-red-50 border border-red-100 rounded-[11px] px-4 py-3 mb-5"></p>
 
     <!-- Section cards grid — headers only, no inline panels -->
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" id="sections-grid">
-      <div class="section-card bg-white rounded-card border border-[#b8e4e0]" id="card-basics">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4" id="sections-grid">
+      <div class="section-card bg-white rounded-card border border-[#b8e4e0] xl:col-span-2" id="card-basics">
         <div class="card-header p-5" id="hdr-basics"></div>
       </div>
-      <div class="section-card bg-white rounded-card border border-[#b8e4e0] relative overflow-hidden" id="card-showtype">
+      <div class="section-card bg-white rounded-card border border-[#b8e4e0] relative overflow-hidden xl:col-span-1" id="card-showtype">
         <div class="card-header p-5" id="hdr-showtype"></div>
         <span class="absolute bottom-1 right-2 pointer-events-none leading-none" style="font-size:clamp(28px, 6vw, 66px)">🐕</span>
       </div>
-      <div class="section-card bg-white rounded-card border border-[#b8e4e0]" id="card-breed">
+      <div class="section-card bg-white rounded-card border border-[#b8e4e0] xl:col-span-1" id="card-breed">
         <div class="card-header p-5" id="hdr-breed"></div>
       </div>
-      <div class="section-card bg-white rounded-card border border-[#b8e4e0]" id="card-classes">
+      <div class="section-card bg-white rounded-card border border-[#b8e4e0] xl:col-span-2" id="card-classes">
         <div class="card-header p-5" id="hdr-classes"></div>
       </div>
-      <div class="section-card bg-white rounded-card border border-[#b8e4e0]" id="card-sponsorship">
+      <div class="section-card bg-white rounded-card border border-[#b8e4e0] xl:col-span-2" id="card-sponsorship">
         <div class="card-header p-5" id="hdr-sponsorship"></div>
       </div>
-      <div class="section-card bg-white rounded-card border border-[#b8e4e0]" id="card-judging">
+      <div class="section-card bg-white rounded-card border border-[#b8e4e0] xl:col-span-2" id="card-judging">
         <div class="card-header p-5" id="hdr-judging"></div>
       </div>
-      <div class="section-card bg-white rounded-card border border-[#b8e4e0]" id="card-awards">
+      <div class="section-card bg-white rounded-card border border-[#b8e4e0] xl:col-span-2" id="card-awards">
         <div class="card-header p-5" id="hdr-awards"></div>
       </div>
-      <div class="section-card bg-white rounded-card border border-[#b8e4e0]" id="card-fundraising">
+      <div class="section-card bg-white rounded-card border border-[#b8e4e0] xl:col-span-2" id="card-fundraising">
         <div class="card-header p-5" id="hdr-fundraising"></div>
       </div>
-      <div class="section-card bg-white rounded-card border border-[#b8e4e0]" id="card-branding">
+      <div class="section-card bg-white rounded-card border border-[#b8e4e0] xl:col-span-2" id="card-payout">
+        <div class="card-header p-5" id="hdr-payout"></div>
+      </div>
+      <div class="section-card bg-white rounded-card border border-[#b8e4e0] xl:col-span-2" id="card-branding">
         <div class="card-header p-5" id="hdr-branding"></div>
       </div>
     </div>
@@ -564,6 +567,166 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         </div>
       </div>
 
+      <!-- Panel: Payout Details -->
+      <div id="panel-payout" style="display:none" class="p-6 space-y-5">
+        <p class="text-[12.5px] text-[#6f6880] leading-relaxed -mt-1">
+          Where we send this show's prize-pool proceeds via international bank transfer once the show wraps up.
+          These details are only visible to you and platform admins.
+        </p>
+
+        <div id="payout-verified-banner" style="display:none" class="rounded-[11px] bg-[#f0fafa] border border-[#b8e4e0] px-3 py-2.5 text-[12.5px] text-[#1ba89a] font-semibold">
+          ✓ Verified by the platform team
+        </div>
+
+        <div>
+          <p class="text-[13px] font-bold text-[#1c1626] mb-3">Account Holder</p>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Account Holder Legal Name <span class="text-red-400">*</span></label>
+              <input type="text" id="payout-holder-name" placeholder="e.g. Sydney Kennel Club Inc."
+                class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+            </div>
+            <div>
+              <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Address Line 1 <span class="text-red-400">*</span></label>
+              <input type="text" id="payout-address-line1"
+                class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">City <span class="text-red-400">*</span></label>
+                <input type="text" id="payout-city"
+                  class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+              </div>
+              <div>
+                <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">State / Region <span class="text-[#9b94a8] font-normal">(optional)</span></label>
+                <input type="text" id="payout-region"
+                  class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Postcode <span class="text-red-400">*</span></label>
+                <input type="text" id="payout-postcode"
+                  class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+              </div>
+              <div>
+                <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Country <span class="text-red-400">*</span></label>
+                <select id="payout-beneficiary-country"
+                  class="w-full border border-[#b8e4e0] rounded-[11px] px-3 py-2.5 text-[14px] text-[#1c1626] bg-white focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors">
+                  <option value="">Select…</option>
+                  <option value="AU">Australia</option>
+                  <option value="NZ">New Zealand</option>
+                  <option value="GB">United Kingdom</option>
+                  <option value="US">United States</option>
+                  <option value="CA">Canada</option>
+                  <option value="SG">Singapore</option>
+                  <option value="ZA">South Africa</option>
+                  <option value="DE">Germany</option>
+                  <option value="FR">France</option>
+                  <option value="IE">Ireland</option>
+                  <option value="ES">Spain</option>
+                  <option value="IT">Italy</option>
+                  <option value="NL">Netherlands</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="border-t border-[#efebf5] pt-4">
+          <p class="text-[13px] font-bold text-[#1c1626] mb-3">Bank Details</p>
+          <div class="space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Bank Name <span class="text-red-400">*</span></label>
+                <input type="text" id="payout-bank-name"
+                  class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+              </div>
+              <div>
+                <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Bank Country <span class="text-red-400">*</span></label>
+                <select id="payout-bank-country"
+                  class="w-full border border-[#b8e4e0] rounded-[11px] px-3 py-2.5 text-[14px] text-[#1c1626] bg-white focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors">
+                  <option value="">Select…</option>
+                  <option value="AU">Australia</option>
+                  <option value="NZ">New Zealand</option>
+                  <option value="GB">United Kingdom</option>
+                  <option value="US">United States</option>
+                  <option value="CA">Canada</option>
+                  <option value="SG">Singapore</option>
+                  <option value="ZA">South Africa</option>
+                  <option value="DE">Germany</option>
+                  <option value="FR">France</option>
+                  <option value="IE">Ireland</option>
+                  <option value="ES">Spain</option>
+                  <option value="IT">Italy</option>
+                  <option value="NL">Netherlands</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Bank Address <span class="text-[#9b94a8] font-normal">(optional)</span></label>
+              <input type="text" id="payout-bank-address"
+                class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Account Currency <span class="text-red-400">*</span></label>
+                <select id="payout-account-currency"
+                  class="w-full border border-[#b8e4e0] rounded-[11px] px-3 py-2.5 text-[14px] text-[#1c1626] bg-white focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors">
+                  <option value="AUD">AUD — A$ Australian Dollar</option>
+                  <option value="NZD">NZD — NZ$ New Zealand Dollar</option>
+                  <option value="GBP">GBP — £ British Pound</option>
+                  <option value="USD">USD — $ US Dollar</option>
+                  <option value="EUR">EUR — € Euro</option>
+                  <option value="CAD">CAD — C$ Canadian Dollar</option>
+                  <option value="SGD">SGD — S$ Singapore Dollar</option>
+                  <option value="ZAR">ZAR — R South African Rand</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Account Number <span class="text-red-400">*</span></label>
+                <input type="text" id="payout-account-number"
+                  class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">SWIFT / BIC Code <span class="text-red-400">*</span></label>
+                <input type="text" id="payout-swift-bic" placeholder="e.g. ANZBAU3M"
+                  class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+              </div>
+              <div id="payout-iban-field">
+                <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">IBAN
+                  <span id="payout-iban-required" class="text-red-400" style="display:none">*</span>
+                  <span id="payout-iban-optional" class="text-[#9b94a8] font-normal">(optional)</span>
+                </label>
+                <input type="text" id="payout-iban"
+                  class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+              </div>
+            </div>
+            <div id="payout-local-code-field">
+              <label id="payout-local-code-label" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Local Bank/Routing Code <span class="text-red-400">*</span></label>
+              <input type="text" id="payout-local-code"
+                class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Notes <span class="text-[#9b94a8] font-normal">(optional)</span></label>
+          <textarea id="payout-notes" rows="2" placeholder="Anything the admin should know before transferring funds…"
+            class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors resize-none"></textarea>
+        </div>
+
+        <p class="panel-error text-[12px] text-red-500" style="display:none"></p>
+        <div class="drawer-actions flex justify-end gap-3 pb-2">
+          <button class="cancel-btn text-[13px] font-semibold text-[#9b94a8] hover:text-[#1c1626] px-3 py-2 transition-colors">Cancel</button>
+          <button class="save-btn bg-brand text-white text-[13px] font-bold px-5 py-2.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Save changes</button>
+        </div>
+      </div>
+
       <!-- Panel: Branding -->
       <div id="panel-branding" style="display:none" class="p-6 space-y-4">
 
@@ -691,6 +854,16 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   let loadedAwardIds    = new Set();
   let pendingBranding = { logo: null, orgLogo: null, banner: null, sponsorLogo: null };
   let brandingRemoval = { logo: false, orgLogo: false, banner: false, sponsorLogo: false };
+  let payoutDetails   = null; // show_payout_details row, or null if not yet entered
+
+  // Countries needing IBAN (rest use local_bank_code instead / in addition)
+  const IBAN_COUNTRIES = ['GB', 'DE', 'FR', 'IE', 'ES', 'IT', 'NL'];
+  // Label for the generic "local bank code" field, keyed by bank_country — null means hide the field
+  const LOCAL_CODE_LABELS = {
+    AU: 'BSB', GB: 'Sort Code', US: 'Routing Number (ABA)',
+    CA: 'Institution & Transit Number', SG: 'Bank & Branch Code', ZA: 'Branch Code',
+    NZ: null, DE: null, FR: null, IE: null, ES: null, IT: null, NL: null,
+  };
 
   const BREED_SCOPE_LABELS = { all: 'All Breeds', breed_specific: 'Breed Specific', group_specific: 'Group Specific' };
   const ORG_TYPE_LABELS   = { non_profit: 'Non-Profit', registered_charity: 'Registered Charity', commercial: 'Commercial' };
@@ -747,6 +920,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     basics: 'Show Basics', showtype: 'Animal Type', breed: 'Breed & Eligibility',
     classes: 'Classes', sponsorship: 'Sponsorship', judging: 'Judging',
     awards: 'Physical Prizes', fundraising: 'Fundraising & Fees', branding: 'Branding',
+    payout: 'Payout Details',
   };
 
   // ── Init ─────────────────────────────────────────────────────────────────────
@@ -777,7 +951,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (!showId) { window.location.replace(mgmtBase + 'organiser/shows'); return; }
 
     uid = auth.session.user.id;
-    const [showRes, catsRes, judgesRes, sponsorsRes, awardsRes, feeRes, sjRes] = await Promise.all([
+    const [showRes, catsRes, judgesRes, sponsorsRes, awardsRes, feeRes, sjRes, payoutRes] = await Promise.all([
       supabase.from('shows').select('*').eq('id', showId).eq('created_by', uid).single(),
       supabase.from('show_categories').select('*').eq('show_id', showId),
       supabase.from('show_judges').select('*').eq('show_id', showId),
@@ -785,6 +959,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       supabase.from('awards').select('*').eq('show_id', showId),
       supabase.from('platform_settings').select('key, value').or('key.like.service_fee_%,key.like.min_entry_fee_%,key.like.stripe_fee_%,key.eq.max_upload_mb'),
       supabase.from('saved_judges').select('*').eq('organiser_id', uid).order('first_name'),
+      supabase.from('show_payout_details').select('*').eq('show_id', showId).maybeSingle(),
     ]);
 
     if (!showRes.data) { window.location.replace(mgmtBase + 'organiser/shows'); return; }
@@ -795,6 +970,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     sponsors    = sponsorsRes.data || [];
     awards      = awardsRes.data   || [];
     savedJudges = sjRes.data       || [];
+    payoutDetails = payoutRes.data || null;
     loadedCategoryIds = new Set(categories.map(c => c.id));
     loadedAwardIds    = new Set(awards.map(a => a.id));
     (feeRes.data || []).forEach(r => {
@@ -1414,6 +1590,18 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       ], 'Set Up');
     }
 
+    if (payoutDetails) {
+      const verified = !!payoutDetails.verified_at;
+      setHeader('payout', verified ? '#22c55e' : '#fbbf24', verified ? 'Verified' : 'Saved — pending review', 'Payout Details', [
+        ['Bank',    payoutDetails.bank_name || '—'],
+        ['Account', payoutDetails.account_number ? `••••${String(payoutDetails.account_number).slice(-4)}` : '—'],
+      ], 'Edit');
+    } else {
+      setHeader('payout', '#fbbf24', 'Setup needed', 'Payout Details', [
+        ['Status', 'Not entered yet'],
+      ], 'Set Up');
+    }
+
     renderBrandingHeader();
   }
 
@@ -1570,6 +1758,51 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     setFeeValue(Number(show.entry_fee) || getMin(show.currency || 'AUD') || 3);
     applyCurrencySymbol(show.currency || 'AUD');
     updatePublicToggleAvailability();
+
+    setField('payout-holder-name',       payoutDetails?.account_holder_name || '');
+    setField('payout-address-line1',     payoutDetails?.beneficiary_address_line1 || '');
+    setField('payout-city',              payoutDetails?.beneficiary_city || '');
+    setField('payout-region',            payoutDetails?.beneficiary_region || '');
+    setField('payout-postcode',          payoutDetails?.beneficiary_postcode || '');
+    setField('payout-beneficiary-country', payoutDetails?.beneficiary_country || '');
+    setField('payout-bank-name',         payoutDetails?.bank_name || '');
+    setField('payout-bank-address',      payoutDetails?.bank_address || '');
+    setField('payout-account-currency',  payoutDetails?.account_currency || show.currency || 'AUD');
+    setField('payout-account-number',    payoutDetails?.account_number || '');
+    setField('payout-swift-bic',         payoutDetails?.swift_bic || '');
+    setField('payout-iban',              payoutDetails?.iban || '');
+    setField('payout-local-code',        payoutDetails?.local_bank_code || '');
+    setField('payout-notes',             payoutDetails?.notes || '');
+    setField('payout-bank-country',      payoutDetails?.bank_country || '');
+    updatePayoutBankCountryFields(payoutDetails?.bank_country || '');
+    const verifiedBanner = document.getElementById('payout-verified-banner');
+    if (verifiedBanner) verifiedBanner.style.display = payoutDetails?.verified_at ? 'block' : 'none';
+  }
+
+  // Relabels/toggles the IBAN and local-bank-code fields based on the selected
+  // bank country — mirrors the s1-charity-field conditional-visibility pattern.
+  function updatePayoutBankCountryFields(country) {
+    const ibanRequired = document.getElementById('payout-iban-required');
+    const ibanOptional = document.getElementById('payout-iban-optional');
+    const needsIban = IBAN_COUNTRIES.includes(country);
+    if (ibanRequired) ibanRequired.style.display = needsIban ? 'inline' : 'none';
+    if (ibanOptional) ibanOptional.style.display = needsIban ? 'none' : 'inline';
+
+    const localField = document.getElementById('payout-local-code-field');
+    const localLabelEl = document.getElementById('payout-local-code-label');
+    const isKnownCountry = LOCAL_CODE_LABELS.hasOwnProperty(country);
+    const knownLabel = LOCAL_CODE_LABELS[country];
+    if (isKnownCountry && !knownLabel) {
+      // Known country whose account number already encodes the bank/branch (e.g. NZ) or that uses IBAN instead
+      if (localField) localField.style.display = 'none';
+    } else if (isKnownCountry) {
+      if (localField) localField.style.display = 'block';
+      if (localLabelEl) localLabelEl.innerHTML = `${knownLabel} <span class="text-red-400">*</span>`;
+    } else {
+      // Unselected or "Other" — show the generic field but don't require it
+      if (localField) localField.style.display = 'block';
+      if (localLabelEl) localLabelEl.innerHTML = `Local Bank/Routing Code <span class="text-[#9b94a8] font-normal">(optional)</span>`;
+    }
   }
 
   // Fundraising progress can only be shown publicly once a goal is set — otherwise
@@ -1630,6 +1863,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.querySelector('#panel-judging .save-btn').addEventListener('click', confirmIfPublished(saveJudging));
     document.querySelector('#panel-awards .save-btn').addEventListener('click', confirmIfPublished(saveAwards));
     document.querySelector('#panel-fundraising .save-btn').addEventListener('click', confirmIfPublished(saveFundraising));
+    document.querySelector('#panel-payout .save-btn').addEventListener('click', confirmIfPublished(savePayout));
     document.querySelector('#panel-branding .save-btn').addEventListener('click', confirmIfPublished(saveBranding));
 
     // Org type
@@ -1705,6 +1939,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     // Branding: logo source toggle
     document.getElementById('branding-logo-source-cards').querySelectorAll('[data-value]').forEach(btn => {
       btn.addEventListener('click', () => selectCard(document.getElementById('branding-logo-source-cards'), btn.dataset.value));
+    });
+
+    // Payout details: bank country drives the IBAN/local-code field labels
+    document.getElementById('payout-bank-country').addEventListener('change', e => {
+      updatePayoutBankCountryFields(e.target.value);
     });
   }
 
@@ -2072,6 +2311,60 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       is_fundraising: true,
       fundraising_goal: goal,
       show_fundraising_publicly: goal > 0 && document.getElementById('mgmt-public-toggle').dataset.on === 'true',
+    });
+  }
+
+  async function savePayout() {
+    const holderName   = document.getElementById('payout-holder-name').value.trim();
+    const addressLine1 = document.getElementById('payout-address-line1').value.trim();
+    const city         = document.getElementById('payout-city').value.trim();
+    const region       = document.getElementById('payout-region').value.trim();
+    const postcode     = document.getElementById('payout-postcode').value.trim();
+    const benCountry   = document.getElementById('payout-beneficiary-country').value;
+    const bankName     = document.getElementById('payout-bank-name').value.trim();
+    const bankCountry  = document.getElementById('payout-bank-country').value;
+    const bankAddress  = document.getElementById('payout-bank-address').value.trim();
+    const currency     = document.getElementById('payout-account-currency').value;
+    const accountNum   = document.getElementById('payout-account-number').value.trim();
+    const swiftBic     = document.getElementById('payout-swift-bic').value.trim();
+    const iban         = document.getElementById('payout-iban').value.trim();
+    const localCode    = document.getElementById('payout-local-code').value.trim();
+    const notes        = document.getElementById('payout-notes').value.trim();
+
+    if (!holderName)   return showPanelError('payout', 'Please enter the account holder name.');
+    if (!addressLine1 || !city || !postcode || !benCountry) return showPanelError('payout', 'Please complete the beneficiary address.');
+    if (!bankName || !bankCountry) return showPanelError('payout', 'Please enter the bank name and country.');
+    if (!currency)     return showPanelError('payout', 'Please select the account currency.');
+    if (!accountNum)   return showPanelError('payout', 'Please enter the account number.');
+    if (!swiftBic)     return showPanelError('payout', 'Please enter the SWIFT/BIC code.');
+    if (IBAN_COUNTRIES.includes(bankCountry) && !iban) return showPanelError('payout', 'IBAN is required for this bank country.');
+    if (LOCAL_CODE_LABELS.hasOwnProperty(bankCountry) && LOCAL_CODE_LABELS[bankCountry] && !localCode) {
+      return showPanelError('payout', `Please enter the ${LOCAL_CODE_LABELS[bankCountry]}.`);
+    }
+
+    await saveSection('payout', {}, async () => {
+      const { error } = await supabase.from('show_payout_details').upsert({
+        show_id: showId,
+        account_holder_name: holderName,
+        beneficiary_address_line1: addressLine1,
+        beneficiary_city: city,
+        beneficiary_region: region || null,
+        beneficiary_postcode: postcode,
+        beneficiary_country: benCountry,
+        bank_name: bankName,
+        bank_country: bankCountry,
+        bank_address: bankAddress || null,
+        account_currency: currency,
+        account_number: accountNum,
+        swift_bic: swiftBic,
+        iban: iban || null,
+        local_bank_code: localCode || null,
+        local_bank_code_label: LOCAL_CODE_LABELS[bankCountry] || null,
+        notes: notes || null,
+      }, { onConflict: 'show_id' });
+      if (error) { showPanelError('payout', error.message); throw error; }
+      const { data } = await supabase.from('show_payout_details').select('*').eq('show_id', showId).maybeSingle();
+      payoutDetails = data || null;
     });
   }
 

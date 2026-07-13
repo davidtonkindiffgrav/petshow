@@ -17,6 +17,8 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 
     <div id="settlement-header" class="mb-5"></div>
 
+    <div id="payout-warning" style="display:none" class="mb-4"></div>
+
     <div class="grid grid-cols-[1.2fr_1fr] gap-4">
       <div class="bg-white rounded-[14px] border border-[#e6eaee] p-5">
         <p class="text-[13px] font-extrabold text-[#8492a3] uppercase tracking-wide mb-3.5">Payout Breakdown</p>
@@ -40,6 +42,14 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       </div>
 
       <div class="flex flex-col gap-4">
+        <div class="bg-white rounded-[14px] border border-[#e6eaee] p-5">
+          <div class="flex items-center justify-between mb-3">
+            <p class="text-[13px] font-extrabold text-[#8492a3] uppercase tracking-wide m-0">Payout Details</p>
+            <div id="payout-verify-action"></div>
+          </div>
+          <div id="payout-details-body"></div>
+        </div>
+
         <div class="bg-white rounded-[14px] border border-[#e6eaee] p-5">
           <p class="text-[13px] font-extrabold text-[#8492a3] uppercase tracking-wide mb-3">Audit Trail</p>
           <div id="audit-list"></div>
@@ -71,6 +81,14 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 
   let settlement = null;
   let show = null;
+  let payoutDetails = null;
+
+  const COUNTRY_NAMES = {
+    AU: 'Australia', NZ: 'New Zealand', GB: 'United Kingdom', US: 'United States',
+    CA: 'Canada', SG: 'Singapore', ZA: 'South Africa', DE: 'Germany', FR: 'France',
+    IE: 'Ireland', ES: 'Spain', IT: 'Italy', NL: 'Netherlands', OTHER: 'Other',
+  };
+  const countryName = (code) => COUNTRY_NAMES[code] || code || '—';
 
   function money(n) { return `${settlement.currency} ${Number(n).toFixed(2)}`; }
 
@@ -123,11 +141,73 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     const { shows } = await callAdminApi('filter-options');
     show = (shows || []).find(s => s.id === settlement.show_id) || null;
 
+    const { data: pd } = await supabase.from('show_payout_details').select('*').eq('show_id', settlement.show_id).maybeSingle();
+    payoutDetails = pd || null;
+
     renderHeader();
     renderBreakdown();
     renderActions();
     renderAdjustments();
+    renderPayoutDetails();
     await renderAudit();
+  }
+
+  function renderPayoutDetails() {
+    const warningEl = document.getElementById('payout-warning');
+    const bodyEl = document.getElementById('payout-details-body');
+    const actionEl = document.getElementById('payout-verify-action');
+
+    if (!payoutDetails) {
+      warningEl.style.display = 'block';
+      warningEl.innerHTML = `<div style="background:#fce8e6;border:1px solid #f6c9c4;color:#8a2f1e;font-size:13px;font-weight:600;padding:10px 14px;border-radius:10px;">No payout details on file for this show — contact the organiser before transferring funds.</div>`;
+      bodyEl.innerHTML = `<p class="text-[13px] text-[#8492a3]">The organiser hasn't entered payout details for this show yet.</p>`;
+      actionEl.innerHTML = '';
+      return;
+    }
+
+    if (!payoutDetails.verified_at) {
+      warningEl.style.display = 'block';
+      warningEl.innerHTML = `<div style="background:#fdf3e0;border:1px solid #f3ddac;color:#8a5c1e;font-size:13px;font-weight:600;padding:10px 14px;border-radius:10px;">Payout details have not been verified yet.</div>`;
+    } else {
+      warningEl.style.display = 'none';
+      warningEl.innerHTML = '';
+    }
+
+    const field = (label, value) => `
+      <div style="display:flex;justify-content:space-between;gap:12px;padding:5px 0;">
+        <span style="font-size:12px;color:#8492a3;">${esc(label)}</span>
+        <span style="font-size:12.5px;font-weight:700;color:#10233f;text-align:right;">${esc(value ?? '—')}</span>
+      </div>`;
+
+    const addressLine = [payoutDetails.beneficiary_address_line1, payoutDetails.beneficiary_city, payoutDetails.beneficiary_region, payoutDetails.beneficiary_postcode]
+      .filter(Boolean).join(', ');
+
+    bodyEl.innerHTML =
+      field('Account Holder', payoutDetails.account_holder_name) +
+      field('Beneficiary Address', `${addressLine}${addressLine ? ', ' : ''}${countryName(payoutDetails.beneficiary_country)}`) +
+      `<div style="border-top:1px solid #f1f3f5;margin:8px 0;"></div>` +
+      field('Bank Name', payoutDetails.bank_name) +
+      field('Bank Country', countryName(payoutDetails.bank_country)) +
+      (payoutDetails.bank_address ? field('Bank Address', payoutDetails.bank_address) : '') +
+      field('Account Currency', payoutDetails.account_currency) +
+      field('Account Number', payoutDetails.account_number) +
+      field('SWIFT / BIC', payoutDetails.swift_bic) +
+      (payoutDetails.iban ? field('IBAN', payoutDetails.iban) : '') +
+      (payoutDetails.local_bank_code ? field(payoutDetails.local_bank_code_label || 'Local Bank Code', payoutDetails.local_bank_code) : '') +
+      (payoutDetails.notes ? `<div style="border-top:1px solid #f1f3f5;margin:8px 0 6px;"></div><p style="font-size:12px;color:#8492a3;">${esc(payoutDetails.notes)}</p>` : '');
+
+    if (payoutDetails.verified_at) {
+      actionEl.innerHTML = `<span style="font-size:11.5px;font-weight:700;color:#1d8a4e;background:#e5f6ec;padding:3px 9px;border-radius:8px;">Verified ${new Date(payoutDetails.verified_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>`;
+    } else {
+      actionEl.innerHTML = `<button id="btn-verify-payout" class="text-[12px] font-bold text-white bg-[#10233f] px-3 py-1.5 rounded-[8px] hover:opacity-90 transition-opacity">Mark Verified</button>`;
+      document.getElementById('btn-verify-payout')?.addEventListener('click', async (e) => {
+        e.target.disabled = true; e.target.textContent = 'Verifying…';
+        try {
+          await callAdminApi('verify-payout-details', { show_id: settlement.show_id });
+          await reload();
+        } catch (err) { alert('Failed to verify payout details: ' + err.message); }
+      });
+    }
   }
 
   function actionButton(id, label, cls) {
