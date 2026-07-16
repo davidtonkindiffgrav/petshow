@@ -32,10 +32,20 @@ const base = raw.endsWith('/') ? raw : raw + '/';
           Sign Up
         </a>
       </div>
-      <a id="header-hub-link" href={`${base}participant`} style="display:none;"
-        class="text-[15px] font-bold text-brand border-[1.5px] border-[#b8e4e0] rounded-btn-sm px-[18px] py-[9px] hover:bg-brand-tint transition-colors">
-        My Show Hub
-      </a>
+
+      <!-- Logged-in: avatar + dropdown -->
+      <div id="header-user-menu" style="display:none;position:relative;">
+        <button id="header-avatar-btn" type="button" aria-haspopup="true" aria-expanded="false"
+          style="display:flex;align-items:center;gap:8px;background:none;border:none;cursor:pointer;padding:2px;">
+          <div id="header-avatar-bubble" style="width:36px;height:36px;border-radius:50%;background:#002d6b;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;overflow:hidden;flex-shrink:0;">?</div>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="#6b7c89" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div id="header-avatar-menu" style="display:none;position:absolute;right:0;top:calc(100% + 10px);background:#fff;border:1px solid #efebf5;border-radius:13px;box-shadow:0 8px 24px rgba(10,31,68,0.10);padding:6px;min-width:190px;z-index:60;">
+          <div id="header-menu-name" style="padding:9px 12px 7px;font-size:13.5px;font-weight:700;color:#1c1626;border-bottom:1px solid #f0f4f5;margin-bottom:4px;"></div>
+          <div id="header-menu-links"></div>
+          <button id="header-signout" type="button" class="hover:bg-[#f5f8f9] transition-colors" style="width:100%;text-align:left;background:none;border:none;margin-top:4px;padding:9px 12px;border-top:1px solid #f0f4f5;font-size:13.5px;font-weight:600;color:#6f6880;cursor:pointer;border-radius:9px;font-family:inherit;">Sign out</button>
+        </div>
+      </div>
     </div>
 
     <!-- Mobile hamburger -->
@@ -89,12 +99,20 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     <a href={`${base}login`} class="w-full text-center font-bold text-brand border-[1.5px] border-[#b8e4e0] rounded-btn py-3 hover:bg-brand-tint transition-colors">Log In</a>
     <a href={`${base}signup`} class="w-full text-center font-bold text-white bg-brand rounded-btn py-3 shadow-hero-btn hover:bg-brand-dark transition-colors">Sign Up</a>
   </div>
-  <div id="mobile-hub-link-wrap" class="flex flex-col gap-3 px-4 pb-8 pt-2 border-t border-[#efebf5]" style="display:none;">
-    <a id="mobile-hub-link" href={`${base}participant`} class="w-full text-center font-bold text-brand border-[1.5px] border-[#b8e4e0] rounded-btn py-3 hover:bg-brand-tint transition-colors">My Show Hub</a>
+  <div id="mobile-user-menu" class="px-4 pb-8 pt-2 border-t border-[#efebf5]" style="display:none;">
+    <div class="flex items-center gap-3 px-1 py-2 mb-2">
+      <div id="mobile-avatar-bubble" style="width:40px;height:40px;border-radius:50%;background:#002d6b;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;overflow:hidden;flex-shrink:0;">?</div>
+      <span id="mobile-menu-name" class="text-[15px] font-bold text-[#1c1626] truncate"></span>
+    </div>
+    <div id="mobile-menu-links" class="flex flex-col gap-1 mb-3"></div>
+    <button id="mobile-signout" type="button" class="w-full text-center font-bold text-[#6f6880] border-[1.5px] border-[#efebf5] rounded-btn py-3 hover:bg-brand-tint transition-colors">Sign out</button>
   </div>
 </div>
 
 <script>
+  const raw  = import.meta.env.BASE_URL;
+  const base = raw.endsWith('/') ? raw : raw + '/';
+
   const btn     = document.getElementById('hamburger-btn');
   const nav     = document.getElementById('mobile-nav');
   const overlay = document.getElementById('nav-overlay');
@@ -124,19 +142,93 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   closeBtn?.addEventListener('click', closeNav);
   overlay?.addEventListener('click', closeNav);
 
-  // ── Logged-in state: swap Log In/Sign Up for a link back to the dashboard ──
+  // ── Logged-in state: swap Log In/Sign Up for the user menu ──────────────
+  // A user's `profiles.roles` is a tag array (e.g. ['participant','organiser']),
+  // so the menu lists one destination link per role the user actually holds.
+  const ROLE_META: Record<string, { label: string; href: string }> = {
+    organiser:   { label: 'Organiser Hub', href: 'organiser' },
+    judge:       { label: 'Judge Hub',     href: 'judge' },
+    participant: { label: 'My Show Hub',   href: 'participant' },
+    admin:       { label: 'Admin',         href: 'admin' },
+  };
+
   (async () => {
-    const { supabase } = await import('../lib/supabase.js');
-    const { data: { session } } = await supabase.auth.getSession();
+    const { getAuth } = await import('../lib/auth.js');
+    const { session, profile } = await getAuth();
     if (!session) return;
+
     const loggedOutDesktop = document.getElementById('header-actions-logged-out');
-    const hubLink          = document.getElementById('header-hub-link');
+    const userMenuDesktop  = document.getElementById('header-user-menu');
     const loggedOutMobile  = document.getElementById('mobile-actions-logged-out');
-    const mobileHubWrap    = document.getElementById('mobile-hub-link-wrap');
+    const userMenuMobile   = document.getElementById('mobile-user-menu');
     if (loggedOutDesktop) loggedOutDesktop.style.display = 'none';
-    if (hubLink)          hubLink.style.display          = 'inline-flex';
+    if (userMenuDesktop)  userMenuDesktop.style.display  = 'flex';
     if (loggedOutMobile)  loggedOutMobile.style.display  = 'none';
-    if (mobileHubWrap)    mobileHubWrap.style.display    = 'flex';
+    if (userMenuMobile)   userMenuMobile.style.display   = 'block';
+
+    const displayName = profile?.display_name || session.user.email?.split('@')[0] || 'there';
+    const initial      = displayName.charAt(0).toUpperCase();
+    const roles: string[] = profile?.roles || ['participant'];
+
+    // Avatar bubble: profile photo if set, else initials
+    [document.getElementById('header-avatar-bubble'), document.getElementById('mobile-avatar-bubble')].forEach(el => {
+      if (!el) return;
+      if (profile?.avatar_url) {
+        el.innerHTML = `<img src="${profile.avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+      } else {
+        el.textContent = initial;
+      }
+    });
+
+    const nameDesktop = document.getElementById('header-menu-name');
+    if (nameDesktop) nameDesktop.textContent = displayName;
+    const nameMobile = document.getElementById('mobile-menu-name');
+    if (nameMobile) nameMobile.textContent = displayName;
+
+    // One destination link per role tag the user holds
+    const linksDesktop = document.getElementById('header-menu-links');
+    const linksMobile  = document.getElementById('mobile-menu-links');
+    Object.entries(ROLE_META).forEach(([role, meta]) => {
+      if (!roles.includes(role)) return;
+      if (linksDesktop) {
+        const a = document.createElement('a');
+        a.href = base + meta.href;
+        a.textContent = meta.label;
+        a.className = 'hover:bg-brand-tint transition-colors';
+        a.style.cssText = 'display:block;padding:9px 12px;font-size:13.5px;font-weight:600;color:#1c1626;border-radius:9px;text-decoration:none;';
+        linksDesktop.appendChild(a);
+      }
+      if (linksMobile) {
+        const a2 = document.createElement('a');
+        a2.href = base + meta.href;
+        a2.textContent = meta.label;
+        a2.className = 'py-3 px-3 text-[15px] font-semibold text-[#4a4357] rounded-lg hover:bg-brand-tint hover:text-brand transition-colors';
+        linksMobile.appendChild(a2);
+      }
+    });
+
+    // Desktop dropdown open/close
+    const avatarBtn  = document.getElementById('header-avatar-btn');
+    const avatarMenu = document.getElementById('header-avatar-menu');
+    avatarBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const opening = avatarMenu!.style.display === 'none';
+      avatarMenu!.style.display = opening ? 'block' : 'none';
+      avatarBtn.setAttribute('aria-expanded', String(opening));
+    });
+    document.addEventListener('click', () => {
+      if (avatarMenu) avatarMenu.style.display = 'none';
+      avatarBtn?.setAttribute('aria-expanded', 'false');
+    });
+
+    // Sign out (desktop menu + mobile panel)
+    const doSignOut = async () => {
+      const { supabase } = await import('../lib/supabase.js');
+      await supabase.auth.signOut();
+      window.location.href = base + 'login';
+    };
+    document.getElementById('header-signout')?.addEventListener('click', doSignOut);
+    document.getElementById('mobile-signout')?.addEventListener('click', doSignOut);
   })();
 
   // Close nav when a link inside it is clicked (except events-trigger — that opens the panel)
