@@ -546,7 +546,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div style="background:rgba(255,255,255,0.18);border-radius:12px;padding:14px 12px;text-align:center;flex-shrink:0;min-width:88px">
             <p style="color:rgba(255,255,255,0.7);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 2px">Entry fee</p>
             <p style="color:white;font-size:38px;font-weight:900;margin:0;line-height:1">${fee != null ? sym + fee.toFixed(2) : '—'}</p>
-            <p style="color:rgba(255,255,255,0.65);font-size:10px;margin:0 0 10px">per entry · incl. all fees</p>
+            <p style="color:rgba(255,255,255,0.65);font-size:10px;margin:0 0 10px">per entry · incl. all fees · ${esc(show.currency || '')}</p>
             <div style="border-top:1px solid rgba(255,255,255,0.22);padding-top:10px">
               ${closeDate
                 ? `<p style="color:rgba(255,255,255,0.6);font-size:9px;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 2px">Entries close in</p>
