@@ -120,7 +120,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
             type="password"
             id="password"
             autocomplete="new-password"
-            placeholder="At least 6 characters"
+            placeholder="At least 8 characters"
             class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors"
           />
           <div id="password-strength" class="hidden mt-2">
@@ -143,6 +143,17 @@ const base = raw.endsWith('/') ? raw : raw + '/';
             placeholder="••••••••"
             class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors"
           />
+        </div>
+
+        <div class="flex items-start gap-2.5 mb-6">
+          <input
+            type="checkbox"
+            id="consent-checkbox"
+            class="mt-[3px] w-4 h-4 rounded border-[#b8e4e0] text-brand focus:ring-brand flex-shrink-0"
+          />
+          <label for="consent-checkbox" class="text-[13px] text-[#6f6880] leading-snug">
+            I agree to the <a href={`${base}terms`} class="text-brand font-semibold hover:underline">Terms of Service</a> and <a href={`${base}privacy`} class="text-brand font-semibold hover:underline">Privacy Policy</a>.
+          </label>
         </div>
 
         <p id="signup-error" class="hidden text-[13px] text-red-500 text-center mb-4 bg-red-50 border border-red-100 rounded-lg px-3 py-2" role="alert"></p>
@@ -319,13 +330,18 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       errEl.classList.remove('hidden');
       return;
     }
-    if (password.length < 6) {
-      errEl.textContent = 'Password must be at least 6 characters.';
+    if (password.length < 8) {
+      errEl.textContent = 'Password must be at least 8 characters.';
       errEl.classList.remove('hidden');
       return;
     }
     if (password !== confirm) {
       errEl.textContent = 'Passwords do not match.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+    if (!(document.getElementById('consent-checkbox')).checked) {
+      errEl.textContent = 'Please agree to the Terms of Service and Privacy Policy to continue.';
       errEl.classList.remove('hidden');
       return;
     }

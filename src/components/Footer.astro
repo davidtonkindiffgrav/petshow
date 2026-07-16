@@ -19,8 +19,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     <div>
       <h3 class="text-[14px] font-extrabold text-[#1c1626] mb-4">Explore</h3>
       <ul class="flex flex-col gap-[10px]">
-        <li><a href={`${base}#events`}     class="text-[14px] font-medium text-[#6f6880] hover:text-brand transition-colors">Events</a></li>
-        <li><a href={`${base}#categories`} class="text-[14px] font-medium text-[#6f6880] hover:text-brand transition-colors">Categories</a></li>
+        <li><a href="#" class="events-trigger text-[14px] font-medium text-[#6f6880] hover:text-brand transition-colors">Events</a></li>
         {/* <li><a href={`${base}#hof`}        class="text-[14px] font-medium text-[#6f6880] hover:text-brand transition-colors">Hall of Fame</a></li> */}
         <li><a href={`${base}#how`}        class="text-[14px] font-medium text-[#6f6880] hover:text-brand transition-colors">How It Works</a></li>
       </ul>
@@ -31,7 +30,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       <h3 class="text-[14px] font-extrabold text-[#1c1626] mb-4">Support</h3>
       <ul class="flex flex-col gap-[10px]">
         <li><a href={`${base}faq`} class="text-[14px] font-medium text-[#6f6880] hover:text-brand transition-colors">Help Center</a></li>
-        <li><a href="#" class="text-[14px] font-medium text-[#6f6880] hover:text-brand transition-colors">Contact Us</a></li>
+        <li><a href={`${base}faq#contact`} class="text-[14px] font-medium text-[#6f6880] hover:text-brand transition-colors">Contact Us</a></li>
         <li><a href={`${base}terms`} class="text-[14px] font-medium text-[#6f6880] hover:text-brand transition-colors">Terms of Service</a></li>
         <li><a href={`${base}privacy`} class="text-[14px] font-medium text-[#6f6880] hover:text-brand transition-colors">Privacy Policy</a></li>
       </ul>
@@ -51,15 +50,9 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       <h3 class="text-[14px] font-extrabold text-[#1c1626] mb-4">Stay Connected</h3>
       <div class="flex flex-wrap gap-3">
         <!-- Facebook -->
-        <a href="#" aria-label="Facebook" class="w-[38px] h-[38px] rounded-full bg-brand-tint flex items-center justify-center text-brand hover:bg-brand-tint2 transition-colors">
+        <a href="https://www.facebook.com/FurToFeathersFundRaising" target="_blank" rel="noopener noreferrer" aria-label="Facebook" class="w-[38px] h-[38px] rounded-full bg-brand-tint flex items-center justify-center text-brand hover:bg-brand-tint2 transition-colors">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
-          </svg>
-        </a>
-        <!-- Instagram -->
-        <a href="#" aria-label="Instagram" class="w-[38px] h-[38px] rounded-full bg-brand-tint flex items-center justify-center text-brand hover:bg-brand-tint2 transition-colors">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
           </svg>
         </a>
 
@@ -75,6 +68,6 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
   <!-- Bottom bar -->
   <div class="border-t border-[#efebf5] mt-[34px] pt-[22px]">
-    <p class="text-[13px] text-[#9b94a8]">© 2025 Fur to Feathers. All rights reserved.</p>
+    <p class="text-[13px] text-[#9b94a8]">© 2026 Fur to Feathers. All rights reserved.</p>
   </div>
 </footer>
