@@ -732,22 +732,30 @@ async function getUserDetail(supabase: any, payload: any) {
     last_sign_in_at = userRes?.user?.last_sign_in_at || null;
   } catch { /* skip */ }
 
-  // show_entries has no user_id column, only exhibitor_email — the closest
-  // identity link that exists today. Known gap: entries made under a
-  // different email than the account's login email won't show up here.
-  const [organisedRes, enteredRes] = await Promise.all([
+  // Entries are linked primarily by user_id, but a handful of older/edge-case
+  // rows may only have exhibitor_email (e.g. entered under a different email
+  // than the account's current login). Match on both and merge so those
+  // aren't missed; queried separately to avoid building a filter string out
+  // of a user-supplied email.
+  const entryCols = 'id, animal_name, status, entry_fee_paid, created_at, shows(id, title, currency)';
+  const [organisedRes, byUserRes, byEmailRes] = await Promise.all([
     supabase.from('shows').select('id, title, status, show_date, currency').eq('created_by', user_id).order('created_at', { ascending: false }),
+    supabase.from('show_entries').select(entryCols).eq('user_id', user_id),
     email
-      ? supabase.from('show_entries').select('id, animal_name, status, entry_fee_paid, created_at, shows(id, title, currency)').eq('exhibitor_email', email).order('created_at', { ascending: false })
+      ? supabase.from('show_entries').select(entryCols).eq('exhibitor_email', email)
       : Promise.resolve({ data: [] as any[] }),
   ]);
+
+  const entriesById = new Map<string, any>();
+  for (const row of [...(byUserRes.data || []), ...(byEmailRes.data || [])]) entriesById.set(row.id, row);
+  const shows_entered = [...entriesById.values()].sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
 
   return {
     profile,
     email,
     last_sign_in_at,
     shows_organised: organisedRes.data || [],
-    shows_entered: enteredRes.data || [],
+    shows_entered,
   };
 }
 
