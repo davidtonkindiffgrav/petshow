@@ -1,0 +1,178 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA';
+---
+
+<BaseLayout title="Contact Us — Fur to Feathers" description="Get in touch with the Fur to Feathers team — general enquiries or questions about a specific show.">
+
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
+  <div style="max-width:560px;margin:0 auto;padding:60px 24px 100px;">
+
+    <div style="text-align:center;margin-bottom:40px;">
+      <p style="font-size:13px;font-weight:700;color:#1ba89a;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 10px;">Get in touch</p>
+      <h1 style="font-size:36px;font-weight:900;color:#1c1626;margin:0 0 14px;line-height:1.15;">Contact Us</h1>
+      <p style="font-size:17px;color:#6b7c89;max-width:460px;margin:0 auto;line-height:1.6;">
+        Have a question or need a hand? Send us a message and we'll get back to you.
+      </p>
+    </div>
+
+    <div id="contact-form" style="border:1.5px solid #e7eef0;border-radius:16px;background:#fff;padding:28px;">
+      <div style="margin-bottom:16px;">
+        <label for="c-name" style="display:block;font-size:13.5px;font-weight:700;color:#1c1626;margin-bottom:6px;">Name</label>
+        <input id="c-name" type="text" placeholder="Your name" style="width:100%;border:1.5px solid #b8e4e0;border-radius:11px;padding:12px 16px;font-size:15px;color:#1c1626;box-sizing:border-box;font-family:inherit;outline:none;" />
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <label for="c-email" style="display:block;font-size:13.5px;font-weight:700;color:#1c1626;margin-bottom:6px;">Email</label>
+        <input id="c-email" type="email" placeholder="you@example.com" style="width:100%;border:1.5px solid #b8e4e0;border-radius:11px;padding:12px 16px;font-size:15px;color:#1c1626;box-sizing:border-box;font-family:inherit;outline:none;" />
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <label for="c-subject" style="display:block;font-size:13.5px;font-weight:700;color:#1c1626;margin-bottom:6px;">Subject</label>
+        <select id="c-subject" style="width:100%;border:1.5px solid #b8e4e0;border-radius:11px;padding:12px 16px;font-size:15px;color:#1c1626;box-sizing:border-box;font-family:inherit;outline:none;background:#fff;">
+          <option value="general">General enquiry</option>
+          <option value="show_question">Question about a show</option>
+        </select>
+      </div>
+
+      <div id="c-show-wrap" style="display:none;margin-bottom:16px;">
+        <label for="c-show" style="display:block;font-size:13.5px;font-weight:700;color:#1c1626;margin-bottom:6px;">Which show?</label>
+        <select id="c-show" style="width:100%;border:1.5px solid #b8e4e0;border-radius:11px;padding:12px 16px;font-size:15px;color:#1c1626;box-sizing:border-box;font-family:inherit;outline:none;background:#fff;">
+          <option value="">Loading shows…</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <label for="c-message" style="display:block;font-size:13.5px;font-weight:700;color:#1c1626;margin-bottom:6px;">Message</label>
+        <textarea id="c-message" rows="5" placeholder="How can we help?" style="width:100%;border:1.5px solid #b8e4e0;border-radius:11px;padding:12px 16px;font-size:15px;color:#1c1626;box-sizing:border-box;font-family:inherit;outline:none;resize:vertical;"></textarea>
+      </div>
+
+      <!-- Honeypot: hidden off-screen from sighted users, left open for bots that fill every field.
+           No <label> and a name/id autofill has no reason to match (avoid common tokens like
+           "company"/"name"/"phone" — browser autofill fills those in even when off-screen). -->
+      <div style="position:absolute;left:-9999px;top:-9999px;" aria-hidden="true">
+        <input id="c-xy7q" type="text" name="xy7q_ref" tabindex="-1" autocomplete="off" />
+      </div>
+
+      <div class="cf-turnstile" data-sitekey={turnstileSiteKey} style="margin-bottom:16px;"></div>
+
+      <p id="c-error" style="display:none;font-size:13px;color:#DC2626;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px 12px;margin:0 0 14px"></p>
+
+      <button id="c-submit" type="button" style="width:100%;text-align:center;font-weight:700;font-size:15.5px;color:#fff;background:#1ba89a;border:none;border-radius:13px;padding:14px 24px;cursor:pointer;">
+        Send Message
+      </button>
+    </div>
+
+    <div id="contact-success" style="display:none;text-align:center;border:1.5px solid #e7eef0;border-radius:16px;background:#f5f8f9;padding:44px 28px;">
+      <div style="width:52px;height:52px;border-radius:50%;background:#dcf6e3;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h2 style="font-size:19px;font-weight:800;color:#1c1626;margin:0 0 8px;">Thanks — message sent!</h2>
+      <p style="font-size:14.5px;color:#6f6880;margin:0;">We'll get back to you at your email address shortly.</p>
+    </div>
+
+  </div>
+</BaseLayout>
+
+<script>
+  function esc(s: any) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  const subjectSelect = document.getElementById('c-subject') as HTMLSelectElement;
+  const showWrap       = document.getElementById('c-show-wrap') as HTMLDivElement;
+  const showSelect      = document.getElementById('c-show') as HTMLSelectElement;
+  let showsLoaded = false;
+
+  async function loadShows() {
+    if (showsLoaded) return;
+    showsLoaded = true;
+    const { supabase } = await import('../lib/supabase.js');
+    const { data, error } = await supabase
+      .from('shows')
+      .select('id, title, show_date')
+      .eq('status', 'published')
+      .is('archived_at', null)
+      .order('show_date', { ascending: true });
+
+    if (error || !data?.length) {
+      showSelect.innerHTML = `<option value="">No shows found</option>`;
+      return;
+    }
+    showSelect.innerHTML = data.map((s: any) => `<option value="${esc(s.id)}">${esc(s.title || 'Untitled Show')}</option>`).join('');
+  }
+
+  subjectSelect?.addEventListener('change', () => {
+    if (subjectSelect.value === 'show_question') {
+      showWrap.style.display = 'block';
+      loadShows();
+    } else {
+      showWrap.style.display = 'none';
+    }
+  });
+
+  const submitBtn = document.getElementById('c-submit') as HTMLButtonElement;
+  const errorEl   = document.getElementById('c-error') as HTMLParagraphElement;
+  const formEl    = document.getElementById('contact-form') as HTMLDivElement;
+  const successEl = document.getElementById('contact-success') as HTMLDivElement;
+
+  async function submitContact() {
+    const name    = (document.getElementById('c-name') as HTMLInputElement).value.trim();
+    const email   = (document.getElementById('c-email') as HTMLInputElement).value.trim();
+    const subject = subjectSelect.value;
+    const showId  = subject === 'show_question' ? showSelect.value : null;
+    const message = (document.getElementById('c-message') as HTMLTextAreaElement).value.trim();
+    const hpValue = (document.getElementById('c-xy7q') as HTMLInputElement).value.trim();
+    const turnstileToken = (document.querySelector('[name="cf-turnstile-response"]') as HTMLInputElement)?.value || '';
+
+    if (!name) { errorEl.textContent = 'Please enter your name.'; errorEl.style.display = 'block'; return; }
+    if (!email || !email.includes('@')) { errorEl.textContent = 'Please enter a valid email address.'; errorEl.style.display = 'block'; return; }
+    if (subject === 'show_question' && !showId) { errorEl.textContent = 'Please choose a show.'; errorEl.style.display = 'block'; return; }
+    if (!message) { errorEl.textContent = 'Please enter a message.'; errorEl.style.display = 'block'; return; }
+    if (!turnstileToken) { errorEl.textContent = 'Please complete the verification check.'; errorEl.style.display = 'block'; return; }
+
+    errorEl.style.display = 'none';
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending…';
+
+    // Honeypot: pretend success without ever calling the function
+    if (hpValue) {
+      setTimeout(() => {
+        formEl.style.display = 'none';
+        successEl.style.display = 'block';
+      }, 400);
+      return;
+    }
+
+    const fnUrl = import.meta.env.PUBLIC_SUPABASE_URL + '/functions/v1/send-contact-message';
+    try {
+      const res = await fetch(fnUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name, email,
+          subject_type: subject,
+          show_id: showId,
+          message,
+          turnstile_token: turnstileToken,
+        }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        formEl.style.display = 'none';
+        successEl.style.display = 'block';
+        return;
+      }
+      errorEl.textContent = result.error || 'Something went wrong. Please try again.';
+      errorEl.style.display = 'block';
+    } catch {
+      errorEl.textContent = 'Could not send your message. Please try again.';
+      errorEl.style.display = 'block';
+    }
+
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Send Message';
+  }
+
+  submitBtn?.addEventListener('click', submitContact);
+</script>
