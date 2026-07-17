@@ -181,6 +181,39 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     </div>
   </div>
 
+  <!-- ── Close-on-goal help modal ─────────────────────────────────────────────── -->
+  <div id="close-on-goal-modal" style="display:none" class="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="close-on-goal-modal-title">
+    <div class="bg-white rounded-[20px] w-full max-w-[480px] shadow-2xl max-h-[85vh] overflow-y-auto">
+      <div class="p-6">
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <h2 id="close-on-goal-modal-title" class="text-[17px] font-extrabold text-[#1c1626] leading-snug">Close Entries Automatically When Goal Is Reached</h2>
+          <button type="button" id="close-on-goal-modal-x" aria-label="Close"
+            class="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[#9b94a8] hover:bg-[#f5f3fa] hover:text-[#1c1626] transition-colors">✕</button>
+        </div>
+        <p class="text-[13.5px] text-[#4a4357] leading-relaxed mb-4">When this is on, entries stop being accepted the moment your fundraising goal is reached — whether that's a dollar amount raised or a number of entries. It works <em>alongside</em> an entries-close date, not instead of it.</p>
+
+        <div class="space-y-3 mb-4">
+          <div class="bg-[#F0F7F5] border border-[#b8e4e0] rounded-[12px] px-4 py-3">
+            <p class="text-[12.5px] font-bold text-[#143A37] mb-1">No entries-close date set</p>
+            <p class="text-[12px] text-[#4a7a74] leading-relaxed">Entries stay open indefinitely and close as soon as your goal is hit — whether that takes one day or six months.</p>
+          </div>
+          <div class="bg-[#F0F7F5] border border-[#b8e4e0] rounded-[12px] px-4 py-3">
+            <p class="text-[12.5px] font-bold text-[#143A37] mb-1">Both a date and a goal are set</p>
+            <p class="text-[12px] text-[#4a7a74] leading-relaxed">Whichever happens first wins. E.g. entries close 30 Sept, or sooner if your $2,000 goal is reached before then.</p>
+          </div>
+          <div class="bg-[#F0F7F5] border border-[#b8e4e0] rounded-[12px] px-4 py-3">
+            <p class="text-[12.5px] font-bold text-[#143A37] mb-1">Goal is never reached</p>
+            <p class="text-[12px] text-[#4a7a74] leading-relaxed">No problem — entries still close on your entries-close date if you set one, on Show Day at the latest, or whenever you close them manually.</p>
+          </div>
+        </div>
+
+        <p class="text-[11.5px] text-[#9b94a8] leading-relaxed mb-5">You can change your goal or turn this off any time before judging or voting begins.</p>
+
+        <button type="button" id="close-on-goal-modal-ok" class="w-full bg-brand text-white text-[14px] font-bold py-3 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Got it</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Backdrop ──────────────────────────────────────────────────────────────── -->
   <div id="drawer-backdrop"
     class="fixed inset-0 bg-black/30 z-40 transition-opacity duration-300 opacity-0 pointer-events-none"></div>
@@ -580,11 +613,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
               <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
             </button>
           </div>
-          <div class="flex items-center justify-between p-3 border border-[#efebf5] rounded-[11px]">
-            <div>
+          <div class="flex items-center gap-3 p-3 border border-[#efebf5] rounded-[11px]">
+            <div class="flex-1 min-w-0">
               <p class="text-[13px] font-bold text-[#1c1626]">Close Entries Automatically When Goal Is Reached</p>
               <p id="mgmt-close-on-goal-hint" class="text-[11.5px] text-[#9b94a8]">Works alongside (or instead of) an entries-close date — whichever's first wins</p>
             </div>
+            <button type="button" id="close-on-goal-help-btn" aria-label="More about this setting"
+              class="shrink-0 w-6 h-6 rounded-full border border-[#b8e4e0] text-brand text-[13px] font-bold leading-none inline-flex items-center justify-center hover:bg-brand hover:text-white transition-colors cursor-pointer">?</button>
             <button type="button" id="mgmt-close-on-goal-toggle" data-on="false"
               class="w-11 h-6 rounded-full bg-[#c4bed0] transition-colors relative flex items-center px-0.5 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed">
               <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
@@ -1964,13 +1999,23 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       if (e.target === e.currentTarget) closeShowDateModal();
     });
 
+    // Close-on-goal help modal
+    document.getElementById('close-on-goal-help-btn').addEventListener('click', () => {
+      document.getElementById('close-on-goal-modal').style.display = 'flex';
+    });
+    document.getElementById('close-on-goal-modal-x').addEventListener('click', closeCloseOnGoalModal);
+    document.getElementById('close-on-goal-modal-ok').addEventListener('click', closeCloseOnGoalModal);
+    document.getElementById('close-on-goal-modal').addEventListener('click', e => {
+      if (e.target === e.currentTarget) closeCloseOnGoalModal();
+    });
+
     // Publish Show modal
     wirePublishShowModal();
 
     // Close drawer — X button, backdrop, Escape key, cancel buttons
     document.getElementById('drawer-close').addEventListener('click', closeDrawer);
     document.getElementById('drawer-backdrop').addEventListener('click', closeDrawer);
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeDrawer(); document.getElementById('archive-modal').style.display = 'none'; closeShowDateModal(); } });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeDrawer(); document.getElementById('archive-modal').style.display = 'none'; closeShowDateModal(); closeCloseOnGoalModal(); } });
     document.getElementById('edit-drawer').addEventListener('click', e => {
       if (e.target.closest('.cancel-btn')) closeDrawer();
     });
@@ -3150,6 +3195,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
   function closeShowDateModal() {
     document.getElementById('show-date-modal').style.display = 'none';
+  }
+
+  function closeCloseOnGoalModal() {
+    document.getElementById('close-on-goal-modal').style.display = 'none';
   }
 
   // ── Shared card / toggle helpers ─────────────────────────────────────────────
