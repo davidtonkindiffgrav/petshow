@@ -902,6 +902,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
               </div>
             </div>
           </div>
+          <div id="branding-banner-color-row" class="hidden mt-3 flex items-center gap-3">
+            <label for="branding-banner-color" class="text-[12px] font-semibold text-[#4a4357]">Theme color</label>
+            <input type="color" id="branding-banner-color" class="w-9 h-9 rounded-lg border border-[#b8e4e0] cursor-pointer p-0.5" />
+            <span class="text-[11px] text-[#9b94a8]">Used to color your public show page</span>
+            <button type="button" id="branding-banner-color-reset" class="text-[11.5px] font-semibold text-[#1ba89a] hover:text-brand-dark ml-auto">Reset to auto-detected</button>
+          </div>
         </div>
 
         <p class="panel-error text-[12px] text-red-500" style="display:none"></p>
@@ -921,6 +927,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   import { supabase } from '../../lib/supabase.js';
   import { zonedDateTime, getEntriesCloseInfo, getGoalProgress, getDateOrderError } from '../../lib/voteWindow.js';
   import { uploadImage } from '../../lib/storage.js';
+  import { extractDominantColor } from '../../lib/dominantColor.js';
   import { showUploadOverlay, hideUploadOverlay } from '../../lib/uploadOverlay.js';
   import { FUN_STAKES } from '../../lib/show-categories.js';
   import { minEntryFee, platformFee, stripeFeeEstimate, organiserNet, clampFee } from '../../lib/fees.js';
@@ -952,6 +959,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   let loadedAwardIds    = new Set();
   let pendingBranding = { logo: null, orgLogo: null, banner: null, sponsorLogo: null };
   let brandingRemoval = { logo: false, orgLogo: false, banner: false, sponsorLogo: false };
+  let bannerColorAuto = null; // last auto-detected hex, for the "Reset to auto-detected" link
+  let pendingBannerColor = null; // staged override; null = keep show.banner_color as-is
   let payoutDetails   = null; // show_payout_details row, or null if not yet entered
   let goalTotal       = null; // running total toward fundraising_goal (net amount raised, or entry count), null if no goal set
   let judgingOrVotingStarted = false; // any judge_rankings/public_votes rows exist — gates close-mode edits
@@ -2185,6 +2194,26 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     brandingRemoval[key] = false;
     input.value = '';
 
+    if (key === 'banner') {
+      const colorInput = document.getElementById('branding-banner-color');
+      const colorRow   = document.getElementById('branding-banner-color-row');
+      const colorReset = document.getElementById('branding-banner-color-reset');
+      bannerColorAuto = show?.banner_color || null;
+      pendingBannerColor = null;
+      if (bannerColorAuto) {
+        colorInput.value = bannerColorAuto;
+        colorRow.classList.remove('hidden');
+      } else {
+        colorRow.classList.add('hidden');
+      }
+      colorInput.oninput = () => { pendingBannerColor = colorInput.value; };
+      colorReset.onclick = () => {
+        if (!bannerColorAuto) return;
+        pendingBannerColor = bannerColorAuto;
+        colorInput.value = bannerColorAuto;
+      };
+    }
+
     let removeBtn = el.querySelector('.upload-remove');
     if (!removeBtn) {
       removeBtn = document.createElement('button');
@@ -2203,6 +2232,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       label.textContent = 'Click to upload (removal unsaved)';
       input.value = '';
       removeBtn.style.display = 'none';
+      if (key === 'banner') {
+        bannerColorAuto = null;
+        pendingBannerColor = null;
+        document.getElementById('branding-banner-color-row').classList.add('hidden');
+      }
     };
 
     function processFile(file) {
@@ -2218,6 +2252,16 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         removeBtn.style.display = 'inline-block';
       };
       reader.readAsDataURL(file);
+      if (key === 'banner') {
+        extractDominantColor(file).then(color => {
+          if (!color) return;
+          bannerColorAuto = color;
+          pendingBannerColor = color;
+          const colorInput = document.getElementById('branding-banner-color');
+          colorInput.value = color;
+          document.getElementById('branding-banner-color-row').classList.remove('hidden');
+        });
+      }
     }
 
     trigger.onclick  = () => input.click();
@@ -2261,7 +2305,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       }
       if (brandingRemoval.logo)    updates.logo_url     = null;
       if (brandingRemoval.orgLogo) updates.org_logo_url = null;
-      if (brandingRemoval.banner)  updates.banner_url   = null;
+      if (brandingRemoval.banner) { updates.banner_url = null; updates.banner_color = null; }
+      if (pendingBannerColor !== null) updates.banner_color = pendingBannerColor;
       {
         const { error } = await supabase.from('shows').update(updates).eq('id', showId);
         if (error) throw error;
@@ -2269,6 +2314,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       }
       pendingBranding = { logo: null, orgLogo: null, banner: null };
       brandingRemoval = { logo: false, orgLogo: false, banner: false };
+      pendingBannerColor = null;
       renderAllHeaders();
       closeDrawer();
     } catch (err) {

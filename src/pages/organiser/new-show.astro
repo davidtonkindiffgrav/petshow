@@ -565,6 +565,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
               <span class="upload-size-hint text-[11px] text-[#c4bed0]">JPG, PNG, WebP · max 2 MB · recommended 1400×600 — keep the focal point on the right half</span>
             </div>
           </div>
+          <div id="s9-banner-color-row" class="hidden mt-3 flex items-center gap-3">
+            <label for="s9-banner-color" class="text-[12px] font-semibold text-[#4a4357]">Theme color</label>
+            <input type="color" id="s9-banner-color" class="w-9 h-9 rounded-lg border border-[#b8e4e0] cursor-pointer p-0.5" />
+            <span class="text-[11px] text-[#9b94a8]">Used to color your public show page</span>
+            <button type="button" id="s9-banner-color-reset" class="text-[11.5px] font-semibold text-[#1ba89a] hover:text-brand-dark ml-auto">Reset to auto-detected</button>
+          </div>
         </div>
       </div>
     </div>
@@ -677,6 +683,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   import { getAuth } from '../../lib/auth.js';
   import { supabase } from '../../lib/supabase.js';
   import { uploadImage } from '../../lib/storage.js';
+  import { extractDominantColor } from '../../lib/dominantColor.js';
   import { showUploadOverlay, hideUploadOverlay } from '../../lib/uploadOverlay.js';
   import { FUN_STAKES } from '../../lib/show-categories.js';
   import { minEntryFee, platformFee, stripeFeeEstimate, organiserNet, clampFee } from '../../lib/fees.js';
@@ -715,7 +722,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     show_fundraising_publicly: null,
     currency: 'AUD', entry_fee: 0,
     classes: [],
-    logo_url: '', banner_url: '', org_logo_url: '', logo_source: 'show',
+    logo_url: '', banner_url: '', banner_color: '', org_logo_url: '', logo_source: 'show',
     wizard_step: 1,
     timezone: '', entry_open_time: '', entry_close_time: '',
   };
@@ -1179,7 +1186,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       close_entries_on_goal: !!show.close_entries_on_goal,
       show_fundraising_publicly: show.show_fundraising_publicly, donation_receipts: show.donation_receipts,
       description: show.description || null, about: show.about || null, website_url: show.website_url || null,
-      logo_url: show.logo_url || null, banner_url: show.banner_url || null, org_logo_url: show.org_logo_url || null,
+      logo_url: show.logo_url || null, banner_url: show.banner_url || null, banner_color: show.banner_color || null, org_logo_url: show.org_logo_url || null,
       logo_source: show.logo_source || 'show',
       currency: show.currency, entry_fee: show.entry_fee, status: 'draft',
       timezone: show.timezone || null,
@@ -1853,6 +1860,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       entry_fee: data.entry_fee || 0,
       logo_url: data.logo_url || '',
       banner_url: data.banner_url || '',
+      banner_color: data.banner_color || '',
       org_logo_url: data.org_logo_url || '',
       logo_source: data.logo_source || 'show',
       timezone: data.timezone || show.timezone,
@@ -1866,6 +1874,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (show.logo_url)     restoreUploadPreview(document.getElementById('s9-logo-widget'),     show.logo_url);
     if (show.banner_url)   restoreUploadPreview(document.getElementById('s9-banner-widget'),   show.banner_url);
     if (show.org_logo_url) restoreUploadPreview(document.getElementById('s9-org-logo-widget'), show.org_logo_url);
+    if (show.banner_color) {
+      document.getElementById('s9-banner-color').value = show.banner_color;
+      document.getElementById('s9-banner-color-row').classList.remove('hidden');
+    }
     selectCard(document.getElementById('s9-logo-source-cards'), show.logo_source || 'show');
     if (show.sponsors[0]?.logo_url) restoreUploadPreview(document.getElementById('s5-logo-widget'), show.sponsors[0].logo_url);
 
@@ -1999,7 +2011,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         if (icon) icon.classList.add('hidden');
         label.textContent = 'Click to replace';
         removeBtn.style.display = 'inline-block';
-        onUrl(url);
+        onUrl(url, file);
       } catch { label.textContent = 'Upload failed — try again'; }
       finally { hideUploadOverlay(); }
     }
@@ -2215,11 +2227,37 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       () => show.id ? `shows/${show.id}/org-logo` : null,
       url => { show.org_logo_url = url; }
     );
+    const bannerColorInput = document.getElementById('s9-banner-color');
+    const bannerColorRow   = document.getElementById('s9-banner-color-row');
+    const bannerColorReset = document.getElementById('s9-banner-color-reset');
+    let bannerColorAuto = show.banner_color || null;
     initUploadWidget(
       document.getElementById('s9-banner-widget'),
       () => show.id ? `shows/${show.id}/banner` : null,
-      url => { show.banner_url = url; }
+      async (url, file) => {
+        show.banner_url = url;
+        if (!url) {
+          show.banner_color = '';
+          bannerColorAuto = null;
+          bannerColorRow.classList.add('hidden');
+          return;
+        }
+        if (file) {
+          bannerColorAuto = await extractDominantColor(file);
+          if (bannerColorAuto) {
+            show.banner_color = bannerColorAuto;
+            bannerColorInput.value = bannerColorAuto;
+            bannerColorRow.classList.remove('hidden');
+          }
+        }
+      }
     );
+    bannerColorInput.addEventListener('input', () => { show.banner_color = bannerColorInput.value; });
+    bannerColorReset.addEventListener('click', () => {
+      if (!bannerColorAuto) return;
+      show.banner_color = bannerColorAuto;
+      bannerColorInput.value = bannerColorAuto;
+    });
   }
 
   function getFeeValue() {
