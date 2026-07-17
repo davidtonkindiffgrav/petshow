@@ -59,6 +59,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS show_payout_details_clear_verification ON show_payout_details;
 CREATE TRIGGER show_payout_details_clear_verification
   BEFORE UPDATE ON show_payout_details
   FOR EACH ROW EXECUTE FUNCTION clear_payout_verification_on_edit();
@@ -67,6 +68,7 @@ CREATE TRIGGER show_payout_details_clear_verification
 -- Sensitive financial PII — tightly scoped, unlike general show/entry data.
 ALTER TABLE show_payout_details ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "organiser manage own show payout details" ON show_payout_details;
 CREATE POLICY "organiser manage own show payout details" ON show_payout_details
   FOR ALL TO authenticated USING (
     EXISTS (SELECT 1 FROM shows s WHERE s.id = show_payout_details.show_id AND s.created_by = auth.uid())
@@ -77,5 +79,6 @@ CREATE POLICY "organiser manage own show payout details" ON show_payout_details
 -- Admins can read (verification writes go through the admin-api Edge
 -- Function using the service-role client, same as settlements — no admin
 -- UPDATE policy needed here).
+DROP POLICY IF EXISTS "admin read show payout details" ON show_payout_details;
 CREATE POLICY "admin read show payout details" ON show_payout_details
   FOR SELECT TO authenticated USING (is_admin());
