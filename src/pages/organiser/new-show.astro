@@ -684,6 +684,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   import { getDateOrderError } from '../../lib/voteWindow.js';
 
   // ─── Constants ──────────────────────────────────────────────────────────────
+  // Referenced by initCardGroups(), which the top-level init IIFE below calls
+  // immediately — must be declared before that, not just before first use in
+  // source order, or it's a TDZ ReferenceError at load time.
+  const DATE_FIELD_ID_MAP = { entry_open: 's1-entry-open', entry_close: 's1-entry-close', show_date: 's1-show-date' };
+  const DATE_FIELD_IDS_S1 = Object.values(DATE_FIELD_ID_MAP);
+
   const STEP_NAMES = [
     'Show Basics', 'Animal Type', 'Breed & Eligibility', 'Categories',
     'Sponsorship', 'Judging', 'Awards & Prizes', 'Fundraising',
@@ -924,6 +930,17 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     return active ? active.dataset.value : null;
   }
 
+  // Red-border-on-invalid for the three Step 1 date fields, cleared the
+  // moment the organiser edits the offending field (see getDateOrderError).
+  function markFieldInvalid(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.borderColor = '#ef4444';
+  }
+  function clearFieldInvalid(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.borderColor = '';
+  }
+
   // ─── Toggle switch helper ───────────────────────────────────────────────────
   function setupToggle(btnId, onChange) {
     const btn = document.getElementById(btnId);
@@ -978,12 +995,18 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   // ─── Validation ─────────────────────────────────────────────────────────────
   function validateStep(n) {
     if (n === 1) {
+      DATE_FIELD_IDS_S1.forEach(clearFieldInvalid);
+
       if (!document.getElementById('s1-title').value.trim()) return showError('Please enter a show name.'), false;
-      if (document.getElementById('s1-entry-close-toggle').dataset.on === 'true' && !document.getElementById('s1-entry-close').value) {
+      const hasCloseDate = document.getElementById('s1-entry-close-toggle').dataset.on === 'true';
+      if (hasCloseDate && !document.getElementById('s1-entry-close').value) {
+        markFieldInvalid('s1-entry-close');
         return showError('Please choose an entries-close date, or turn off the toggle to leave entries open indefinitely.'), false;
       }
-      if (!document.getElementById('s1-show-date').value) return showError('Please set a show date.'), false;
-      const hasCloseDate = document.getElementById('s1-entry-close-toggle').dataset.on === 'true';
+      if (!document.getElementById('s1-show-date').value) {
+        markFieldInvalid('s1-show-date');
+        return showError('Please set a show date.'), false;
+      }
       const dateError = getDateOrderError({
         entry_open_date:  document.getElementById('s1-entry-open').value || null,
         entry_open_time:  document.getElementById('s1-entry-open-time').value || null,
@@ -993,7 +1016,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         show_time: document.getElementById('s1-show-time').value || null,
         timezone: document.getElementById('s1-timezone').value || null,
       });
-      if (dateError) return showError(dateError), false;
+      if (dateError) {
+        dateError.fields.forEach(f => markFieldInvalid(DATE_FIELD_ID_MAP[f]));
+        return showError(dateError.message), false;
+      }
       if (!getSelectedCard('org-type-cards')) return showError('Please select your type of organisation.'), false;
       const orgType = getSelectedCard('org-type-cards');
       if (orgType === 'non_profit' || orgType === 'registered_charity') {
@@ -2061,6 +2087,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       updateEntryCloseToggleUI();
     });
     updateEntryCloseToggleUI();
+    DATE_FIELD_IDS_S1.forEach(id => {
+      document.getElementById(id).addEventListener('input', () => clearFieldInvalid(id));
+    });
 
     // Step 1: org type
     document.getElementById('org-type-cards').querySelectorAll('[data-value]').forEach(btn => {
@@ -2297,6 +2326,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.getElementById('s1-entry-close-wrap').style.display = on ? 'flex' : 'none';
     document.getElementById('s1-entry-close-hint').style.display = on ? 'none' : 'block';
     document.getElementById('s1-entry-close-required-mark').style.display = on ? 'inline' : 'none';
+    if (!on) clearFieldInvalid('s1-entry-close');
   }
 
   function closeShowDateModal() {

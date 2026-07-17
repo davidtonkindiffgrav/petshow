@@ -891,6 +891,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   import { minEntryFee, platformFee, stripeFeeEstimate, organiserNet, clampFee } from '../../lib/fees.js';
   import { searchBreeds } from '../../lib/dog-breeds.js';
 
+  // Referenced by populateAllForms()/wireAllHandlers(), which the top-level
+  // init IIFE below calls immediately — must be declared before that, not
+  // just before first use in source order, or it's a TDZ ReferenceError.
+  const DATE_FIELD_ID_MAP_BASICS = { entry_open: 'mgmt-entry-open', entry_close: 'mgmt-entry-close', show_date: 'mgmt-show-date' };
+  const DATE_FIELD_IDS_BASICS = Object.values(DATE_FIELD_ID_MAP_BASICS);
+
   // ── State ────────────────────────────────────────────────────────────────────
   let show        = null;
   let categories  = [];
@@ -2006,7 +2012,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       btn.dataset.on = String(on);
       btn.style.background = on ? '#1ba89a' : '#c4bed0';
       btn.querySelector('span').style.transform = on ? 'translateX(16px)' : 'translateX(0)';
+      if (!on) clearFieldInvalid('mgmt-entry-close');
       updateCloseStatusUI();
+    });
+    DATE_FIELD_IDS_BASICS.forEach(id => {
+      document.getElementById(id).addEventListener('input', () => clearFieldInvalid(id));
     });
 
     // Animal type
@@ -2224,6 +2234,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   }
 
   async function saveBasics() {
+    DATE_FIELD_IDS_BASICS.forEach(clearFieldInvalid);
+
     const title   = document.getElementById('mgmt-title').value.trim();
     const email   = document.getElementById('mgmt-contact-email').value.trim();
     const orgType = getSelectedCard('mgmt-org-type-cards');
@@ -2236,6 +2248,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     const hasCloseDate = document.getElementById('mgmt-entry-close-toggle').dataset.on === 'true';
     if (!judgingOrVotingStarted && hasCloseDate && !document.getElementById('mgmt-entry-close').value) {
+      markFieldInvalid('mgmt-entry-close');
       return showPanelError('basics', 'Please choose an entries-close date, or turn off the toggle to leave entries open indefinitely.');
     }
 
@@ -2248,7 +2261,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       show_time: document.getElementById('mgmt-show-time').value || null,
       timezone: document.getElementById('mgmt-timezone').value || null,
     });
-    if (dateError) return showPanelError('basics', dateError);
+    if (dateError) {
+      dateError.fields.forEach(f => markFieldInvalid(DATE_FIELD_ID_MAP_BASICS[f]));
+      return showPanelError('basics', dateError.message);
+    }
 
     await saveSection('basics', {
       title, org_type: orgType,
@@ -3154,6 +3170,17 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (!el) return null;
     const active = el.querySelector('[data-selected="true"]');
     return active ? active.dataset.value : null;
+  }
+
+  // Red-border-on-invalid for the three Basics-panel date fields, cleared
+  // the moment the organiser edits the offending field (see getDateOrderError).
+  function markFieldInvalid(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.borderColor = '#ef4444';
+  }
+  function clearFieldInvalid(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.borderColor = '';
   }
 
   function setupToggle(btnId, onChange) {

@@ -101,19 +101,22 @@ export function getEntriesCloseInfo(show, currentTotal, now = new Date()) {
 // getEntriesCloseInfo), but a misconfigured open-after-close never actually
 // opens, and a close-after-show-day shows entrants a close date/countdown
 // that will never be reached.
+// Returns { message, fields } where fields names which logical date(s) are
+// at fault ('entry_open' | 'entry_close' | 'show_date'), so a caller can
+// highlight the actual offending input(s) — or null if the combination is fine.
 export function getDateOrderError({ entry_open_date, entry_open_time, entry_close_date, entry_close_time, show_date, show_time, timezone }) {
   const openAt  = zonedDateTime(entry_open_date, entry_open_time, timezone);
   const closeAt = zonedDateTime(entry_close_date, entry_close_time, timezone);
   const showAt  = zonedDateTime(show_date, show_time, timezone);
 
   if (openAt && closeAt && openAt >= closeAt) {
-    return 'Entries Close must be after Entries Open.';
+    return { message: 'Entries Close must be after Entries Open.', fields: ['entry_open', 'entry_close'] };
   }
   if (closeAt && showAt && closeAt > showAt) {
-    return 'Entries Close must be on or before Show Day.';
+    return { message: 'Entries Close must be on or before Show Day.', fields: ['entry_close', 'show_date'] };
   }
   if (openAt && showAt && openAt > showAt) {
-    return 'Entries Open must be on or before Show Day.';
+    return { message: 'Entries Open must be on or before Show Day.', fields: ['entry_open', 'show_date'] };
   }
   return null;
 }
