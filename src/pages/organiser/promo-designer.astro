@@ -1,0 +1,396 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+---
+
+<DashboardLayout title="Promo Image Designer" activePage="shows">
+
+  <!-- Loading -->
+  <div id="state-loading" class="flex items-center justify-center h-64">
+    <div class="w-8 h-8 border-[3px] border-brand/20 border-t-brand rounded-full animate-spin"></div>
+  </div>
+
+  <!-- Error -->
+  <div id="state-error" style="display:none" class="flex items-center justify-center h-64">
+    <div class="text-center max-w-sm">
+      <p id="error-msg" class="text-[14px] text-[#6f6880] mb-4"></p>
+      <a id="back-link" href="#" class="text-[13px] font-semibold text-brand hover:text-brand-dark transition-colors">← Back</a>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div id="state-content" style="display:none">
+
+    <!-- Page header -->
+    <div class="flex items-start justify-between gap-4 mb-5 flex-wrap">
+      <div>
+        <a id="nav-back" href="#" class="text-[13px] font-semibold text-[#9b94a8] hover:text-brand transition-colors">← Show Settings</a>
+        <h1 class="text-[22px] font-extrabold text-[#1c1626] tracking-[-0.01em] mt-1">Promo Image Designer</h1>
+        <p id="show-subtitle" class="text-[13px] text-[#6f6880] mt-0.5"></p>
+      </div>
+      <div class="flex items-center gap-3">
+        <button id="btn-save"
+          class="text-[13px] font-semibold text-brand border border-brand/30 px-4 py-2 rounded-btn hover:bg-brand/5 transition-colors">
+          Save
+        </button>
+        <button id="btn-dl-jpg"
+          class="text-[13px] font-bold bg-brand text-white px-4 py-2 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">
+          ↓ Download JPG
+        </button>
+      </div>
+    </div>
+
+    <!-- Status message -->
+    <p id="status-msg" style="display:none"
+      class="text-[13px] text-[#6f6880] bg-[#f0fafa] border border-brand/20 rounded-[11px] px-4 py-2.5 mb-4"></p>
+
+    <!-- Two-column layout -->
+    <div class="flex gap-5" style="align-items:flex-start">
+
+      <!-- Left: independent scrollable options panel -->
+      <div class="w-[300px] shrink-0 relative">
+        <div id="left-panel" class="space-y-4" style="overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;max-height:calc(100vh - 160px)">
+
+          <!-- Headline -->
+          <div class="bg-white rounded-card border border-[#b8e4e0] p-4">
+            <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider mb-3">Headline</p>
+            <textarea id="inp-headline" maxlength="120" rows="2" placeholder="Entries Open"
+              class="w-full text-[13px] border border-[#e8e4f0] rounded-[8px] px-3 py-2 focus:outline-none focus:border-brand resize-none"></textarea>
+            <p class="text-[11px] text-[#9b94a8] mt-2 mb-3">Centered under the banner. Wraps automatically — a large size can fill most of the image.</p>
+            <div class="flex items-center justify-between">
+              <span class="text-[12px] font-semibold text-[#1c1626]">Font Size</span>
+              <div class="flex items-center gap-1.5">
+                <input type="number" id="inp-headline-size" min="16" max="320" step="2" value="48"
+                  class="w-16 text-[13px] border border-[#e8e4f0] rounded-[7px] px-2 py-1.5 text-center focus:outline-none focus:border-brand" />
+                <span class="text-[11px] text-[#9b94a8]">px</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Background color -->
+          <div class="bg-white rounded-card border border-[#b8e4e0] p-4">
+            <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider mb-3">Background Color</p>
+            <div class="flex items-center gap-3">
+              <input type="color" id="inp-bg-color" class="w-9 h-9 rounded-lg border border-[#b8e4e0] cursor-pointer p-0.5" />
+              <button type="button" id="btn-bg-color-reset" class="text-[11.5px] font-semibold text-[#1ba89a] hover:text-brand-dark">Reset to auto-detected</button>
+            </div>
+            <p class="text-[11px] text-[#9b94a8] mt-2">Fills the image below the banner. Suggested from your banner's dominant color.</p>
+          </div>
+
+          <!-- Reusable element control template (repeated for each placeable element) -->
+          <template id="tpl-element">
+            <div class="bg-white rounded-card border border-[#b8e4e0] p-4 space-y-3" data-el="">
+              <label class="flex items-center justify-between cursor-pointer">
+                <span class="el-label text-[13px] font-semibold text-[#1c1626]"></span>
+                <input type="checkbox" class="el-toggle w-4 h-4 accent-brand" />
+              </label>
+              <div class="el-controls space-y-3">
+                <div class="space-y-1.5">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[11px] text-[#9b94a8]">Size</span>
+                    <span class="el-size-val text-[11px] font-bold text-brand">100%</span>
+                  </div>
+                  <input type="range" class="el-size w-full accent-brand h-1.5 cursor-pointer" min="60" max="160" step="5" value="100" />
+                </div>
+                <div>
+                  <p class="text-[11px] text-[#9b94a8] mb-1.5">Position</p>
+                  <div class="grid grid-cols-3 gap-1.5">
+                    <button type="button" data-pos="tl" class="el-pos text-[11px] font-semibold py-1.5 rounded-[7px] border transition-colors">Top Left</button>
+                    <button type="button" data-pos="tr" class="el-pos text-[11px] font-semibold py-1.5 rounded-[7px] border transition-colors">Top Right</button>
+                    <button type="button" data-pos="br" class="el-pos text-[11px] font-semibold py-1.5 rounded-[7px] border transition-colors">Bottom Right</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <div id="element-controls" class="space-y-4"></div>
+
+          <div class="bg-white rounded-card border border-[#b8e4e0] p-4">
+            <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider mb-2">About This Image</p>
+            <p class="text-[11px] text-[#9b94a8] leading-relaxed">1080 × 1350px (4:5) — sized for Facebook and Instagram feed posts.</p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Right: preview panel -->
+      <div class="flex-1 min-w-0 sticky top-6">
+        <div class="bg-white rounded-card border border-[#b8e4e0] p-4">
+          <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider mb-3">Live Preview</p>
+          <div id="promo-canvas-wrapper" class="overflow-hidden rounded-[10px] border border-[#efebf5] bg-[#f9fffe] mx-auto"
+               style="aspect-ratio:1080/1350;max-width:460px">
+            <canvas id="promo-canvas" style="width:100%;height:100%;display:block"></canvas>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</DashboardLayout>
+
+<style is:global>
+  #left-panel::-webkit-scrollbar { display: none; }
+</style>
+
+<script>
+  import { getAuth }         from '../../lib/auth.js';
+  import { supabase }        from '../../lib/supabase.js';
+  import { renderPromoImage, PROMO_DEFAULTS } from '../../lib/promo-renderer.js';
+
+  let show, sponsors = [];
+  let design = JSON.parse(JSON.stringify(PROMO_DEFAULTS));
+  let bgColorAuto    = null; // last auto-detected hex, for the "Reset to auto-detected" link
+  let publicUrl = '';
+  let renderPending = false;
+  let renderQueued  = false;
+
+  const ELEMENTS = [
+    { key: 'showLogo', label: 'Show Logo' },
+    { key: 'clubLogo', label: 'Club / Org Logo' },
+    { key: 'sponsors', label: 'Sponsor Logos' },
+    { key: 'qr',       label: 'QR Code' },
+  ];
+  const POS_LABEL = { tl: 'Top Left', tr: 'Top Right', br: 'Bottom Right' };
+
+  function showToast(msg, isError = false) {
+    const el = document.getElementById('status-msg');
+    el.textContent = msg;
+    el.style.display = 'block';
+    el.style.color = isError ? '#b91c1c' : '#1c1626';
+    el.style.background = isError ? '#fef2f2' : '#f0fafa';
+    el.style.borderColor = isError ? '#fca5a5' : 'rgba(27,168,154,0.2)';
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.style.display = 'none'; }, 4000);
+  }
+
+  function buildElementControls() {
+    const container = document.getElementById('element-controls');
+    const tpl = document.getElementById('tpl-element');
+    container.innerHTML = '';
+    for (const { key, label } of ELEMENTS) {
+      const node = tpl.content.cloneNode(true);
+      const root = node.querySelector('[data-el]');
+      root.dataset.el = key;
+      root.querySelector('.el-label').textContent = label;
+      container.appendChild(node);
+    }
+  }
+
+  function syncElementUI() {
+    document.querySelectorAll('#element-controls [data-el]').forEach(root => {
+      const key = root.dataset.el;
+      const d = design[key];
+      const toggle = root.querySelector('.el-toggle');
+      toggle.checked = d.on;
+
+      const available = key === 'showLogo' ? !!show?.logo_url
+                       : key === 'clubLogo' ? !!show?.org_logo_url
+                       : key === 'sponsors' ? sponsors.length > 0
+                       : true; // qr always available once publicUrl exists
+      toggle.disabled = !available;
+      root.style.opacity = available ? '1' : '0.45';
+
+      root.querySelector('.el-controls').style.opacity       = d.on ? '1' : '0.4';
+      root.querySelector('.el-controls').style.pointerEvents = d.on ? '' : 'none';
+
+      const slider = root.querySelector('.el-size');
+      const val    = root.querySelector('.el-size-val');
+      const pct    = Math.round(d.size * 100);
+      slider.value = pct;
+      val.textContent = pct + '%';
+
+      root.querySelectorAll('.el-pos').forEach(btn => {
+        const active = btn.dataset.pos === d.pos;
+        btn.className = `el-pos text-[11px] font-semibold py-1.5 rounded-[7px] border transition-colors ${
+          active ? 'border-brand bg-brand/10 text-brand' : 'border-[#efebf5] text-[#6f6880] hover:border-brand/40'
+        }`;
+        btn.title = POS_LABEL[btn.dataset.pos];
+      });
+    });
+  }
+
+  function wireElementControls() {
+    document.getElementById('element-controls').addEventListener('change', e => {
+      const root = e.target.closest('[data-el]');
+      if (!root) return;
+      const key = root.dataset.el;
+      if (e.target.classList.contains('el-toggle')) {
+        design[key].on = e.target.checked;
+        syncElementUI();
+        redraw();
+      }
+    });
+    document.getElementById('element-controls').addEventListener('input', e => {
+      const root = e.target.closest('[data-el]');
+      if (!root) return;
+      const key = root.dataset.el;
+      if (e.target.classList.contains('el-size')) {
+        design[key].size = parseInt(e.target.value, 10) / 100;
+        root.querySelector('.el-size-val').textContent = e.target.value + '%';
+        redraw();
+      }
+    });
+    document.getElementById('element-controls').addEventListener('click', e => {
+      const btn = e.target.closest('.el-pos');
+      if (!btn) return;
+      const root = e.target.closest('[data-el]');
+      const key = root.dataset.el;
+      design[key].pos = btn.dataset.pos;
+      syncElementUI();
+      redraw();
+    });
+  }
+
+  function syncBgColorUI() {
+    const input = document.getElementById('inp-bg-color');
+    input.value = design.bg_color || bgColorAuto;
+    document.getElementById('btn-bg-color-reset').style.display = design.bg_color ? 'inline' : 'none';
+  }
+
+  async function redraw() {
+    if (renderPending) { renderQueued = true; return; }
+    renderPending = true;
+    const canvas = document.getElementById('promo-canvas');
+    await renderPromoImage(canvas, {
+      show,
+      sponsors,
+      headline: design.headline,
+      headlineSize: design.headlineSize,
+      bgColor:  design.bg_color || bgColorAuto,
+      elements: { showLogo: design.showLogo, clubLogo: design.clubLogo, sponsors: design.sponsors, qr: design.qr },
+      publicUrl,
+    });
+    canvas.style.width  = '100%';
+    canvas.style.height = '100%';
+    renderPending = false;
+    if (renderQueued) { renderQueued = false; redraw(); }
+  }
+
+  async function saveDesign(showSuccess = false) {
+    const { error } = await supabase.from('shows')
+      .update({ promo_design_json: design })
+      .eq('id', show.id);
+    if (error) { showToast(showSuccess ? 'Failed to save — please try again.' : 'Saved image, but failed to remember your settings.', true); return false; }
+    if (showSuccess) showToast('Design saved.');
+    return true;
+  }
+
+  function downloadJpg() {
+    const canvas = document.getElementById('promo-canvas');
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL('image/jpeg', 0.92);
+    const slug = (show.title || 'promo').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    link.download = `${slug || 'promo'}-social.jpg`;
+    link.click();
+    saveDesign();
+    showToast('Image downloaded.');
+  }
+
+  (async () => {
+    const auth = await getAuth();
+    const base = auth.base;
+
+    document.getElementById('back-link').href = base + 'organiser/shows';
+
+    if (!auth.session) { window.location.replace(base + 'login'); return; }
+
+    const name = auth.profile?.display_name || auth.session.user.email?.split('@')[0] || 'Organiser';
+    const avatarEl = document.getElementById('sidebar-avatar');
+    const nameEl   = document.getElementById('sidebar-username');
+    const badgeEl  = document.getElementById('sidebar-role-badge');
+    if (avatarEl) {
+      if (auth.profile?.avatar_url) {
+        avatarEl.innerHTML = `<img src="${auth.profile.avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+      } else {
+        avatarEl.textContent = name.charAt(0).toUpperCase();
+      }
+    }
+    if (nameEl)  nameEl.textContent  = name;
+    if (badgeEl) badgeEl.textContent = auth.profile?.organiser_type === 'club' ? 'Club Organiser' : 'Organiser';
+    document.getElementById('sidebar-signout')?.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = base + 'login';
+    });
+
+    const uid = auth.session.user.id;
+
+    const params = new URLSearchParams(window.location.search);
+    const showId = params.get('id');
+
+    function showError(msg) {
+      document.getElementById('state-loading').style.display = 'none';
+      document.getElementById('state-error').style.display   = 'flex';
+      document.getElementById('error-msg').textContent = msg;
+    }
+
+    if (!showId) { showError('No show specified.'); return; }
+
+    const [showRes, sponsorsRes] = await Promise.all([
+      supabase.from('shows').select('*').eq('id', showId).eq('created_by', uid).single(),
+      supabase.from('show_sponsors').select('name, logo_url').eq('show_id', showId),
+    ]);
+    if (showRes.error || !showRes.data) { showError('Show not found or access denied.'); return; }
+
+    show     = showRes.data;
+    sponsors = sponsorsRes.data || [];
+
+    document.getElementById('nav-back').href = base + 'organiser/show?id=' + showId;
+    document.getElementById('show-subtitle').textContent = show.title || 'Untitled Show';
+
+    publicUrl   = `${window.location.origin}${base}show?id=${showId}`;
+    bgColorAuto = show.banner_color || '#0E2A2A';
+
+    if (show.promo_design_json) {
+      try {
+        const saved = show.promo_design_json;
+        design = {
+          headline: saved.headline ?? design.headline,
+          headlineSize: saved.headlineSize ?? design.headlineSize,
+          bg_color: saved.bg_color ?? null,
+          showLogo: { ...design.showLogo, ...saved.showLogo },
+          clubLogo: { ...design.clubLogo, ...saved.clubLogo },
+          sponsors: { ...design.sponsors, ...saved.sponsors },
+          qr:       { ...design.qr,       ...saved.qr },
+        };
+      } catch {}
+    }
+
+    document.getElementById('inp-headline').value = design.headline;
+    document.getElementById('inp-headline-size').value = design.headlineSize;
+    buildElementControls();
+    syncElementUI();
+    syncBgColorUI();
+
+    document.getElementById('state-loading').style.display = 'none';
+    document.getElementById('state-content').style.display = 'block';
+
+    await redraw();
+
+    wireElementControls();
+
+    document.getElementById('inp-headline').addEventListener('input', e => {
+      design.headline = e.target.value;
+      redraw();
+    });
+    document.getElementById('inp-headline-size').addEventListener('input', e => {
+      const px = parseInt(e.target.value, 10);
+      if (!px) return;
+      design.headlineSize = Math.min(320, Math.max(16, px));
+      redraw();
+    });
+    document.getElementById('inp-bg-color').addEventListener('input', e => {
+      design.bg_color = e.target.value;
+      syncBgColorUI();
+      redraw();
+    });
+    document.getElementById('btn-bg-color-reset').addEventListener('click', () => {
+      design.bg_color = null;
+      syncBgColorUI();
+      redraw();
+    });
+    document.getElementById('btn-dl-jpg').addEventListener('click', downloadJpg);
+    document.getElementById('btn-save').addEventListener('click', () => saveDesign(true));
+  })();
+</script>
