@@ -429,7 +429,7 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
 
     const pendingSummary = pendingEntries.length > 0 ? `
       <div style="margin-bottom:20px;">
-        <p style="font-size:12px;font-weight:700;color:#9b94a8;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 8px;">Already added</p>
+        <p style="font-size:12px;font-weight:700;color:#9b94a8;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 8px;">Your entries so far</p>
         ${pendingEntries.map((e, i) => renderEntryCard(e, `Entry ${i + 1}`)).join('')}
       </div>` : '';
 
