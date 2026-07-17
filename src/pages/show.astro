@@ -196,7 +196,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 <script>
   import { getAuth } from '../lib/auth.js';
   import { supabase } from '../lib/supabase.js';
-  import { zonedDateTime } from '../lib/voteWindow.js';
+  import { zonedDateTime, getEntriesCloseInfo, getGoalProgress } from '../lib/voteWindow.js';
   import { organiserNet } from '../lib/fees.js';
 
   const CURRENCY_SYMBOLS = { GBP: '£', USD: '$', EUR: '€', AUD: 'A$', CAD: 'C$', NZD: 'NZ$', ZAR: 'R', SGD: 'S$' };
@@ -266,15 +266,16 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     awards      = awardsRes.data   || [];
     awardsById  = Object.fromEntries(awards.map(a => [a.id, a]));
     sym         = CURRENCY_SYMBOLS[show.currency] || '£';
-    showState   = getShowState(show);
-    earlyVoting  = showState === 'entries_open' && show.is_judged === false && show.vote_open_mode === 'on_entries_open';
-    votingActive = showState === 'voting' || earlyVoting;
     // "Total raised" is what the organiser actually receives — the all-in fee
     // the exhibitor paid, minus the platform + Stripe fees. Never show gross.
+    // Computed before showState since a goal-based auto-close needs it.
     const serviceFees = {};
     for (const r of (feesRes.data || [])) serviceFees[r.key] = parseFloat(r.value) || 0;
     const netPerEntry = organiserNet(show.entry_fee || 0, show.currency || 'AUD', serviceFees) ?? 0;
     totalRaised = entries.length * netPerEntry;
+    showState   = getShowState(show);
+    earlyVoting  = showState === 'entries_open' && show.is_judged === false && show.vote_open_mode === 'on_entries_open';
+    votingActive = showState === 'voting' || earlyVoting;
 
     // All-in pricing: entry_fee is the total the entrant pays.
     displayFee = show.entry_fee > 0 ? Number(show.entry_fee) : null;
@@ -296,13 +297,15 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     if (s.archived_at)          return 'archived';
     if (s.results_published_at) return 'results';
     const open      = zonedDateTime(s.entry_open_date,  s.entry_open_time,  s.timezone);
-    const close     = zonedDateTime(s.entry_close_date, s.entry_close_time, s.timezone);
     const showStart = zonedDateTime(s.show_date,        s.show_time,        s.timezone);
     // Public vote shows: voting cuts off the moment the show starts (missing
     // start time = midnight, i.e. the start of show day).
     if (s.is_judged === false && showStart && now >= showStart) return 'vote_closed';
     if (!open || open > now) return 'upcoming';
-    if (!close || close >= now) return 'entries_open';
+    // entries.length / totalRaised are computed just before this is called —
+    // whichever the fundraising goal measures, matching organiser/enter pages.
+    const goalTotal = s.fundraising_goal_type === 'entries' ? entries.length : totalRaised;
+    if (getEntriesCloseInfo(s, goalTotal, now).isOpen) return 'entries_open';
     if (s.is_judged === false) return 'voting';
     const showDay = s.show_date ? new Date(s.show_date) : null;
     if (showDay && showDay.toDateString() === now.toDateString()) return 'show_day';
@@ -339,8 +342,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           : showState === 'vote_closed'
             ? pill('Results coming soon')
             : show.entry_close_date
-              ? pill(`📅 Closes ${fmt(show.entry_close_date)}`)
-              : '';
+              ? pill(`📅 Closes ${fmt(show.entry_close_date)}${show.close_entries_on_goal ? ' or on goal' : ''}`)
+              : show.close_entries_on_goal
+                ? pill('📅 Closes once goal is met')
+                : '';
 
     const activeLogoUrl = show.logo_source === 'club' ? show.org_logo_url : show.logo_url;
     const logoEl = activeLogoUrl
@@ -527,7 +532,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
   function enterCard() {
     const fee       = displayFee;
-    const closeDate = zonedDateTime(show.entry_close_date, show.entry_close_time, show.timezone);
+    // Clamped to the show_date backstop — a misconfigured entry_close_date set
+    // after Show Day would otherwise show entrants a countdown/date that's
+    // never actually reached (entries always stop no later than Show Day).
+    const rawCloseDate = zonedDateTime(show.entry_close_date, show.entry_close_time, show.timezone);
+    const showStartsAt = zonedDateTime(show.show_date, show.show_time, show.timezone);
+    const closeDate = (rawCloseDate && showStartsAt && rawCloseDate > showStartsAt) ? showStartsAt : rawCloseDate;
     const countdown = closeDate ? getCountdown(closeDate) : null;
     const isUpcoming = showState === 'upcoming';
 
@@ -551,8 +561,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               ${closeDate
                 ? `<p style="color:rgba(255,255,255,0.6);font-size:9px;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 2px">Entries close in</p>
                    ${countdown ? `<p style="color:white;font-size:14px;font-weight:800;margin:0 0 1px">${countdown}</p>` : ''}
-                   <p style="color:rgba(255,255,255,0.6);font-size:10px;margin:0">${fmt(show.entry_close_date)}</p>`
-                : `<p style="color:rgba(255,255,255,0.7);font-size:11px;margin:0">Open now</p>`}
+                   <p style="color:rgba(255,255,255,0.6);font-size:10px;margin:0">${fmt(closeDate)}${show.close_entries_on_goal ? ' or on goal' : ''}</p>`
+                : show.close_entries_on_goal
+                  ? `<p style="color:rgba(255,255,255,0.7);font-size:11px;margin:0">Closes once goal is met</p>`
+                  : `<p style="color:rgba(255,255,255,0.7);font-size:11px;margin:0">Open now</p>`}
             </div>
           </div>
         </div>
@@ -567,18 +579,24 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
   function fundraisingCard() {
     if (!show.show_fundraising_publicly) return '';
-    const goal = show.fundraising_goal || 0;
-    const pct  = goal > 0 ? Math.round(totalRaised / goal * 100) : 0;
+    const isEntries = show.fundraising_goal_type === 'entries';
+    const current = isEntries ? entries.length : totalRaised;
+    const progress = getGoalProgress(show, current);
+    const goal = progress?.target || 0;
+    const pct  = progress?.pct || 0;
+    const raisedLabel = isEntries ? `${entries.length} entries` : `Raised ${sym}${fmtMoney(totalRaised)}`;
+    const goalLabel    = isEntries ? `Goal: ${goal} entries` : `Goal: ${sym}${fmtMoney(goal)}`;
     return card(`
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
         <h3 style="font-size:15px;font-weight:700;color:#143A37;margin:0">Help Us Reach Our Goal</h3>
-        ${goal > 0 ? `<span style="font-size:12px;color:#6B7C79">Goal: ${sym}${fmtMoney(goal)}</span>` : ''}
+        ${goal > 0 ? `<span style="font-size:12px;color:#6B7C79">${goalLabel}</span>` : ''}
       </div>
-      <p style="font-size:26px;font-weight:800;color:#1E8E7E;margin:0 0 12px">Raised ${sym}${fmtMoney(totalRaised)}</p>
+      <p style="font-size:26px;font-weight:800;color:#1E8E7E;margin:0 0 12px">${raisedLabel}</p>
       <div style="height:12px;border-radius:999px;background:#E6EEEC;overflow:hidden;margin-bottom:4px">
         <div style="height:100%;border-radius:999px;width:${Math.min(pct, 100)}%;background:linear-gradient(to right,#A6D84A,#5FB23E)"></div>
       </div>
       <p style="font-size:12px;font-weight:700;color:#5FB23E;margin:0 0 10px;text-align:right">${pct}%</p>
+      ${show.close_entries_on_goal ? `<p style="font-size:11.5px;color:#6B7C79;margin:0">Entries close as soon as this goal is reached.</p>` : ''}
     `);
   }
 
@@ -793,7 +811,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   function datesStrip() {
     const items = [
       { label: 'Entry Open',   value: show.entry_open_date  ? fmt(show.entry_open_date)  : null },
-      { label: 'Entries Close',value: show.entry_close_date ? fmt(show.entry_close_date) : null },
+      { label: 'Entries Close',value: show.entry_close_date ? fmt(show.entry_close_date) : (show.close_entries_on_goal ? 'On reaching goal' : null) },
       { label: 'Show Day',     value: show.show_date        ? fmt(show.show_date)        : null },
       { label: 'Judging',      value: show.is_judged != null ? (show.is_judged ? 'By Expert Judges' : 'Public Vote') : null },
     ].filter(d => d.value);

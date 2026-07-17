@@ -152,6 +152,35 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     </div>
   </div>
 
+  <!-- ── Show Day / Results Day help modal ────────────────────────────────────── -->
+  <div id="show-date-modal" style="display:none" class="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="show-date-modal-title">
+    <div class="bg-white rounded-[20px] w-full max-w-[480px] shadow-2xl max-h-[85vh] overflow-y-auto">
+      <div class="p-6">
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <h2 id="show-date-modal-title" class="text-[17px] font-extrabold text-[#1c1626] leading-snug">Show Day / Results Day</h2>
+          <button type="button" id="show-date-modal-x" aria-label="Close"
+            class="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[#9b94a8] hover:bg-[#f5f3fa] hover:text-[#1c1626] transition-colors">✕</button>
+        </div>
+        <p class="text-[13.5px] text-[#4a4357] leading-relaxed mb-4">This is the day your show wraps up — what happens on it depends on how winners are decided.</p>
+
+        <div class="space-y-3 mb-4">
+          <div class="bg-[#F0F7F5] border border-[#b8e4e0] rounded-[12px] px-4 py-3">
+            <p class="text-[12.5px] font-bold text-[#143A37] mb-1">Expert judged</p>
+            <p class="text-[12px] text-[#4a7a74] leading-relaxed">This is the day judging takes place and results can be published. Entries must close before this date.</p>
+          </div>
+          <div class="bg-[#F0F7F5] border border-[#b8e4e0] rounded-[12px] px-4 py-3">
+            <p class="text-[12.5px] font-bold text-[#143A37] mb-1">Public voting</p>
+            <p class="text-[12px] text-[#4a7a74] leading-relaxed">Voting closes the moment this date arrives (at the start time, or midnight if no time is set). You publish the results once voting ends.</p>
+          </div>
+        </div>
+
+        <p class="text-[11.5px] text-[#9b94a8] leading-relaxed mb-5">Start time is optional — entries can never stay open past this date, even if you're using a fundraising goal to close them early.</p>
+
+        <button type="button" id="show-date-modal-ok" class="w-full bg-brand text-white text-[14px] font-bold py-3 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">Got it</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Backdrop ──────────────────────────────────────────────────────────────── -->
   <div id="drawer-backdrop"
     class="fixed inset-0 bg-black/30 z-40 transition-opacity duration-300 opacity-0 pointer-events-none"></div>
@@ -194,14 +223,30 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
               class="shrink-0 border border-[#b8e4e0] rounded-[11px] px-3 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
           </div>
         </div>
-        <div>
-          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Entries Close <span class="text-red-400">*</span></label>
-          <div class="flex gap-2">
+        <div id="mgmt-entry-close-wrap">
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="text-[13px] font-semibold text-[#4a4357]">Entries Close <span id="mgmt-entry-close-required-mark" class="text-red-400">*</span></label>
+            <button type="button" id="mgmt-entry-close-toggle" data-on="true" aria-label="Toggle entries-close date"
+              class="shrink-0 w-9 h-5 rounded-full bg-[#1ba89a] transition-colors relative flex items-center px-0.5 disabled:opacity-40 disabled:cursor-not-allowed">
+              <span class="w-4 h-4 rounded-full bg-white shadow transition-transform" style="transform:translateX(16px)"></span>
+            </button>
+          </div>
+          <div id="mgmt-entry-close-date-wrap" class="flex gap-2">
             <input type="date" id="mgmt-entry-close"
               class="flex-1 min-w-0 border border-[#b8e4e0] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
             <input type="time" id="mgmt-entry-close-time"
               class="shrink-0 border border-[#b8e4e0] rounded-[11px] px-3 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
           </div>
+          <p id="mgmt-entry-close-hint" class="text-[11.5px] text-[#9b94a8] mt-1.5">Off — entries stay open indefinitely, e.g. until your fundraising goal is met (Fundraising panel), or until you close them manually below.</p>
+          <p id="mgmt-close-lock-notice" style="display:none" class="text-[11.5px] text-amber-brand mt-2">Judging/voting has started, so this can no longer be changed.</p>
+        </div>
+        <div id="mgmt-close-now-wrap" class="flex items-center justify-between gap-3 bg-[#f9f8fc] border border-[#efebf5] rounded-[11px] px-4 py-3">
+          <div>
+            <p id="mgmt-close-status" class="text-[12.5px] font-semibold text-[#1c1626]">—</p>
+            <p class="text-[11.5px] text-[#9b94a8]">You can close entries early at any time.</p>
+          </div>
+          <button type="button" id="mgmt-close-now-btn"
+            class="shrink-0 text-[12.5px] font-bold text-red-400 border border-red-200 px-3 py-2 rounded-btn hover:bg-red-50 transition-colors">Close Entries Now</button>
         </div>
         <div>
           <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Timezone <span class="text-[#9b94a8] font-normal">(for entry &amp; show times)</span></label>
@@ -213,8 +258,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         <div>
           <label class="flex items-center gap-1.5 text-[13px] font-semibold text-[#4a4357] mb-1.5">
             Show Day / Results Day <span class="text-red-400">*</span> <span class="text-[#9b94a8] font-normal">&amp; start time</span>
-            <button type="button" aria-label="What does this date mean?"
-              onclick="document.getElementById('mgmt-show-date-info').classList.toggle('hidden')"
+            <button type="button" id="show-date-help-btn" aria-label="What does this date mean?"
               class="w-[17px] h-[17px] rounded-full border border-[#b8e4e0] text-brand text-[11px] font-bold leading-none inline-flex items-center justify-center hover:bg-brand hover:text-white transition-colors cursor-pointer">?</button>
           </label>
           <div class="flex gap-2">
@@ -222,11 +266,6 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
               class="flex-1 min-w-0 border border-[#b8e4e0] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
             <input type="time" id="mgmt-show-time"
               class="shrink-0 border border-[#b8e4e0] rounded-[11px] px-3 py-2.5 text-[14px] text-[#1c1626] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
-          </div>
-          <div id="mgmt-show-date-info" class="hidden mt-2 bg-[#F0F7F5] border border-[#b8e4e0] rounded-[10px] px-3.5 py-3 text-[12px] text-[#4a7a74] leading-relaxed">
-            <p class="font-bold mb-1">This is the day your show wraps up — what happens on it depends on how winners are decided:</p>
-            <p class="mb-1"><strong>Expert judged:</strong> the day judging takes place and results can be published. Entries must close before this date.</p>
-            <p><strong>Public voting:</strong> the moment voting closes (this date at the start time, or midnight if no time is set). You publish the results once voting ends.</p>
           </div>
           <p class="text-[11.5px] text-[#9b94a8] mt-1.5">Start time is optional. For public voting shows, voting closes when the show starts.</p>
         </div>
@@ -518,10 +557,17 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         <div id="mgmt-fundraising-form" class="space-y-4 mb-4">
           <div>
             <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Fundraising Goal <span class="text-[#9b94a8] font-normal">(optional)</span></label>
-            <div class="relative max-w-[200px]">
-              <span id="mgmt-sym-goal" class="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-[#9b94a8] font-semibold">A$</span>
-              <input type="number" id="mgmt-fund-goal" min="0" placeholder="0.00"
-                class="w-full border border-[#b8e4e0] rounded-[11px] pl-11 pr-4 py-2.5 text-[14px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+            <div class="flex gap-2">
+              <select id="mgmt-goal-type"
+                class="shrink-0 border border-[#b8e4e0] rounded-[11px] px-3 py-2.5 text-[14px] text-[#1c1626] bg-white focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors">
+                <option value="amount">Amount raised</option>
+                <option value="entries">Number of entries</option>
+              </select>
+              <div class="relative max-w-[200px]">
+                <span id="mgmt-sym-goal" class="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-[#9b94a8] font-semibold">A$</span>
+                <input type="number" id="mgmt-fund-goal" min="0" placeholder="0.00"
+                  class="w-full border border-[#b8e4e0] rounded-[11px] pl-11 pr-4 py-2.5 text-[14px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
+              </div>
             </div>
           </div>
           <div class="flex items-center justify-between p-3 border border-[#efebf5] rounded-[11px]">
@@ -530,10 +576,21 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
               <p id="mgmt-public-toggle-hint" class="text-[11.5px] text-[#9b94a8]">Show a progress bar on the public page</p>
             </div>
             <button type="button" id="mgmt-public-toggle" data-on="false"
-              class="w-11 h-6 rounded-full bg-[#efebf5] transition-colors relative flex items-center px-0.5 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed">
+              class="w-11 h-6 rounded-full bg-[#c4bed0] transition-colors relative flex items-center px-0.5 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed">
               <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
             </button>
           </div>
+          <div class="flex items-center justify-between p-3 border border-[#efebf5] rounded-[11px]">
+            <div>
+              <p class="text-[13px] font-bold text-[#1c1626]">Close Entries Automatically When Goal Is Reached</p>
+              <p id="mgmt-close-on-goal-hint" class="text-[11.5px] text-[#9b94a8]">Works alongside (or instead of) an entries-close date — whichever's first wins</p>
+            </div>
+            <button type="button" id="mgmt-close-on-goal-toggle" data-on="false"
+              class="w-11 h-6 rounded-full bg-[#c4bed0] transition-colors relative flex items-center px-0.5 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed">
+              <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
+            </button>
+          </div>
+          <p id="mgmt-fundraising-lock-notice" style="display:none" class="text-[11.5px] text-amber-brand">Judging/voting has started, so this can no longer be changed.</p>
         </div>
         <div class="border-t border-[#efebf5] pt-4 mb-4">
           <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Entry Fee per Entry <span class="text-[#9b94a8] font-normal">— the total each entrant pays</span></label>
@@ -827,7 +884,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 <script>
   import { getAuth } from '../../lib/auth.js';
   import { supabase } from '../../lib/supabase.js';
-  import { zonedDateTime } from '../../lib/voteWindow.js';
+  import { zonedDateTime, getEntriesCloseInfo, getGoalProgress, getDateOrderError } from '../../lib/voteWindow.js';
   import { uploadImage } from '../../lib/storage.js';
   import { showUploadOverlay, hideUploadOverlay } from '../../lib/uploadOverlay.js';
   import { FUN_STAKES } from '../../lib/show-categories.js';
@@ -855,6 +912,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   let pendingBranding = { logo: null, orgLogo: null, banner: null, sponsorLogo: null };
   let brandingRemoval = { logo: false, orgLogo: false, banner: false, sponsorLogo: false };
   let payoutDetails   = null; // show_payout_details row, or null if not yet entered
+  let goalTotal       = null; // running total toward fundraising_goal (net amount raised, or entry count), null if no goal set
+  let judgingOrVotingStarted = false; // any judge_rankings/public_votes rows exist — gates close-mode edits
 
   // Countries needing IBAN (rest use local_bank_code instead / in addition)
   const IBAN_COUNTRIES = ['GB', 'DE', 'FR', 'IE', 'ES', 'IT', 'NL'];
@@ -965,6 +1024,27 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (!showRes.data) { window.location.replace(mgmtBase + 'organiser/shows'); return; }
 
     show        = showRes.data;
+    if (show.fundraising_goal) {
+      (feeRes.data || []).forEach(r => { serviceFees[r.key] = parseFloat(r.value) || 0; });
+      const { count } = await supabase.from('show_entries')
+        .select('id', { count: 'exact', head: true }).eq('show_id', showId).eq('status', 'confirmed');
+      const confirmedCount = count || 0;
+      if (show.fundraising_goal_type === 'entries') {
+        goalTotal = confirmedCount;
+      } else {
+        const netPerEntry = organiserNet(show.entry_fee || 0, show.currency || 'AUD', serviceFees) ?? 0;
+        goalTotal = confirmedCount * netPerEntry;
+      }
+    }
+    if (show.is_judged === true) {
+      const { count } = await supabase.from('judge_rankings')
+        .select('show_id', { count: 'exact', head: true }).eq('show_id', showId);
+      judgingOrVotingStarted = (count || 0) > 0;
+    } else if (show.is_judged === false) {
+      const { count } = await supabase.from('public_votes')
+        .select('show_id', { count: 'exact', head: true }).eq('show_id', showId);
+      judgingOrVotingStarted = (count || 0) > 0;
+    }
     categories  = catsRes.data     || [];
     judges      = judgesRes.data   || [];
     sponsors    = sponsorsRes.data || [];
@@ -1117,11 +1197,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   function showStatus() {
     if (show.archived_at) return { label: 'Archived', color: '#92400e', bg: '#fef3c7' };
     if (show.status === 'draft') return { label: 'Draft', color: '#6f6880', bg: '#f5f3fa' };
-    const now = Date.now();
-    const openAt  = zonedDateTime(show.entry_open_date,  show.entry_open_time,  show.timezone);
-    const closeAt = zonedDateTime(show.entry_close_date, show.entry_close_time, show.timezone);
-    if (openAt  && openAt.getTime()  > now)  return { label: 'Scheduled', color: '#2563eb', bg: '#eff6ff' };
-    if (closeAt && closeAt.getTime() >= now) return { label: 'Open for Entries', color: '#16a34a', bg: '#f0fdf4' };
+    const now = new Date();
+    const openAt = zonedDateTime(show.entry_open_date, show.entry_open_time, show.timezone);
+    if (openAt && openAt.getTime() > now.getTime()) return { label: 'Scheduled', color: '#2563eb', bg: '#eff6ff' };
+    const close = getEntriesCloseInfo(show, goalTotal, now);
+    if (close.isOpen) return { label: 'Open for Entries', color: '#16a34a', bg: '#f0fdf4' };
     return { label: 'Closed', color: '#6b7280', bg: '#f9fafb' };
   }
 
@@ -1247,8 +1327,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const required = [];
     const optional = [];
 
-    if (!(show.title && show.show_date && show.entry_close_date)) {
-      required.push({ label: 'Show Basics', detail: 'Show name, show date and entry close date must be set.', panelId: 'basics' });
+    if (!(show.title && show.show_date)) {
+      required.push({ label: 'Show Basics', detail: 'Show name and show date must be set.', panelId: 'basics' });
     }
     const needsCharityNum = show.org_type === 'registered_charity' || show.org_type === 'non_profit';
     if (needsCharityNum && !show.charity_number) {
@@ -1482,12 +1562,18 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       return `${date} at ${t}${abbr ? ' (' + abbr + ')' : ''}`;
     }
 
-    const basicsConfigured = !!(show.title && show.show_date && show.entry_close_date);
+    const closesText = show.close_entries_on_goal
+      ? (show.entry_close_date
+          ? `${fmtDateTime(show.entry_close_date, show.entry_close_time)} or on goal, whichever's first`
+          : `On reaching goal (${show.fundraising_goal_type === 'entries' ? 'entry count' : 'amount raised'})`)
+      : (show.entry_close_date ? fmtDateTime(show.entry_close_date, show.entry_close_time) : 'Manual close only');
+
+    const basicsConfigured = !!(show.title && show.show_date);
     setHeader('basics', basicsConfigured ? '#22c55e' : '#fbbf24', basicsConfigured ? 'Configured' : 'Setup needed', 'Show Basics', [
       ['Name',      show.title || '—'],
       ['Show day / results', fmtDateTime(show.show_date, show.show_time)],
       ...(show.entry_open_date ? [['Opens', fmtDateTime(show.entry_open_date, show.entry_open_time)]] : []),
-      ['Closes',    fmtDateTime(show.entry_close_date, show.entry_close_time)],
+      ['Closes',    closesText],
       ['Org type',  ORG_TYPE_LABELS[show.org_type] || '—'],
     ], 'Edit');
 
@@ -1696,6 +1782,14 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     setField('mgmt-entry-open-time',  show.entry_open_time  || '12:00');
     setField('mgmt-entry-close',      toDateVal(show.entry_close_date));
     setField('mgmt-entry-close-time', show.entry_close_time || '12:00');
+    {
+      const hasCloseDate = !!show.entry_close_date;
+      const toggle = document.getElementById('mgmt-entry-close-toggle');
+      toggle.dataset.on = String(hasCloseDate);
+      toggle.style.background = hasCloseDate ? '#1ba89a' : '#c4bed0';
+      toggle.querySelector('span').style.transform = hasCloseDate ? 'translateX(16px)' : 'translateX(0)';
+    }
+    updateCloseStatusUI();
     setField('mgmt-show-date',        toDateVal(show.show_date));
     setField('mgmt-show-time',        show.show_time || '');
     const tzSel = document.getElementById('mgmt-timezone');
@@ -1754,9 +1848,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     setField('mgmt-currency', show.currency || 'AUD');
     if (show.fundraising_goal) setField('mgmt-fund-goal', show.fundraising_goal);
+    setField('mgmt-goal-type', show.fundraising_goal_type || 'amount');
     setToggle('mgmt-public-toggle', show.show_fundraising_publicly === true);
+    setToggle('mgmt-close-on-goal-toggle', show.close_entries_on_goal === true);
     setFeeValue(Number(show.entry_fee) || getMin(show.currency || 'AUD') || 3);
     applyCurrencySymbol(show.currency || 'AUD');
+    updateGoalTypeUI();
     updatePublicToggleAvailability();
 
     setField('payout-holder-name',       payoutDetails?.account_holder_name || '');
@@ -1806,17 +1903,33 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   }
 
   // Fundraising progress can only be shown publicly once a goal is set — otherwise
-  // the public page renders a permanently-0% bar with no goal to reach.
+  // the public page renders a permanently-0% bar with no goal to reach. Same
+  // condition gates auto-close-on-goal, since there's nothing to trigger it on.
+  // Once judging/voting has started, the whole goal setup is locked — changing
+  // it after scores/votes exist could contradict already-published results.
   function updatePublicToggleAvailability() {
-    const goalVal = parseFloat(document.getElementById('mgmt-fund-goal').value) || 0;
-    const enabled = goalVal > 0;
-    const toggle = document.getElementById('mgmt-public-toggle');
+    const goalVal = parseFloat((document.getElementById('mgmt-fund-goal') as HTMLInputElement).value) || 0;
+    const enabled = goalVal > 0 && !judgingOrVotingStarted;
+    const toggle = document.getElementById('mgmt-public-toggle') as HTMLButtonElement;
     const hint = document.getElementById('mgmt-public-toggle-hint');
     toggle.disabled = !enabled;
-    hint.textContent = enabled
-      ? 'Show a progress bar on the public page'
-      : 'Set a fundraising goal above to enable';
-    if (!enabled) setToggle('mgmt-public-toggle', false);
+    hint.textContent = judgingOrVotingStarted
+      ? 'Judging/voting has started, so this can no longer be changed.'
+      : (enabled ? 'Show a progress bar on the public page' : 'Set a fundraising goal above to enable');
+    if (!enabled && !judgingOrVotingStarted) setToggle('mgmt-public-toggle', false);
+
+    const closeToggle = document.getElementById('mgmt-close-on-goal-toggle') as HTMLButtonElement;
+    const closeHint = document.getElementById('mgmt-close-on-goal-hint');
+    closeToggle.disabled = !enabled;
+    closeHint.textContent = judgingOrVotingStarted
+      ? 'Judging/voting has started, so this can no longer be changed.'
+      : (enabled ? "Works alongside (or instead of) an entries-close date — whichever's first wins" : 'Set a fundraising goal above to enable');
+    if (!enabled && !judgingOrVotingStarted) setToggle('mgmt-close-on-goal-toggle', false);
+
+    (document.getElementById('mgmt-fund-goal') as HTMLInputElement).disabled = judgingOrVotingStarted;
+    (document.getElementById('mgmt-goal-type') as HTMLSelectElement).disabled = judgingOrVotingStarted;
+    const lockNotice = document.getElementById('mgmt-fundraising-lock-notice');
+    if (lockNotice) lockNotice.style.display = judgingOrVotingStarted ? 'block' : 'none';
   }
 
   // ── Wire up all handlers ─────────────────────────────────────────────────────
@@ -1835,13 +1948,23 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       if (e.target === e.currentTarget) document.getElementById('archive-modal').style.display = 'none';
     });
 
+    // Show Day / Results Day help modal
+    document.getElementById('show-date-help-btn').addEventListener('click', () => {
+      document.getElementById('show-date-modal').style.display = 'flex';
+    });
+    document.getElementById('show-date-modal-x').addEventListener('click', closeShowDateModal);
+    document.getElementById('show-date-modal-ok').addEventListener('click', closeShowDateModal);
+    document.getElementById('show-date-modal').addEventListener('click', e => {
+      if (e.target === e.currentTarget) closeShowDateModal();
+    });
+
     // Publish Show modal
     wirePublishShowModal();
 
     // Close drawer — X button, backdrop, Escape key, cancel buttons
     document.getElementById('drawer-close').addEventListener('click', closeDrawer);
     document.getElementById('drawer-backdrop').addEventListener('click', closeDrawer);
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeDrawer(); document.getElementById('archive-modal').style.display = 'none'; } });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeDrawer(); document.getElementById('archive-modal').style.display = 'none'; closeShowDateModal(); } });
     document.getElementById('edit-drawer').addEventListener('click', e => {
       if (e.target.closest('.cancel-btn')) closeDrawer();
     });
@@ -1873,6 +1996,17 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         const needsNum = btn.dataset.value === 'registered_charity' || btn.dataset.value === 'non_profit';
         document.getElementById('mgmt-charity-field').style.display = needsNum ? 'block' : 'none';
       });
+    });
+
+    document.getElementById('mgmt-close-now-btn').addEventListener('click', closeEntriesNow);
+    document.getElementById('mgmt-entry-close-toggle').addEventListener('click', () => {
+      if (judgingOrVotingStarted) return;
+      const btn = document.getElementById('mgmt-entry-close-toggle');
+      const on = btn.dataset.on !== 'true';
+      btn.dataset.on = String(on);
+      btn.style.background = on ? '#1ba89a' : '#c4bed0';
+      btn.querySelector('span').style.transform = on ? 'translateX(16px)' : 'translateX(0)';
+      updateCloseStatusUI();
     });
 
     // Animal type
@@ -1931,6 +2065,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     // Fundraising
     setupToggle('mgmt-public-toggle', () => {});
+    setupToggle('mgmt-close-on-goal-toggle', () => {});
+    document.getElementById('mgmt-goal-type').addEventListener('change', updateGoalTypeUI);
     document.getElementById('mgmt-fund-goal').addEventListener('input', updatePublicToggleAvailability);
     document.getElementById('mgmt-currency').addEventListener('change', e => applyCurrencySymbol(e.target.value));
     document.getElementById('mgmt-fee-minus').addEventListener('click', () => setFeeValue(getFeeValue() - 1));
@@ -2097,6 +2233,23 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const needsNum = orgType === 'registered_charity' || orgType === 'non_profit';
     const charityNum = document.getElementById('mgmt-charity-number').value.trim();
     if (needsNum && !charityNum) return showPanelError('basics', 'Please enter your Charity / Non-Profit Number.');
+
+    const hasCloseDate = document.getElementById('mgmt-entry-close-toggle').dataset.on === 'true';
+    if (!judgingOrVotingStarted && hasCloseDate && !document.getElementById('mgmt-entry-close').value) {
+      return showPanelError('basics', 'Please choose an entries-close date, or turn off the toggle to leave entries open indefinitely.');
+    }
+
+    const dateError = getDateOrderError({
+      entry_open_date:  document.getElementById('mgmt-entry-open').value || null,
+      entry_open_time:  document.getElementById('mgmt-entry-open-time').value || null,
+      entry_close_date: judgingOrVotingStarted ? show.entry_close_date : (hasCloseDate ? (document.getElementById('mgmt-entry-close').value || null) : null),
+      entry_close_time: judgingOrVotingStarted ? show.entry_close_time : (hasCloseDate ? (document.getElementById('mgmt-entry-close-time').value || null) : null),
+      show_date: document.getElementById('mgmt-show-date').value || null,
+      show_time: document.getElementById('mgmt-show-time').value || null,
+      timezone: document.getElementById('mgmt-timezone').value || null,
+    });
+    if (dateError) return showPanelError('basics', dateError);
+
     await saveSection('basics', {
       title, org_type: orgType,
       host_org: document.getElementById('mgmt-host-org').value.trim() || null,
@@ -2107,13 +2260,49 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       contact_phone: document.getElementById('mgmt-contact-phone').value.trim() || null,
       entry_open_date:   document.getElementById('mgmt-entry-open').value        || null,
       entry_open_time:   document.getElementById('mgmt-entry-open-time').value   || null,
-      entry_close_date:  document.getElementById('mgmt-entry-close').value       || null,
-      entry_close_time:  document.getElementById('mgmt-entry-close-time').value  || null,
+      entry_close_date:  judgingOrVotingStarted ? show.entry_close_date : (hasCloseDate ? (document.getElementById('mgmt-entry-close').value || null) : null),
+      entry_close_time:  judgingOrVotingStarted ? show.entry_close_time : (hasCloseDate ? (document.getElementById('mgmt-entry-close-time').value || null) : null),
       show_date:         document.getElementById('mgmt-show-date').value          || null,
       show_time:         document.getElementById('mgmt-show-time').value          || null,
       timezone:          document.getElementById('mgmt-timezone').value           || null,
     });
     document.getElementById('show-title-display').textContent = title || 'Untitled Show';
+    updateCloseStatusUI();
+  }
+
+  function updateCloseStatusUI() {
+    const hasCloseDate = document.getElementById('mgmt-entry-close-toggle').dataset.on === 'true';
+    document.getElementById('mgmt-entry-close-date-wrap').style.display = hasCloseDate ? 'flex' : 'none';
+    document.getElementById('mgmt-entry-close-hint').style.display = hasCloseDate ? 'none' : 'block';
+    document.getElementById('mgmt-entry-close-required-mark').style.display = hasCloseDate ? 'inline' : 'none';
+    document.getElementById('mgmt-entry-close-toggle').toggleAttribute('disabled', judgingOrVotingStarted);
+    document.getElementById('mgmt-entry-close').toggleAttribute('disabled', judgingOrVotingStarted);
+    document.getElementById('mgmt-entry-close-time').toggleAttribute('disabled', judgingOrVotingStarted);
+    document.getElementById('mgmt-close-lock-notice').style.display = judgingOrVotingStarted ? 'block' : 'none';
+
+    const close = getEntriesCloseInfo(show, goalTotal);
+    const statusEl  = document.getElementById('mgmt-close-status');
+    const closeBtn  = document.getElementById('mgmt-close-now-btn') as HTMLButtonElement;
+    if (!close.isOpen) {
+      const reasonLabel = { date: 'entry deadline', goal: 'fundraising goal reached', manual: 'organiser', show_date: 'show day' }[close.reason] || close.reason;
+      statusEl.textContent = `Entries closed (${reasonLabel}).`;
+      closeBtn.style.display = 'none';
+    } else {
+      statusEl.textContent = 'Entries are open.';
+      closeBtn.style.display = '';
+    }
+  }
+
+  async function closeEntriesNow() {
+    if (!confirm('Close entries now? Exhibitors will no longer be able to enter this show.')) return;
+    const { error } = await supabase.from('shows')
+      .update({ entries_closed_at: new Date().toISOString(), entries_closed_reason: 'manual' })
+      .eq('id', showId);
+    if (error) return showPanelError('basics', 'Could not close entries: ' + error.message);
+    show.entries_closed_at = new Date().toISOString();
+    show.entries_closed_reason = 'manual';
+    updateCloseStatusUI();
+    renderPageHeader();
   }
 
   async function saveShowType() {
@@ -2304,14 +2493,16 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const minFee   = getMin(currency);
     if (minFee == null) return showPanelError('fundraising', 'Fee settings could not be loaded — please refresh the page.');
     if (entryFee < minFee) return showPanelError('fundraising', `Entry fee must be at least ${CURRENCY_SYMBOLS[currency] || ''}${minFee}.`);
-    const goal = parseFloat(document.getElementById('mgmt-fund-goal').value) || null;
-    await saveSection('fundraising', {
-      currency,
-      entry_fee: entryFee,
-      is_fundraising: true,
-      fundraising_goal: goal,
-      show_fundraising_publicly: goal > 0 && document.getElementById('mgmt-public-toggle').dataset.on === 'true',
-    });
+    const payload: Record<string, any> = { currency, entry_fee: entryFee, is_fundraising: true };
+    if (!judgingOrVotingStarted) {
+      const goal = parseFloat((document.getElementById('mgmt-fund-goal') as HTMLInputElement).value) || null;
+      payload.fundraising_goal = goal;
+      payload.fundraising_goal_type = (document.getElementById('mgmt-goal-type') as HTMLSelectElement).value || 'amount';
+      payload.show_fundraising_publicly = goal > 0 && document.getElementById('mgmt-public-toggle').dataset.on === 'true';
+      payload.close_entries_on_goal = goal > 0 && document.getElementById('mgmt-close-on-goal-toggle').dataset.on === 'true';
+    }
+    await saveSection('fundraising', payload);
+    updateCloseStatusUI();
   }
 
   async function savePayout() {
@@ -2924,6 +3115,27 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     setFeeValue(getFeeValue());
   }
 
+  // Toggles the $ prefix / placeholder on the goal input between money and a
+  // plain entry count, depending on which the organiser is measuring towards.
+  function updateGoalTypeUI() {
+    const type = (document.getElementById('mgmt-goal-type') as HTMLSelectElement).value;
+    const symEl = document.getElementById('mgmt-sym-goal');
+    const input = document.getElementById('mgmt-fund-goal') as HTMLInputElement;
+    if (type === 'entries') {
+      symEl.style.display = 'none';
+      input.classList.remove('pl-11'); input.classList.add('pl-4');
+      input.placeholder = 'e.g. 100';
+    } else {
+      symEl.style.display = '';
+      input.classList.remove('pl-4'); input.classList.add('pl-11');
+      input.placeholder = '0.00';
+    }
+  }
+
+  function closeShowDateModal() {
+    document.getElementById('show-date-modal').style.display = 'none';
+  }
+
   // ── Shared card / toggle helpers ─────────────────────────────────────────────
   function selectCard(container, value) {
     if (!container) return;
@@ -2950,7 +3162,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     btn.addEventListener('click', () => {
       const on = btn.dataset.on !== 'true';
       btn.dataset.on = String(on);
-      btn.style.background = on ? '#1ba89a' : '#e8f7f6';
+      btn.style.background = on ? '#1ba89a' : '#c4bed0';
       btn.querySelector('span').style.transform = on ? 'translateX(20px)' : 'translateX(0)';
       onChange(on);
     });
@@ -2960,7 +3172,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const btn = document.getElementById(btnId);
     if (!btn) return;
     btn.dataset.on = String(on);
-    btn.style.background = on ? '#1ba89a' : '#e8f7f6';
+    btn.style.background = on ? '#1ba89a' : '#c4bed0';
     btn.querySelector('span').style.transform = on ? 'translateX(20px)' : 'translateX(0)';
   }
 

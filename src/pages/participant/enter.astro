@@ -11,7 +11,8 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
 <script>
   import { getAuth } from '../../lib/auth.js';
   import { supabase } from '../../lib/supabase.js';
-  import { zonedDateTime } from '../../lib/voteWindow.js';
+  import { getEntriesCloseInfo } from '../../lib/voteWindow.js';
+  import { organiserNet } from '../../lib/fees.js';
   import { searchBreeds } from '../../lib/dog-breeds.js';
 
   const { session, profile, base } = await getAuth();
@@ -80,7 +81,7 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
   // ── Load show data ────────────────────────────────────────────────────────────
   const [showRes, catsRes, awardsRes] = await Promise.all([
     supabase.from('shows')
-      .select('id,title,host_org,entry_fee,currency,animal_type,breed_scope,breed_filter,entry_close_date,entry_close_time,timezone,logo_url,status,suspended_at')
+      .select('id,title,host_org,entry_fee,currency,animal_type,breed_scope,breed_filter,entry_close_date,entry_close_time,show_date,show_time,timezone,logo_url,status,suspended_at,fundraising_goal,fundraising_goal_type,close_entries_on_goal,entries_closed_at,entries_closed_reason')
       .eq('id', showId).single(),
     supabase.from('show_categories').select('id,name,award_id,has_certificate').eq('show_id', showId),
     supabase.from('awards').select('*').eq('show_id', showId),
@@ -92,9 +93,29 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
     root.innerHTML = `<div style="text-align:center;padding:60px 0;"><p style="font-size:20px;font-weight:800;color:#1c1626;margin-bottom:8px;">Show not available</p><p style="color:#6b7c89;font-size:14px;margin-bottom:20px;">This show is not currently accepting entries.</p><a href="${base}" style="color:#1ba89a;font-weight:700;font-size:14px;">Browse Shows →</a></div>`;
     throw 0;
   }
-  const closeAt = zonedDateTime(show.entry_close_date, show.entry_close_time, show.timezone);
-  if (closeAt && closeAt < new Date()) {
-    root.innerHTML = `<div style="text-align:center;padding:60px 0;"><p style="font-size:20px;font-weight:800;color:#1c1626;margin-bottom:8px;">Entries are closed</p><p style="color:#6b7c89;font-size:14px;margin-bottom:20px;">The entry deadline was ${fmt(show.entry_close_date)}.</p><a href="${base}show?id=${showId}" style="color:#1ba89a;font-weight:700;font-size:14px;">View Show →</a></div>`;
+  let currentGoalTotal = null;
+  if (show.close_entries_on_goal && show.fundraising_goal) {
+    const { count } = await supabase.from('show_entries')
+      .select('id', { count: 'exact', head: true }).eq('show_id', showId).eq('status', 'confirmed');
+    const confirmedCount = count || 0;
+    if (show.fundraising_goal_type === 'entries') {
+      currentGoalTotal = confirmedCount;
+    } else {
+      const { data: feeRows } = await supabase.from('platform_settings')
+        .select('key, value').or('key.like.service_fee_%,key.like.stripe_fee_%');
+      const serviceFees: Record<string, number> = {};
+      for (const r of (feeRows || [])) serviceFees[r.key] = parseFloat(r.value) || 0;
+      const netPerEntry = organiserNet(show.entry_fee || 0, show.currency || 'AUD', serviceFees) ?? 0;
+      currentGoalTotal = confirmedCount * netPerEntry;
+    }
+  }
+
+  const closeInfo = getEntriesCloseInfo(show, currentGoalTotal);
+  if (!closeInfo.isOpen) {
+    const reasonText = closeInfo.reason === 'goal'
+      ? 'This show reached its fundraising goal, so entries have closed.'
+      : `The entry deadline was ${fmt(show.entry_close_date)}.`;
+    root.innerHTML = `<div style="text-align:center;padding:60px 0;"><p style="font-size:20px;font-weight:800;color:#1c1626;margin-bottom:8px;">Entries are closed</p><p style="color:#6b7c89;font-size:14px;margin-bottom:20px;">${reasonText}</p><a href="${base}show?id=${showId}" style="color:#1ba89a;font-weight:700;font-size:14px;">View Show →</a></div>`;
     throw 0;
   }
 
