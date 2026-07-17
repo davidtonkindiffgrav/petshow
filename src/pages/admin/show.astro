@@ -19,6 +19,11 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 
     <div id="kpi-grid" class="grid grid-cols-4 gap-3 mb-4"></div>
 
+    <div class="bg-white rounded-[14px] border border-[#e6eaee] p-5 mb-4">
+      <p class="text-[13px] font-extrabold text-[#8492a3] uppercase tracking-wide mb-3">Entries Close Status</p>
+      <div id="entries-status-info"></div>
+    </div>
+
     <div class="grid grid-cols-2 gap-4">
       <div class="bg-white rounded-[14px] border border-[#e6eaee] p-5">
         <p class="text-[13px] font-extrabold text-[#8492a3] uppercase tracking-wide mb-2.5">Admin Notes</p>
@@ -57,6 +62,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   import { getAdminAuth, callAdminApi } from '../../lib/adminAuth.js';
   import { supabase } from '../../lib/supabase.js';
   import { esc, statusPillV2 } from '../../lib/format.js';
+  import { getEntriesCloseInfo, getGoalProgress } from '../../lib/voteWindow.js';
 
   const raw = import.meta.env.BASE_URL;
   const base = raw.endsWith('/') ? raw : raw + '/';
@@ -176,7 +182,48 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     renderKpis();
     renderActions();
     renderOrganiser();
+    renderEntriesStatus();
     document.getElementById('notes-input').value = detail.show.admin_notes || '';
+  }
+
+  function fmtDateTime(d) {
+    return d ? new Date(d).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+  }
+
+  function renderEntriesStatus() {
+    const s = detail.show;
+    const close = getEntriesCloseInfo(s, detail.goal_progress_total);
+    const reasonLabel = { date: 'entry deadline', goal: 'fundraising goal reached', manual: 'organiser', show_date: 'show day' }[close.reason] || '—';
+
+    const rows = [
+      ['Entries Close Date', s.entry_close_date ? fmtDateTime(s.entry_close_date) : 'Not set (indefinite)'],
+      ['Close On Goal', s.close_entries_on_goal ? 'Enabled' : 'Disabled'],
+      ['Current Status', close.isOpen
+        ? '<span style="color:#1d8a4e;font-weight:700">Open</span>'
+        : `<span style="color:#c53d3d;font-weight:700">Closed</span> — ${esc(reasonLabel)}${s.entries_closed_at ? ' at ' + esc(fmtDateTime(s.entries_closed_at)) : ''}`],
+    ];
+
+    const progress = getGoalProgress(s, detail.goal_progress_total);
+    if (progress) {
+      const label = progress.type === 'entries'
+        ? `${progress.current} of ${progress.target} entries (${progress.pct}%)`
+        : `${esc(s.currency)} ${progress.current.toFixed(2)} of ${esc(s.currency)} ${progress.target.toFixed(2)} (${progress.pct}%)`;
+      rows.push(['Goal Progress', label]);
+    }
+
+    if (s.close_entries_on_goal && !s.entries_closed_at) {
+      rows.push(['Goal Reminder Sent', s.goal_reminder_sent_at ? fmtDateTime(s.goal_reminder_sent_at) : 'Not yet sent']);
+    }
+
+    document.getElementById('entries-status-info').innerHTML = `
+      <div class="grid grid-cols-2 gap-x-6 gap-y-2.5">
+        ${rows.map(([label, value]) => `
+          <div class="flex items-center justify-between text-[13.5px] border-b border-[#f4f6f8] pb-2">
+            <span class="text-[#5b6b7c]">${esc(label)}</span>
+            <span class="text-[#10233f] font-semibold">${value}</span>
+          </div>
+        `).join('')}
+      </div>`;
   }
 
   const auth = await getAdminAuth();

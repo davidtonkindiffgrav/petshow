@@ -876,14 +876,40 @@ async function getShowDetail(supabase: any, payload: any) {
   const { data: show, error } = await supabase.from('shows').select('*').eq('id', show_id).single();
   if (error || !show) throw new Error('Show not found');
 
-  const [entriesRes, judgingRes, organiserProfileRes] = await Promise.all([
+  const [entriesRes, judgingRes, organiserProfileRes, feeSettingsRes] = await Promise.all([
     supabase.from('show_entries').select('entry_fee_paid').eq('show_id', show_id).eq('status', 'confirmed'),
     supabase.from('judge_scores').select('id', { count: 'exact', head: true }).eq('show_id', show_id),
     supabase.from('profiles').select('id, display_name').eq('id', show.created_by).maybeSingle(),
+    supabase.from('platform_settings').select('key, value').or('key.like.service_fee_%,key.like.stripe_fee_%'),
   ]);
 
   const entry_count = entriesRes.data?.length || 0;
   const revenue = (entriesRes.data || []).reduce((s: number, e: any) => s + (Number(e.entry_fee_paid) || 0), 0);
+
+  // What the fundraising_goal is actually compared against for auto-close —
+  // organiser-net amount raised (matching the public/organiser "Raised $X"
+  // figure, never gross entry_fee_paid), or the raw entry count. Shown to
+  // admins so "why hasn't this closed" is answerable without guessing.
+  let goal_progress_total: number | null = null;
+  if (show.fundraising_goal != null) {
+    if (show.fundraising_goal_type === 'entries') {
+      goal_progress_total = entry_count;
+    } else {
+      const feeSettings: Record<string, number> = {};
+      for (const r of (feeSettingsRes.data || [])) feeSettings[r.key] = parseFloat(r.value) || 0;
+      const pct = feeSettings['service_fee_pct'];
+      const floor = feeSettings[`service_fee_floor_${show.currency}`];
+      const stripePct = feeSettings['stripe_fee_pct'];
+      const stripeFixed = feeSettings[`stripe_fee_fixed_${show.currency}`];
+      if (pct != null && floor != null && stripePct != null && stripeFixed != null) {
+        const total = Number(show.entry_fee) || 0;
+        const platformFee = Math.max(floor, total * pct / 100);
+        const stripeFee = total * stripePct / 100 + stripeFixed;
+        const netPerEntry = Math.max(0, total - platformFee - stripeFee);
+        goal_progress_total = entry_count * netPerEntry;
+      }
+    }
+  }
 
   let organiserEmail: string | null = null;
   try {
@@ -895,6 +921,7 @@ async function getShowDetail(supabase: any, payload: any) {
     show,
     entry_count,
     revenue,
+    goal_progress_total,
     // judge_scores existing and keyed by show_id is a cheap, honest "judging
     // has started" signal — not attempting to re-derive "judging complete",
     // that logic lives in organiser/judging.astro and isn't worth duplicating.
