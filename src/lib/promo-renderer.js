@@ -26,6 +26,8 @@ const ELEMENT_DEFAULTS = { on: true, pos: 'tl', size: 1 };
 export const PROMO_DEFAULTS = {
   headline: 'Entries Open',
   headlineSize: 48, // px — organiser-set exact size, not a percentage
+  headlineColor: '#ffffff',
+  headlineBg: 'fill', // 'fill' = colored rounded panel behind the text, 'none' = transparent
   bg_color: null, // null = follow show.banner_color / DEFAULT_ACCENT
   showLogo: { ...ELEMENT_DEFAULTS, pos: 'tl' },
   clubLogo: { ...ELEMENT_DEFAULTS, pos: 'tr' },
@@ -160,7 +162,7 @@ function resolveStacks(items) {
   return { positions, brWidth };
 }
 
-export async function renderPromoImage(canvas, { show, sponsors = [], headline, headlineSize = 48, bgColor, elements, publicUrl }) {
+export async function renderPromoImage(canvas, { show, sponsors = [], headline, headlineSize = 48, headlineColor = '#ffffff', headlineBg = 'fill', bgColor, elements, publicUrl }) {
   canvas.width  = W;
   canvas.height = H;
   const ctx = canvas.getContext('2d');
@@ -266,11 +268,13 @@ export async function renderPromoImage(canvas, { show, sponsors = [], headline, 
     const panelX = (W - panelW) / 2;
     const panelY = BANNER_H + 28;
 
-    ctx.fillStyle = bright;
-    rrect(ctx, panelX, panelY, panelW, panelH, 20);
-    ctx.fill();
+    if (headlineBg === 'fill') {
+      ctx.fillStyle = bright;
+      rrect(ctx, panelX, panelY, panelW, panelH, 20);
+      ctx.fill();
+    }
 
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = headlineColor;
     ctx.font      = `800 ${headlineSize}px ${FONT}`;
     ctx.textAlign = 'center';
     hLines.forEach((line, i) => ctx.fillText(line, W / 2, panelY + padY + headlineSize * 0.82 + i * hLineH));
