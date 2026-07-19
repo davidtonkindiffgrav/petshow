@@ -130,7 +130,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
             <input type="checkbox" class="dup-section" data-section="sponsorship" checked style="width:16px;height:16px;accent-color:#1ba89a">Sponsorship
           </label>
           <label style="display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13.5px;color:#1c1626;cursor:pointer;border-bottom:1px solid #f5f3fa">
-            <input type="checkbox" class="dup-section" data-section="judging" checked style="width:16px;height:16px;accent-color:#1ba89a">Judging Method <span style="color:#9b94a8;font-weight:400">(public voting or expert judges — judges' details are never copied and will need manual setup)</span>
+            <input type="checkbox" class="dup-section" data-section="judging" checked style="width:16px;height:16px;accent-color:#1ba89a">Judging Method <span style="color:#9b94a8;font-weight:400">(public voting or guest judges — judges' details are never copied and will need manual setup)</span>
           </label>
           <label style="display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13.5px;color:#1c1626;cursor:pointer;border-bottom:1px solid #f5f3fa">
             <input type="checkbox" class="dup-section" data-section="awards" checked style="width:16px;height:16px;accent-color:#1ba89a">Awards &amp; Prizes
@@ -317,7 +317,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       tile('Sponsor',     show.has_sponsor === true ? 'ok' : show.has_sponsor === false ? 'off' : 'pending',
                           show.has_sponsor === true ? 'Sponsor added' : show.has_sponsor === false ? 'No sponsor' : null),
       tile('Judging',     show.is_judged === true ? 'ok' : show.is_judged === false ? 'off' : 'pending',
-                          show.is_judged === true ? 'Expert judges' : show.is_judged === false ? 'Public voting' : null),
+                          show.is_judged === true ? 'Guest judges' : show.is_judged === false ? 'Public voting' : null),
       tile('Awards',      awardedCatCount > 0 ? 'ok' : 'pending',
                           awardedCatCount > 0 ? `${awardedCatCount} of ${catCount} categories` : null),
       tile('Fundraising', show.entry_fee > 0 ? 'ok' : 'pending',
@@ -383,7 +383,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           </span>
           <span class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#4a4357]">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            ${show.is_judged === true ? 'Expert judges' : show.is_judged === false ? 'Public voting' : 'Judging: not set'}
+            ${show.is_judged === true ? 'Guest judges' : show.is_judged === false ? 'Public voting' : 'Judging: not set'}
           </span>
           <span class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#4a4357]">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>

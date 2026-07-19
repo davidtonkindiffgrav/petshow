@@ -143,7 +143,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
   const timeline = [
     timelineNode({ done: node1Done,    current: false,        label: 'Entry submitted',       sub: formatDate(entry.created_at) }),
-    timelineNode({ done: node2Done,    current: node2Current, label: 'Judging in progress',   sub: node2Done ? 'Judging complete' : node2Current ? 'Expert judges scoring now' : 'Begins after entry closes' }),
+    timelineNode({ done: node2Done,    current: node2Current, label: 'Judging in progress',   sub: node2Done ? 'Judging complete' : node2Current ? 'Guest judges scoring now' : 'Begins after entry closes' }),
     timelineNode({ done: node3Done,    current: false,        label: 'Results published',      sub: show.results_published_at ? formatDate(show.results_published_at) : show.show_date ? 'Expected ' + formatDate(show.show_date) : 'Date TBC' }),
   ].join('');
 

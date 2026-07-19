@@ -665,7 +665,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E8E7E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
             Judging
           </span>
-          <span style="font-size:13px;color:#6B7C79">${show.is_judged ? 'By Expert Judges' : 'Public Vote'}</span>
+          <span style="font-size:13px;color:#6B7C79">${show.is_judged ? 'By Guest Judges' : 'Public Vote'}</span>
         </div>` : '';
 
     return card(`<h3 style="font-size:15px;font-weight:700;color:#143A37;margin:0 0 4px">Key Dates</h3>${rows}${judgeRow}`);
@@ -825,7 +825,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       { label: 'Entry Open',   value: show.entry_open_date  ? fmt(show.entry_open_date)  : null },
       { label: 'Entries Close',value: show.entry_close_date ? fmt(show.entry_close_date) : (show.close_entries_on_goal ? 'On reaching goal' : null) },
       { label: 'Show Day',     value: show.show_date        ? fmt(show.show_date)        : null },
-      { label: 'Judging',      value: show.is_judged != null ? (show.is_judged ? 'By Expert Judges' : 'Public Vote') : null },
+      { label: 'Judging',      value: show.is_judged != null ? (show.is_judged ? 'By Guest Judges' : 'Public Vote') : null },
     ].filter(d => d.value);
 
     const cells = items.map((item, i) => `
