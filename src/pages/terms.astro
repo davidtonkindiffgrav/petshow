@@ -4,10 +4,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 const raw  = import.meta.env.BASE_URL;
 const base = raw.endsWith('/') ? raw : raw + '/';
 
-const updated = '4 July 2026';
+const updated = '21 July 2026';
 ---
 
-<BaseLayout title="Terms & Conditions — Fur to Feathers" description="Terms of use, refund policy, and platform rules for Fur to Feathers.">
+<BaseLayout title="Terms & Conditions: Fur to Feathers" description="Terms of use, refund policy, and platform rules for Fur to Feathers.">
 
   <div style="max-width:720px;margin:0 auto;padding:60px 24px 100px;">
 
@@ -30,7 +30,7 @@ const updated = '4 July 2026';
     <section style="margin-bottom:40px;">
       <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">2. Fees and Payments</h2>
       <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 10px;">
-        Organisers set their own all-inclusive entry fee per show, subject to a platform minimum. The price displayed to Exhibitors is the total amount charged — nothing is added at checkout. Fur to Feathers deducts a platform service fee, and our payment processor deducts card processing costs, from each entry before the balance is remitted to the Organiser.
+        Organisers set their own all-inclusive entry fee per show, subject to a platform minimum. The price displayed to Exhibitors is the total amount charged, with nothing added at checkout. Fur to Feathers deducts a platform service fee, and our payment processor deducts card processing costs, from each entry before the balance is remitted to the Organiser.
       </p>
       <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 10px;">
         All payments are processed securely by Stripe. By completing a payment you also agree to <a href="https://stripe.com/legal/consumer" target="_blank" rel="noopener" style="color:#1ba89a;font-weight:600;">Stripe's Terms of Service</a>.
@@ -84,13 +84,105 @@ const updated = '4 July 2026';
 
     <!-- 5 -->
     <section style="margin-bottom:40px;">
-      <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">5. Exhibitor Responsibilities</h2>
+      <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">5. Organiser Eligibility, Authority &amp; Limitation of Liability</h2>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 16px;">
+        This section applies specifically to shows run to raise funds for a charity, non-profit, or other cause (the "Beneficiary"). By creating such a show, the Organiser makes the representations and accepts the obligations below.
+      </p>
+
+      <p style="font-size:13px;font-weight:700;color:#4a4357;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 8px;">5.1 Charity &amp; non-profit status</p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 8px;">
+        The Organiser warrants that the Beneficiary is a lawfully registered charity, non-profit, incorporated society, or other authorised community-benefit entity in good standing in its operating jurisdiction. Fur to Feathers reserves the right, but is under no obligation, to request documentation verifying the Beneficiary's registration or tax-exempt status at any time.
+      </p>
+
+      <p style="font-size:13px;font-weight:700;color:#4a4357;text-transform:uppercase;letter-spacing:0.06em;margin:16px 0 8px;">5.2 Authority to act and fundraise</p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 8px;">
+        The individual creating the show warrants that they have the Beneficiary's express authority to:
+      </p>
+      <ul style="margin:0 0 8px;padding-left:20px;display:flex;flex-direction:column;gap:6px;">
+        {[
+          'Create and manage a fundraising show on the Beneficiary\'s behalf.',
+          'Direct the collection and disbursement of entry fees, donations, or sponsorships raised through the show.',
+          'Use the Beneficiary\'s registered name, logo, and other trademarks in connection with the show.',
+        ].map(item => (
+          <li style="font-size:14px;color:#4a4357;line-height:1.7;">{item}</li>
+        ))}
+      </ul>
+
+      <p style="font-size:13px;font-weight:700;color:#4a4357;text-transform:uppercase;letter-spacing:0.06em;margin:16px 0 8px;">5.3 Regulatory compliance and permits</p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 8px;">
+        The Organiser is solely responsible for ensuring the show complies with all applicable local, regional, and national laws (including charitable solicitation rules, gambling or raffle regulations, and tax reporting requirements) and for obtaining any permits, licences, or approvals needed to run the show or collect funds.
+      </p>
+
+      <p style="font-size:13px;font-weight:700;color:#4a4357;text-transform:uppercase;letter-spacing:0.06em;margin:16px 0 8px;">5.4 Platform role and disclaimer of liability</p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 8px;">
+        Fur to Feathers acts solely as a technical service provider facilitating the online venue for the show. We are not a co-organiser, joint venturer, partner, trustee, or agent of any Organiser or Beneficiary. To the fullest extent permitted by law, Fur to Feathers is not liable for any claim, loss, or dispute arising from:
+      </p>
+      <ul style="margin:0 0 8px;padding-left:20px;display:flex;flex-direction:column;gap:6px;">
+        {[
+          'Misrepresentation of charity status or authority by an Organiser.',
+          'The cancellation, modification, or conduct of any show.',
+          'The judging process, or the distribution or fulfilment of prizes.',
+          'The allocation, misdirection, or misuse of funds once disbursed to the Organiser or its designated account.',
+          'Technical disruptions, data loss, or transaction failures during the show.',
+        ].map(item => (
+          <li style="font-size:14px;color:#4a4357;line-height:1.7;">{item}</li>
+        ))}
+      </ul>
+
+      <p style="font-size:13px;font-weight:700;color:#4a4357;text-transform:uppercase;letter-spacing:0.06em;margin:16px 0 8px;">5.5 Indemnification</p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0;">
+        The Organiser agrees to defend, indemnify, and hold harmless Fur to Feathers against any third-party claims, liabilities, losses, costs, or expenses (including reasonable legal fees) arising from the Organiser's breach of these representations, illegal conduct, or failure to properly distribute funds to the Beneficiary.
+      </p>
+    </section>
+
+    <!-- 6 -->
+    <section style="margin-bottom:40px;">
+      <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">6. Competition Format: Game of Skill</h2>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 16px;">
+        Every show, class, or contest hosted on the Platform is a game of skill. No element of chance determines the outcome of any competition or the awarding of any prize.
+      </p>
+
+      <p style="font-size:13px;font-weight:700;color:#4a4357;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 8px;">6.1 Judging and determination of winners</p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 8px;">
+        The Organiser must set the method of winner selection before entries open, and it must be one of the following:
+      </p>
+      <ul style="margin:0 0 8px;padding-left:20px;display:flex;flex-direction:column;gap:6px;">
+        {[
+          'Guest Judging: entries are individually evaluated by judge(s) appointed by the Organiser against the judging criteria set out in the show description (e.g. presentation, obedience, costume creativity, or adherence to class standards).',
+          'Public Vote: the winner is determined by public voting, representing a collective assessment of merit by voters. The Organiser may audit, filter, or disqualify votes suspected of automated manipulation, botting, or other fraudulent voting activity to preserve the skill-based nature of the contest.',
+        ].map(item => (
+          <li style="font-size:14px;color:#4a4357;line-height:1.7;">{item}</li>
+        ))}
+      </ul>
+
+      <p style="font-size:13px;font-weight:700;color:#4a4357;text-transform:uppercase;letter-spacing:0.06em;margin:16px 0 8px;">6.2 Tiebreaking (no random selection)</p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 8px;">
+        A winner, runner-up, or tied position must never be resolved by random draw, ballot, or any other element of chance:
+      </p>
+      <ul style="margin:0 0 8px;padding-left:20px;display:flex;flex-direction:column;gap:6px;">
+        {[
+          'In a Guest Judging show, the judge(s) will re-evaluate the tied entries against the published judging criteria to determine a single winner.',
+          'In a Public Vote show, a tiebreaker judge appointed by the Organiser will cast the deciding assessment based on merit.',
+        ].map(item => (
+          <li style="font-size:14px;color:#4a4357;line-height:1.7;">{item}</li>
+        ))}
+      </ul>
+
+      <p style="font-size:13px;font-weight:700;color:#4a4357;text-transform:uppercase;letter-spacing:0.06em;margin:16px 0 8px;">6.3 Finality of decisions</p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0;">
+        All decisions on winner selection, scoring, and eligibility (whether made by judges or through the Platform's voting tools) are final and binding on all Exhibitors. Neither the Organiser nor Fur to Feathers will enter into correspondence about subjective judging outcomes.
+      </p>
+    </section>
+
+    <!-- 7 -->
+    <section style="margin-bottom:40px;">
+      <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">7. Exhibitor Responsibilities</h2>
       <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 10px;">By entering a show, Exhibitors agree to:</p>
       <ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;">
         {[
           'Provide accurate information about themselves and their pet(s).',
           'Only enter animals they own or have the legal right to enter on behalf of the owner.',
-          'Submit only photos they own or have the right to use. Photos are made publicly accessible on the internet so that judges can view entries — by uploading a photo you confirm this, grant Fur to Feathers a non-exclusive licence to display it in connection with the relevant show, and take full responsibility for obtaining consent from any identifiable person in the photo (including acting as parent or legal guardian for any child who appears).',
+          'Submit only photos they own or have the right to use. Photos are made publicly accessible on the internet so that judges can view entries; by uploading a photo you confirm this, grant Fur to Feathers a non-exclusive licence to display it in connection with the relevant show, and take full responsibility for obtaining consent from any identifiable person in the photo (including acting as parent or legal guardian for any child who appears).',
           'Accept that entry fees (including the platform fee component) are committed at the point of payment.',
         ].map(item => (
           <li style="font-size:14px;color:#4a4357;line-height:1.7;">{item}</li>
@@ -98,36 +190,36 @@ const updated = '4 July 2026';
       </ul>
     </section>
 
-    <!-- 6 -->
+    <!-- 8 -->
     <section style="margin-bottom:40px;">
-      <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">6. Platform Availability</h2>
+      <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">8. Platform Availability</h2>
       <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0;">
         We aim to keep Fur to Feathers available at all times but cannot guarantee uninterrupted access. We reserve the right to carry out maintenance, updates, or suspend the platform where necessary. We are not liable for losses arising from platform downtime.
       </p>
     </section>
 
-    <!-- 7 -->
+    <!-- 9 -->
     <section style="margin-bottom:40px;">
-      <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">7. Limitation of Liability</h2>
+      <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">9. Limitation of Liability</h2>
       <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 10px;">
-        Fur to Feathers provides a platform; we are not responsible for the conduct of Organisers or Exhibitors, the quality or outcome of any show, or any disputes arising between them.
+        Fur to Feathers provides a platform; we are not responsible for the conduct of Organisers or Exhibitors, the quality or outcome of any show, or any disputes arising between them. Section 5 sets out further, more specific disclaimers that apply to fundraising shows run on behalf of a charity or non-profit Beneficiary.
       </p>
       <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0;">
         To the maximum extent permitted by law, our total liability to any user for any claim arising out of or relating to these Terms or the platform shall not exceed the amount paid by that user to Fur to Feathers in the 12 months preceding the claim.
       </p>
     </section>
 
-    <!-- 8 -->
+    <!-- 10 -->
     <section style="margin-bottom:40px;">
-      <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">8. Changes to These Terms</h2>
+      <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">10. Changes to These Terms</h2>
       <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0;">
         We may update these Terms from time to time. Where changes are material, we will notify users via email or a notice on the platform. Continued use of the platform after changes take effect constitutes acceptance of the updated Terms.
       </p>
     </section>
 
-    <!-- 9 -->
+    <!-- 11 -->
     <section style="margin-bottom:48px;">
-      <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">9. Governing Law</h2>
+      <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">11. Governing Law</h2>
       <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0;">
         These Terms are governed by the laws of Victoria, Australia. Any disputes will be subject to the exclusive jurisdiction of the courts of Victoria, except where mandatory local consumer protection laws in your jurisdiction provide otherwise.
       </p>

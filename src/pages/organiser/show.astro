@@ -341,10 +341,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           </div>
         </div>
         <div id="mgmt-charity-field" style="display:none">
-          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Charity / Non-Profit Number <span class="text-red-400">*</span></label>
+          <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Charity / Non-Profit / Incorporated Society Number <span class="text-red-400">*</span></label>
           <input type="text" id="mgmt-charity-number" placeholder="e.g. 1234567"
             class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
-          <p class="text-[11.5px] text-[#9b94a8] mt-1.5">Required to publish your show.</p>
+          <p class="text-[11.5px] text-[#9b94a8] mt-1.5">The registration number issued to your organisation by a charity or incorporated-societies register — not a general business or company number.</p>
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
@@ -1385,7 +1385,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     }
     const needsCharityNum = show.org_type === 'registered_charity' || show.org_type === 'non_profit';
     if (needsCharityNum && !show.charity_number) {
-      required.push({ label: 'Charity / Non-Profit Number', detail: 'Required for registered charities and non-profits.', panelId: 'basics' });
+      required.push({ label: 'Charity / Non-Profit / Incorporated Society Number', detail: 'Required for registered charities and non-profits.', panelId: 'basics' });
+    } else if (needsCharityNum && ((show.charity_number || '').match(/\d/g) || []).length < 4) {
+      required.push({ label: 'Charity / Non-Profit / Incorporated Society Number', detail: 'The number entered doesn\'t look valid.', panelId: 'basics' });
     }
     if (!show.breed_scope) {
       required.push({ label: 'Breed & Eligibility', detail: 'Choose which breeds or animals are eligible to enter.', panelId: 'breed' });
@@ -2360,7 +2362,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (!orgType) return showPanelError('basics', 'Please select a type of organisation.');
     const needsNum = orgType === 'registered_charity' || orgType === 'non_profit';
     const charityNum = document.getElementById('mgmt-charity-number').value.trim();
-    if (needsNum && !charityNum) return showPanelError('basics', 'Please enter your Charity / Non-Profit Number.');
+    if (needsNum && !charityNum) return showPanelError('basics', 'Please enter your Charity / Non-Profit / Incorporated Society Number.');
+    if (needsNum && (charityNum.match(/\d/g) || []).length < 4) return showPanelError('basics', 'Please enter a valid Charity / Non-Profit / Incorporated Society Number.');
 
     const hasCloseDate = document.getElementById('mgmt-entry-close-toggle').dataset.on === 'true';
     if (!judgingOrVotingStarted && hasCloseDate && !document.getElementById('mgmt-entry-close').value) {

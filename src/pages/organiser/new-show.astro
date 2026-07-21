@@ -150,10 +150,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       </div>
 
       <div id="s1-charity-field" style="display:none" class="mb-5">
-        <label for="s1-charity-number" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Charity / Non-Profit Number <span class="text-red-400">*</span></label>
+        <label for="s1-charity-number" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Charity / Non-Profit / Incorporated Society Number <span class="text-red-400">*</span></label>
         <input type="text" id="s1-charity-number" placeholder="e.g. 1234567"
           class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
-        <p class="text-[11.5px] text-[#9b94a8] mt-1.5">Required to create and publish your show.</p>
+        <p class="text-[11.5px] text-[#9b94a8] mt-1.5">The registration number issued to your organisation by a charity or incorporated-societies register — not a general business or company number.</p>
       </div>
 
       <div class="grid grid-cols-2 gap-4">
@@ -581,9 +581,21 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       <p class="text-[14px] text-[#6f6880] mb-7">Check everything looks right before going live.</p>
       <div id="s10-review" class="space-y-3 mb-8"></div>
 
+      <div class="border border-[#efebf5] rounded-[14px] p-5 mb-2 bg-[#fafafa]">
+        <p class="text-[13px] font-bold text-[#1c1626] mb-2.5">Organiser Representation &amp; Authority</p>
+        <label class="flex items-start gap-2.5 cursor-pointer">
+          <input id="chk-organiser-declaration" type="checkbox"
+            class="mt-[3px] w-4 h-4 rounded border-[#b8e4e0] text-brand focus:ring-brand flex-shrink-0" />
+          <span class="text-[13px] text-[#4a4357] leading-snug">
+            I confirm that: I am registering on behalf of a legally recognised, compliant non-profit or registered charity, or an officially authorised fundraising initiative; I have full legal authority from the beneficiary organisation to collect funds on its behalf through this platform; and I agree to comply with all applicable local fundraising laws, permit requirements, and platform rules, acknowledging that Fur to Feathers bears no liability for show operations, funds allocation, disputes, or administrative errors.
+            By checking this box, you agree to our full <a href={`${import.meta.env.BASE_URL}terms`} target="_blank" class="text-brand font-semibold hover:underline">Terms &amp; Conditions for Event Organisers</a>.
+          </span>
+        </label>
+      </div>
+
       <div class="flex flex-col sm:flex-row gap-3 pt-6 border-t border-[#efebf5]">
-        <button id="btn-publish"
-          class="flex-1 inline-flex items-center justify-center gap-2 bg-brand text-white text-[15px] font-bold py-3.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors">
+        <button id="btn-publish" disabled
+          class="flex-1 inline-flex items-center justify-center gap-2 bg-brand text-white text-[15px] font-bold py-3.5 rounded-btn shadow-btn-primary hover:bg-brand-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           Publish Now
         </button>
@@ -1030,7 +1042,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       if (!getSelectedCard('org-type-cards')) return showError('Please select your type of organisation.'), false;
       const orgType = getSelectedCard('org-type-cards');
       if (orgType === 'non_profit' || orgType === 'registered_charity') {
-        if (!document.getElementById('s1-charity-number').value.trim()) return showError('Please enter your Charity / Non-Profit Number to continue.'), false;
+        const charityNum = document.getElementById('s1-charity-number').value.trim();
+        if (!charityNum) return showError('Please enter your Charity / Non-Profit / Incorporated Society Number to continue.'), false;
+        if ((charityNum.match(/\d/g) || []).length < 4) return showError('Please enter a valid Charity / Non-Profit / Incorporated Society Number.'), false;
       }
       const email = document.getElementById('s1-contact-email').value.trim();
       if (!email || !email.includes('@')) return showError('Please enter a valid contact email.'), false;
@@ -1803,7 +1817,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   // ─── Publish / Save draft ───────────────────────────────────────────────────
   async function finalSave(status) {
     if (!show.id) return;
-    await supabase.from('shows').update({ status, wizard_step: 10 }).eq('id', show.id);
+    const update = { status, wizard_step: 10 };
+    if (status === 'published') update.organiser_declaration_accepted_at = new Date().toISOString();
+    await supabase.from('shows').update(update).eq('id', show.id);
     window.location.href = status === 'published'
       ? `${base}show/?id=${show.id}`
       : base + 'organiser';
@@ -2392,7 +2408,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       window.location.href = base + 'organiser';
     });
 
+    document.getElementById('chk-organiser-declaration').addEventListener('change', (e) => {
+      document.getElementById('btn-publish').disabled = !e.target.checked;
+    });
+
     document.getElementById('btn-publish').addEventListener('click', async () => {
+      if (!document.getElementById('chk-organiser-declaration').checked) return;
       document.getElementById('btn-publish').textContent = 'Publishing…';
       await finalSave('published');
     });
