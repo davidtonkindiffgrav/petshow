@@ -1,12 +1,13 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // Bumped from @14: connect-resend-onboarding-link needs the v2.core.*
-// Accounts/Account Links API, which requires a newer SDK. Existing V1 calls
-// elsewhere in this file (payouts, disputes, refunds, balance) are unaffected
-// since the wire format is pinned by apiVersion below, not the SDK major
-// version. Check https://github.com/stripe/stripe-node/releases and bump
-// further if v2.core.* calls come back undefined.
-import Stripe from 'npm:stripe@18';
+// Accounts/Account Links API, which requires a newer SDK — @18 turned out to
+// still be too old (confirmed live: "Cannot read properties of undefined
+// (reading 'create')" on stripe-connect-onboarding, same import). Existing V1
+// calls elsewhere in this file (payouts, disputes, refunds, balance) are
+// unaffected since the wire format is pinned by apiVersion below, not the SDK
+// major version.
+import Stripe from 'npm:stripe@22';
 import { PDFDocument, StandardFonts, rgb } from 'npm:pdf-lib@1.17.1';
 
 import { createOnboardingAccountLink } from '../_shared/connect.ts';
@@ -46,7 +47,12 @@ async function copyStorageImage(supabase: any, oldUrl: string | null, newPath: s
 }
 
 function stripeClient(): Stripe {
-  return new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2024-04-10' });
+  // No explicit apiVersion — this client now also drives the v2.core.*
+  // Connect calls (see stripe-connect-onboarding/index.ts for why the old
+  // v1-style dated pin breaks under the newer SDK); the existing v1 calls
+  // elsewhere in this file (payouts, disputes, refunds, balance, checkout
+  // session retrieval) are unaffected by letting the SDK pick automatically.
+  return new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!);
 }
 
 async function loadSettingsMap(supabase: any): Promise<Record<string, number>> {

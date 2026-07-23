@@ -1,8 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import Stripe from 'npm:stripe@18';
-// Same SDK-version note as stripe-connect-onboarding/index.ts — bump the pin
-// to whatever's current if v2.core.* calls come back undefined.
+// Same SDK-version fix as stripe-connect-onboarding/index.ts — @18 didn't
+// expose v2.core.* at all. Bumped to @22.
+import Stripe from 'npm:stripe@22';
 
 // Separate function/webhook destination from stripe-webhook/index.ts on
 // purpose: this is Stripe's V2 Accounts API, delivered as "thin events" (the
@@ -26,11 +26,29 @@ serve(async (req: Request) => {
   const sig = req.headers.get('stripe-signature');
   const body = await req.text();
 
-  const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2024-04-10' });
+  // Pinned to .preview, same reason as stripe-connect-onboarding/index.ts:
+  // this function reads back configuration.recipient (preview-only) via
+  // accounts.retrieve's `include` below.
+  const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2026-06-24.preview' });
 
-  let thinEvent: any;
+  // stripe-node renamed this in v19 (we're on v22): parseThinEvent doesn't
+  // exist any more — confirmed live: "stripe.parseThinEvent is not a
+  // function". parseEventNotification returns a richer object with a
+  // related_object field (snake_case — verified against the actual v22
+  // package source; despite the changelog prose saying "relatedObject",
+  // the parsed object itself is untouched JSON) instead of requiring a
+  // separate events.retrieve round-trip to find the account id.
+  //
+  // Must use the *Async* variant + an explicit SubtleCryptoProvider: Deno
+  // has no Node crypto module, so the sync path's default crypto provider
+  // can't compute the HMAC synchronously — confirmed live: "SubtleCrypto
+  // Provider cannot be used in a synchronous context".
+  const cryptoProvider = (Stripe as any).createSubtleCryptoProvider();
+  let eventNotification: any;
   try {
-    thinEvent = (stripe as any).parseThinEvent(body, sig!, Deno.env.get('STRIPE_CONNECT_WEBHOOK_SECRET')!);
+    eventNotification = await (stripe as any).parseEventNotificationAsync(
+      body, sig!, Deno.env.get('STRIPE_CONNECT_WEBHOOK_SECRET')!, undefined, cryptoProvider,
+    );
   } catch (err: any) {
     return new Response(`Webhook signature verification failed: ${err.message}`, { status: 400 });
   }
@@ -41,17 +59,9 @@ serve(async (req: Request) => {
     'v2.core.account[configuration.recipient].capability_status_updated',
   ]);
 
-  if (HANDLED_TYPES.has(thinEvent.type)) {
+  if (HANDLED_TYPES.has(eventNotification.type)) {
     try {
-      const event = await (stripe as any).v2.core.events.retrieve(thinEvent.id);
-
-      // TODO(verify against current Stripe docs): the exact field carrying
-      // the connected account's id on a retrieved V2 event. Using
-      // related_object.id as the best-available guess from Stripe's V2
-      // events model (thin events carry a related_object pointer) — confirm
-      // during Phase 7 end-to-end testing and adjust if this comes back
-      // undefined (check event.data / event.context as fallbacks).
-      const accountId: string | undefined = event.related_object?.id || event.data?.id;
+      const accountId: string | undefined = eventNotification.related_object?.id;
       if (!accountId) throw new Error('Could not determine account id from event payload');
 
       const account = await (stripe as any).v2.core.accounts.retrieve(accountId, {
@@ -61,12 +71,21 @@ serve(async (req: Request) => {
       const cardPaymentsStatus: string | null = account.configuration?.merchant?.capabilities?.card_payments?.status ?? null;
       const chargesReady = cardPaymentsStatus === 'active';
 
-      // TODO(verify against current Stripe docs): the exact field for the
-      // recipient/payout capability's status — we requested
-      // configuration.recipient.capabilities.bank_accounts.local at account
-      // creation (see stripe-connect-onboarding/index.ts), so reading the
-      // mirrored path here; confirm during Phase 7 testing.
-      const payoutsStatus: string | null = account.configuration?.recipient?.capabilities?.bank_accounts?.local?.status ?? null;
+      // TODO(verify against current Stripe docs / during live testing): we
+      // dropped configuration.recipient entirely from account creation (see
+      // stripe-connect-onboarding/index.ts — it's for indirect-charge money
+      // movement, not our Direct-charge model), so account.configuration
+      // .recipient is always undefined now and the old bank_accounts.local
+      // path here never matched. Requesting the `merchant` configuration is
+      // documented to auto-provision a stripe_balance.payouts capability
+      // alongside card_payments (since the merchant account needs its own
+      // balance paid out), so trying that path — but this field wasn't
+      // confirmed against a live account response. If this stays null,
+      // inspect a real account.configuration.merchant.capabilities object
+      // and adjust the path; stripe_payouts_ready never blocks anything
+      // (only drives the settings page's "finish verification" banner), so
+      // it's safe to leave under-reporting while this gets nailed down.
+      const payoutsStatus: string | null = account.configuration?.merchant?.capabilities?.stripe_balance?.payouts?.status ?? null;
       const payoutsReady = payoutsStatus === 'active';
 
       const supabase = createClient(
@@ -83,19 +102,38 @@ serve(async (req: Request) => {
 
       // Account id is unique across both tables (enforced by the Phase 1
       // migration's partial unique indexes) — try profiles first, then
-      // organisations.
-      const { data: updatedProfiles } = await supabase.from('profiles')
+      // organisations. supabase-js doesn't throw on a failed update, it
+      // returns { data, error } — surface both explicitly instead of
+      // silently dropping errors like the previous version of this code did
+      // (confirmed live: DB rows stayed unchanged with zero errors anywhere
+      // because nothing ever inspected .error).
+      const { data: updatedProfiles, error: profilesErr } = await supabase.from('profiles')
         .update(updates).eq('stripe_account_id', accountId).select('id');
+      if (profilesErr) console.error('profiles update failed:', profilesErr.message);
+      let updatedOrgs: any[] | null = null;
       if (!updatedProfiles?.length) {
-        await supabase.from('organisations').update(updates).eq('stripe_account_id', accountId);
+        const { data, error: orgsErr } = await supabase.from('organisations')
+          .update(updates).eq('stripe_account_id', accountId).select('id');
+        if (orgsErr) console.error('organisations update failed:', orgsErr.message);
+        updatedOrgs = data;
       }
+      console.log('Connect webhook processed', {
+        type: eventNotification.type, accountId, cardPaymentsStatus, chargesReady, payoutsStatus, payoutsReady,
+        matchedProfile: updatedProfiles?.[0]?.id ?? null, matchedOrg: updatedOrgs?.[0]?.id ?? null,
+      });
 
-      await supabase.from('audit_log').insert({
+      // entity_id is uuid (audit_log was designed around entities like
+      // 'settlement' that have uuid ids) — a Stripe account id like
+      // "acct_..." doesn't fit, confirmed live: "invalid input syntax for
+      // type uuid". Leave it null and carry the account id in details
+      // instead, same as entity_type-only rows elsewhere.
+      const { error: auditErr } = await supabase.from('audit_log').insert({
         action: 'connect_account.status_changed',
         entity_type: 'stripe_account',
-        entity_id: accountId,
-        details: updates,
+        entity_id: null,
+        details: { ...updates, stripe_account_id: accountId },
       });
+      if (auditErr) console.error('audit_log insert failed:', auditErr.message);
     } catch (err: any) {
       console.error('Failed to process Connect account event:', err.message);
     }

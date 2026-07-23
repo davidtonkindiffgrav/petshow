@@ -1,10 +1,11 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import Stripe from 'npm:stripe@18';
-// NOTE: the V2 Core Accounts/Account Links API used below needs a stripe-node
-// version that supports it. Check https://github.com/stripe/stripe-node/releases
-// and bump this pin to whatever's current before deploying if v2.core.* calls
-// 404 or come back undefined.
+// @18 didn't expose v2.core.* at all (confirmed live: caused "Cannot read
+// properties of undefined (reading 'create')") — v2 Core Accounts/Account
+// Links support only landed in stripe-node's more recent major versions.
+// Bumped to @22. Check https://github.com/stripe/stripe-node/releases if
+// v2.core.* calls ever come back undefined again after a future bump.
+import Stripe from 'npm:stripe@22';
 
 import { resolveConnectOwnerForUser, persistStripeAccountId, createOnboardingAccountLink } from '../_shared/connect.ts';
 
@@ -46,7 +47,14 @@ serve(async (req: Request) => {
     const owner = await resolveConnectOwnerForUser(supabase, user.id);
     if (!owner) throw new Error('Could not resolve organiser/organisation profile');
 
-    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2024-04-10' });
+    // Pinned to the .preview version, not left to auto-negotiate: this
+    // function requests configuration.recipient.capabilities.bank_accounts
+    // at account creation below, and Stripe rejected that field on the
+    // account's stable default version (confirmed live: "This matches an
+    // existing preview-only field... explicitly specify a .preview
+    // Stripe-Version"). accountLinks.create (also called in this file) has
+    // no such requirement, so pinning the whole client here is safe.
+    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2026-06-24.preview' });
     let accountId = owner.stripe_account_id;
 
     if (!accountId) {
@@ -72,15 +80,19 @@ serve(async (req: Request) => {
         defaults: {
           responsibilities: { fees_collector: 'stripe', losses_collector: 'stripe' },
         },
+        // No `recipient` configuration: that's for indirect-charge money
+        // movement (receiving transfers from the platform or other merchant
+        // accounts) via stripe_balance.stripe_transfers — not our model.
+        // We use Direct charges, so the organiser's account is the merchant
+        // of record and this `merchant` capability alone is what creates
+        // its own Stripe balance and standard payout behaviour. Confirmed
+        // live: requesting `recipient.capabilities.bank_accounts` failed
+        // twice (preview-only field, then Global-Payouts-gated) before this
+        // simplification, matching Stripe's own docs that `recipient` is
+        // unrelated to standard same-account Direct-charge payouts.
         configuration: {
           customer: {},
           merchant: { capabilities: { card_payments: { requested: true } } },
-          // Payout capability — distinct from `merchant` above, which only
-          // requests the ability to accept charges. Confirm the exact
-          // recipient-configuration shape against current Stripe docs;
-          // Stripe's own sample integration only demonstrated merchant/
-          // customer for its generic storefront demo.
-          recipient: { capabilities: { bank_accounts: { local: { requested: true } } } },
         },
       });
 
