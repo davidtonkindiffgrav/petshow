@@ -2,6 +2,9 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import Stripe from 'npm:stripe@14';
 
+import { resolveConnectOwnerForShow } from '../_shared/connect.ts';
+import { platformFee } from '../_shared/fees.ts';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -63,7 +66,7 @@ serve(async (req: Request) => {
     // 3. Verify show is open
     const { data: show, error: showErr } = await supabase
       .from('shows')
-      .select('id, title, entry_fee, currency, status, entry_close_date, entry_close_time, timezone, suspended_at')
+      .select('id, title, entry_fee, currency, status, entry_close_date, entry_close_time, timezone, suspended_at, created_by, organisation_id')
       .eq('id', show_id)
       .single();
     if (showErr || !show) throw new Error('Show not found');
@@ -148,7 +151,7 @@ serve(async (req: Request) => {
     }
 
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2024-04-10' });
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: 'payment',
       line_items: entries.map((e: any) => {
         const cat  = e.category_id ? catMap[e.category_id] : null;
@@ -165,12 +168,45 @@ serve(async (req: Request) => {
       success_url: `${siteUrl}/participant`,
       cancel_url:  `${siteUrl}/participant/enter?show=${show_id}&cancelled=1`,
       metadata:    { show_id, entry_count: String(entryCount) },
-    });
+    };
 
-    // 9. Store session ID on all entries
+    // Direct charge on the organiser's own connected Stripe account when
+    // they've completed at least the lighter "can accept charges" step of
+    // deferred onboarding. If they haven't (or entry_fee is 0, in which case
+    // Connect is never required), fall through to the exact call this
+    // function has always made — this is what keeps every organiser who
+    // hasn't connected Stripe working byte-for-byte, untouched.
+    const owner = perEntryFee > 0 ? await resolveConnectOwnerForShow(supabase, show) : null;
+    const connectReady = !!(owner?.stripe_account_id && owner.stripe_charges_ready);
+
+    let session: Stripe.Checkout.Session;
+    if (connectReady) {
+      const totalAmount = Math.round(perEntryFee * 100) * entryCount;
+      const settingsMap: Record<string, number> = {};
+      const { data: feeRows } = await supabase.from('platform_settings').select('key, value')
+        .or('key.like.service_fee_%');
+      for (const r of (feeRows || [])) {
+        const n = parseFloat(r.value);
+        if (isFinite(n)) settingsMap[r.key] = n;
+      }
+      const applicationFeeAmount = Math.round((platformFee(totalAmount / 100, show.currency, settingsMap) ?? 0) * 100);
+
+      session = await stripe.checkout.sessions.create(
+        { ...sessionParams, payment_intent_data: { application_fee_amount: applicationFeeAmount } },
+        { stripeAccount: owner!.stripe_account_id! },
+      );
+    } else {
+      session = await stripe.checkout.sessions.create(sessionParams);
+    }
+
+    // 9. Store session ID (and, for the Connect path, which account
+    // processed it) on all entries
     await supabase
       .from('show_entries')
-      .update({ stripe_session_id: session.id })
+      .update({
+        stripe_session_id: session.id,
+        ...(connectReady ? { stripe_account_id: owner!.stripe_account_id } : {}),
+      })
       .in('id', entryIds);
 
     return new Response(

@@ -30,7 +30,13 @@ const updated = '21 July 2026';
     <section style="margin-bottom:40px;">
       <h2 style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 12px;">2. Fees and Payments</h2>
       <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 10px;">
-        Organisers set their own all-inclusive entry fee per show, subject to a platform minimum. The price displayed to Exhibitors is the total amount charged, with nothing added at checkout. Fur to Feathers deducts a platform service fee, and our payment processor deducts card processing costs, from each entry before the balance is remitted to the Organiser.
+        Organisers set their own all-inclusive entry fee per show, subject to a platform minimum. The price displayed to Exhibitors is the total amount charged, with nothing added at checkout.
+      </p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 10px;">
+        To publish a paid show, an Organiser must connect their own Stripe account ("Connected Account") to the platform. Entry fees are charged directly to the Organiser's Connected Account — Fur to Feathers is never the recipient of, and never takes custody of, entry-fee funds. Fur to Feathers automatically collects a platform service fee at the moment of each charge, and Stripe's own card-processing costs are deducted directly from the Connected Account by Stripe. Stripe then pays the remaining balance out to the Organiser on its normal payout schedule.
+      </p>
+      <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 10px;">
+        By connecting a Stripe account, the Organiser agrees directly to Stripe's <a href="https://stripe.com/legal/connect-account" target="_blank" rel="noopener" style="color:#1ba89a;font-weight:600;">Connected Account Agreement</a> and accepts that Stripe, not Fur to Feathers, verifies their identity, holds their funds pending payout, and determines when payouts are made.
       </p>
       <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 10px;">
         All payments are processed securely by Stripe. By completing a payment you also agree to <a href="https://stripe.com/legal/consumer" target="_blank" rel="noopener" style="color:#1ba89a;font-weight:600;">Stripe's Terms of Service</a>.
@@ -115,14 +121,14 @@ const updated = '21 July 2026';
 
       <p style="font-size:13px;font-weight:700;color:#4a4357;text-transform:uppercase;letter-spacing:0.06em;margin:16px 0 8px;">5.4 Platform role and disclaimer of liability</p>
       <p style="font-size:14px;color:#4a4357;line-height:1.8;margin:0 0 8px;">
-        Fur to Feathers acts solely as a technical service provider facilitating the online venue for the show. We are not a co-organiser, joint venturer, partner, trustee, or agent of any Organiser or Beneficiary. To the fullest extent permitted by law, Fur to Feathers is not liable for any claim, loss, or dispute arising from:
+        Fur to Feathers acts solely as a technical service provider facilitating the online venue for the show. We are not a co-organiser, joint venturer, partner, trustee, or agent of any Organiser or Beneficiary. Entry-fee funds are paid directly by Stripe to the Organiser's own Connected Account and are never received, held, or transferred by Fur to Feathers at any point (see Section 2). To the fullest extent permitted by law, Fur to Feathers is not liable for any claim, loss, or dispute arising from:
       </p>
       <ul style="margin:0 0 8px;padding-left:20px;display:flex;flex-direction:column;gap:6px;">
         {[
           'Misrepresentation of charity status or authority by an Organiser.',
           'The cancellation, modification, or conduct of any show.',
           'The judging process, or the distribution or fulfilment of prizes.',
-          'The allocation, misdirection, or misuse of funds once disbursed to the Organiser or its designated account.',
+          'The allocation, misdirection, or misuse of funds once paid out by Stripe to the Organiser\'s Connected Account.',
           'Technical disruptions, data loss, or transaction failures during the show.',
         ].map(item => (
           <li style="font-size:14px;color:#4a4357;line-height:1.7;">{item}</li>

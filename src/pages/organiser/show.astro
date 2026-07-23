@@ -42,6 +42,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     <p id="page-error" style="display:none"
       class="text-[13px] text-red-500 bg-red-50 border border-red-100 rounded-[11px] px-4 py-3 mb-5"></p>
 
+    <!-- Non-blocking reminder: accepting entries, but Stripe payout verification isn't finished yet -->
+    <div id="connect-reminder-banner" style="display:none"
+      class="flex items-center justify-between gap-3 flex-wrap bg-[#fff8e6] border border-[#fbbf24] rounded-[11px] px-4 py-3 mb-5">
+      <p class="text-[13px] text-[#92400e]">Finish verifying your Stripe account before your show wraps up so you can get paid.</p>
+      <a href="settings#payments-section" class="text-[12.5px] font-bold text-[#b45309] whitespace-nowrap">Finish verification →</a>
+    </div>
+
     <!-- Section cards grid — headers only, no inline panels -->
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4" id="sections-grid">
       <div class="section-card bg-white rounded-card border border-[#b8e4e0]" id="card-basics">
@@ -664,6 +671,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
       <!-- Panel: Payout Details -->
       <div id="panel-payout" style="display:none" class="p-6 space-y-5">
+        <div class="rounded-[11px] bg-[#f5f3fa] border border-[#e7e2f0] px-3 py-2.5 text-[12px] text-[#6f6880]">
+          Manual bank transfer payouts are being replaced by direct Stripe payouts — see <a href="settings#payments-section" class="text-brand font-semibold">Settings → Payments</a>.
+        </div>
         <p class="text-[12.5px] text-[#6f6880] leading-relaxed -mt-1">
           Where we send this show's prize-pool proceeds via international bank transfer once the show wraps up.
           These details are only visible to you and platform admins.
@@ -965,6 +975,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   let bannerColorAuto = null; // last auto-detected hex, for the "Reset to auto-detected" link
   let pendingBannerColor = null; // staged override; null = keep show.banner_color as-is
   let payoutDetails   = null; // show_payout_details row, or null if not yet entered
+  let connectStatus   = null; // { stripe_charges_ready, stripe_payouts_ready } for this show's Connect owner, or null (free show / not fetched)
   let goalTotal       = null; // running total toward fundraising_goal (net amount raised, or entry count), null if no goal set
   let judgingOrVotingStarted = false; // any judge_rankings/public_votes rows exist — gates close-mode edits
 
@@ -1077,6 +1088,17 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (!showRes.data) { window.location.replace(mgmtBase + 'organiser/shows'); return; }
 
     show        = showRes.data;
+
+    // Connect status — only relevant to paid shows, per the same owner
+    // resolution as _shared/connect.ts (club's shared account, else the
+    // organiser's own).
+    if (show.entry_fee > 0) {
+      const { data } = show.organisation_id
+        ? await supabase.from('organisations').select('stripe_charges_ready, stripe_payouts_ready').eq('id', show.organisation_id).single()
+        : await supabase.from('profiles').select('stripe_charges_ready, stripe_payouts_ready').eq('id', uid).single();
+      connectStatus = data || null;
+    }
+
     if (show.fundraising_goal) {
       (feeRes.data || []).forEach(r => { serviceFees[r.key] = parseFloat(r.value) || 0; });
       const { count } = await supabase.from('show_entries')
@@ -1185,6 +1207,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       ? new Date(show.show_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
       : 'Date not set';
     document.getElementById('show-meta').textContent = `${dateText} · ${categories.length} categor${categories.length !== 1 ? 'ies' : 'y'}${feeText}`;
+
+    const showConnectReminder = show.status === 'published' && show.entry_fee > 0
+      && connectStatus?.stripe_charges_ready && !connectStatus?.stripe_payouts_ready;
+    document.getElementById('connect-reminder-banner').style.display = showConnectReminder ? 'flex' : 'none';
 
     const publishBtn = document.getElementById('btn-publish');
     if (show.status === 'published') {
@@ -1403,6 +1429,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     }
     if (!(show.entry_fee > 0)) {
       required.push({ label: 'Fundraising & Fees', detail: 'Set an entry fee before publishing.', panelId: 'fundraising' });
+    } else if (!connectStatus?.stripe_charges_ready) {
+      required.push({ label: 'Payments connected', detail: 'Connect a Stripe account before publishing a paid show.', panelId: 'payments' });
     }
 
     const uploadedCount = [show.logo_url, show.org_logo_url, show.banner_url].filter(Boolean).length;
@@ -1554,7 +1582,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       const fixBtn = e.target.closest('.fix-link');
       if (fixBtn) {
         closePublishShowModal();
-        openDrawer(fixBtn.dataset.panel);
+        // Payments isn't a drawer on this page — it lives on Settings.
+        if (fixBtn.dataset.panel === 'payments') window.location.href = mgmtBase + 'organiser/settings#payments-section';
+        else openDrawer(fixBtn.dataset.panel);
       }
     });
     modal.addEventListener('change', e => {

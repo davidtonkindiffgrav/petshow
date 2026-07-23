@@ -78,8 +78,18 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     </div>
 
-    <!-- ─── Right column: Defaults + Organisation + Password ─────────────────── -->
+    <!-- ─── Right column: Payments + Defaults + Organisation + Password ───────── -->
     <div class="space-y-6">
+
+      <!-- Section P: Payments -->
+      <div id="payments-section" class="bg-white rounded-card shadow-winner-card p-6 md:p-8">
+        <h2 class="text-[16px] font-extrabold text-[#1c1626] tracking-[-0.01em] mb-1">Payments</h2>
+        <p class="text-[13px] text-[#6f6880] mb-6">Connect a Stripe account so you can publish paid shows and get paid directly — Fur to Feathers never holds your entry fees.</p>
+
+        <div id="payments-body">
+          <!-- populated by JS -->
+        </div>
+      </div>
 
       <!-- Section D: Defaults -->
       <div class="bg-white rounded-card shadow-winner-card p-6 md:p-8">
@@ -176,6 +186,121 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
   let userId        = null;
   let organisationId = null;
+
+  // ─── Payments (Stripe Connect) ────────────────────────────────────────────────
+  // Same small set of countries the platform already supports currencies for.
+  const CONNECT_COUNTRIES = [
+    { code: 'AU', label: 'Australia' }, { code: 'NZ', label: 'New Zealand' },
+    { code: 'GB', label: 'United Kingdom' }, { code: 'US', label: 'United States' },
+    { code: 'CA', label: 'Canada' }, { code: 'SG', label: 'Singapore' },
+    { code: 'ZA', label: 'South Africa' }, { code: 'DE', label: 'Germany' },
+    { code: 'FR', label: 'France' }, { code: 'IE', label: 'Ireland' },
+    { code: 'ES', label: 'Spain' }, { code: 'IT', label: 'Italy' }, { code: 'NL', label: 'Netherlands' },
+  ];
+
+  // Resolves the same way _shared/connect.ts does server-side: a club
+  // organiser's Stripe account lives on their shared organisations row, an
+  // individual's on their own profiles row.
+  async function loadConnectStatus() {
+    if (organisationId) {
+      const { data } = await supabase.from('organisations')
+        .select('stripe_account_id, stripe_charges_ready, stripe_payouts_ready').eq('id', organisationId).single();
+      return { ownerType: 'organisation', ...data };
+    }
+    const { data } = await supabase.from('profiles')
+      .select('stripe_account_id, stripe_charges_ready, stripe_payouts_ready').eq('id', userId).single();
+    return { ownerType: 'profile', ...data };
+  }
+
+  async function callConnectOnboarding(country) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const resp = await fetch(`${import.meta.env.PUBLIC_SUPABASE_URL}/functions/v1/stripe-connect-onboarding`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+      body: JSON.stringify(country ? { country } : {}),
+    });
+    const json = await resp.json();
+    if (!resp.ok) throw new Error(json.error || 'Could not start Stripe onboarding. Please try again.');
+    return json.url;
+  }
+
+  function renderPayments(status) {
+    const el = document.getElementById('payments-body');
+    if (!el) return;
+
+    if (!status?.stripe_account_id) {
+      el.innerHTML = `
+        <div class="mb-4">
+          <label for="connect-country" class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Country</label>
+          <select id="connect-country" class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-3 text-[15px] text-[#1c1626] bg-white focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors">
+            ${CONNECT_COUNTRIES.map(c => `<option value="${c.code}">${c.label}</option>`).join('')}
+          </select>
+        </div>
+        <button id="connect-btn" class="bg-brand text-white text-[13.5px] font-bold px-6 py-2.5 rounded-btn hover:bg-brand-dark transition-colors shadow-btn-primary">
+          Connect with Stripe
+        </button>
+        <p id="connect-status" class="text-[13px] mt-2" style="display:none"></p>`;
+      document.getElementById('connect-btn')?.addEventListener('click', async () => {
+        setBusy('connect-btn', true, 'Connect with Stripe');
+        try {
+          const country = document.getElementById('connect-country').value;
+          const url = await callConnectOnboarding(country);
+          window.location.href = url;
+        } catch (err) {
+          setBusy('connect-btn', false, 'Connect with Stripe');
+          showStatus('connect-status', err.message, true);
+        }
+      });
+      return;
+    }
+
+    if (status.stripe_charges_ready && status.stripe_payouts_ready) {
+      el.innerHTML = `
+        <div class="inline-flex items-center gap-2 bg-[#e9f9f3] text-[#0f9d67] text-[13px] font-bold px-3 py-1.5 rounded-full mb-4">
+          ✓ Fully verified
+        </div>
+        <p class="text-[13px] text-[#6f6880]">
+          <a href="https://dashboard.stripe.com" target="_blank" rel="noopener" class="text-brand font-semibold">Manage your account on Stripe →</a>
+        </p>`;
+      return;
+    }
+
+    if (status.stripe_charges_ready) {
+      el.innerHTML = `
+        <div class="inline-flex items-center gap-2 bg-[#e9f9f3] text-[#0f9d67] text-[13px] font-bold px-3 py-1.5 rounded-full mb-3">
+          ✓ Accepting entries
+        </div>
+        <div class="bg-[#fff8e6] border border-[#fbbf24] rounded-[11px] px-4 py-3 mb-4">
+          <p class="text-[13px] text-[#92400e] font-semibold mb-2">Finish verification to get paid</p>
+          <p class="text-[12.5px] text-[#92400e] mb-3">You can publish and take entries already — Stripe just needs a bit more information before it can pay your show's proceeds out to you.</p>
+          <button id="connect-btn" class="bg-[#d97706] text-white text-[13px] font-bold px-4 py-2 rounded-btn hover:opacity-90 transition-opacity">
+            Continue verification
+          </button>
+        </div>
+        <p id="connect-status" class="text-[13px]" style="display:none"></p>`;
+    } else {
+      el.innerHTML = `
+        <div class="inline-flex items-center gap-2 bg-[#fff8e6] text-[#92400e] text-[13px] font-bold px-3 py-1.5 rounded-full mb-4">
+          Onboarding incomplete
+        </div>
+        <button id="connect-btn" class="bg-brand text-white text-[13.5px] font-bold px-6 py-2.5 rounded-btn hover:bg-brand-dark transition-colors shadow-btn-primary">
+          Continue onboarding
+        </button>
+        <p id="connect-status" class="text-[13px] mt-2" style="display:none"></p>`;
+    }
+
+    document.getElementById('connect-btn')?.addEventListener('click', async () => {
+      const label = status.stripe_charges_ready ? 'Continue verification' : 'Continue onboarding';
+      setBusy('connect-btn', true, label);
+      try {
+        const url = await callConnectOnboarding();
+        window.location.href = url;
+      } catch (err) {
+        setBusy('connect-btn', false, label);
+        showStatus('connect-status', err.message, true);
+      }
+    });
+  }
 
   // ─── Status helpers ──────────────────────────────────────────────────────────
   function showStatus(id, msg, isError = false) {
@@ -296,6 +421,16 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     // Section D — defaults
     buildTimezoneSelect(profile?.default_timezone || '');
     buildCurrencySelect(profile?.default_currency || '');
+
+    // Section P — payments (Stripe Connect)
+    const connectParam = new URLSearchParams(window.location.search).get('connect');
+    renderPayments(await loadConnectStatus());
+    // Stripe's account.updated webhook may take a moment to land after
+    // returning from onboarding — the rendered status reflects whatever was
+    // last synced, so let the organiser know a fresher status may follow.
+    if (connectParam === 'return') showStatus('connect-status', "Welcome back — we're checking your latest Stripe status.", false);
+    // Clean the ?connect= param out of the URL without a reload/history entry
+    if (connectParam) window.history.replaceState({}, '', window.location.pathname);
   })();
 
   // ─── Section A: avatar upload ─────────────────────────────────────────────────

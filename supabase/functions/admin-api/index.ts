@@ -1,7 +1,15 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import Stripe from 'npm:stripe@14';
+// Bumped from @14: connect-resend-onboarding-link needs the v2.core.*
+// Accounts/Account Links API, which requires a newer SDK. Existing V1 calls
+// elsewhere in this file (payouts, disputes, refunds, balance) are unaffected
+// since the wire format is pinned by apiVersion below, not the SDK major
+// version. Check https://github.com/stripe/stripe-node/releases and bump
+// further if v2.core.* calls come back undefined.
+import Stripe from 'npm:stripe@18';
 import { PDFDocument, StandardFonts, rgb } from 'npm:pdf-lib@1.17.1';
+
+import { createOnboardingAccountLink } from '../_shared/connect.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -663,6 +671,49 @@ async function verifyPayoutDetails(supabase: any, payload: any, actorId: string)
 
   await writeAudit(supabase, actorId, 'payout_details.verified', 'show_payout_details', row.id, { show_id });
   return { success: true };
+}
+
+// ── Stripe Connect oversight ─────────────────────────────────────────────────
+// Read-only status list across both places a Connect account can live
+// (individual organiser profiles, and shared club organisations) — same
+// account-scope model as _shared/connect.ts, just listing everyone instead
+// of resolving one owner.
+async function getConnectAccountsList(supabase: any, payload: any) {
+  const { page = 1, page_size = 25 } = payload || {};
+
+  const [{ data: profiles, error: profErr }, { data: orgs, error: orgErr }] = await Promise.all([
+    supabase.from('profiles')
+      .select('id, display_name, organiser_type, stripe_account_id, stripe_account_country, stripe_card_payments_status, stripe_charges_ready, stripe_payouts_ready, stripe_account_updated_at')
+      .not('stripe_account_id', 'is', null),
+    supabase.from('organisations')
+      .select('id, name, stripe_account_id, stripe_account_country, stripe_card_payments_status, stripe_charges_ready, stripe_payouts_ready, stripe_account_updated_at')
+      .not('stripe_account_id', 'is', null),
+  ]);
+  if (profErr) throw new Error('Failed to load organiser Connect accounts: ' + profErr.message);
+  if (orgErr) throw new Error('Failed to load organisation Connect accounts: ' + orgErr.message);
+
+  const rows = [
+    ...(profiles || []).map((p: any) => ({ owner_type: 'profile', owner_id: p.id, name: p.display_name, ...p })),
+    ...(orgs || []).map((o: any) => ({ owner_type: 'organisation', owner_id: o.id, name: o.name, ...o })),
+  ].sort((a, b) => (b.stripe_account_updated_at || '').localeCompare(a.stripe_account_updated_at || ''));
+
+  const from = (page - 1) * page_size;
+  return { rows: rows.slice(from, from + page_size), total: rows.length, page, page_size };
+}
+
+async function resendConnectOnboardingLink(supabase: any, stripe: Stripe, payload: any, actorId: string) {
+  const { owner_type, owner_id } = payload || {};
+  if (!owner_type || !owner_id) throw new Error('Missing owner_type or owner_id');
+  const table = owner_type === 'organisation' ? 'organisations' : 'profiles';
+
+  const { data: owner, error } = await supabase.from(table).select('stripe_account_id').eq('id', owner_id).single();
+  if (error || !owner?.stripe_account_id) throw new Error('No Stripe account found for this organiser/organisation');
+
+  const siteUrl = Deno.env.get('SITE_URL') || 'https://www.furtofeathers.com';
+  const url = await createOnboardingAccountLink(stripe, owner.stripe_account_id, siteUrl);
+
+  await writeAudit(supabase, actorId, 'connect_account.link_resent', 'stripe_account', owner.stripe_account_id, { owner_type, owner_id });
+  return { url };
 }
 
 // Shows/organisations have no admin RLS bypass policy (only settlements/
@@ -1520,6 +1571,12 @@ serve(async (req: Request) => {
         break;
       case 'verify-payout-details':
         result = await verifyPayoutDetails(supabase, payload, user.id);
+        break;
+      case 'connect-accounts-list':
+        result = await getConnectAccountsList(supabase, payload);
+        break;
+      case 'connect-resend-onboarding-link':
+        result = await resendConnectOnboardingLink(supabase, stripeClient(), payload, user.id);
         break;
       case 'health-check':
         result = await runHealthCheck(supabase, stripeClient());
