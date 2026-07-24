@@ -95,18 +95,29 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
   }
   let currentGoalTotal = null;
   if (show.close_entries_on_goal && show.fundraising_goal) {
-    const { count } = await supabase.from('show_entries')
-      .select('id', { count: 'exact', head: true }).eq('show_id', showId).eq('status', 'confirmed');
-    const confirmedCount = count || 0;
     if (show.fundraising_goal_type === 'entries') {
-      currentGoalTotal = confirmedCount;
+      const { count } = await supabase.from('show_entries')
+        .select('id', { count: 'exact', head: true }).eq('show_id', showId).eq('status', 'confirmed');
+      currentGoalTotal = count || 0;
     } else {
+      // Sums the real net Stripe recorded per entry (captured at
+      // confirmation) instead of multiplying by the estimate — falls back
+      // to the estimate only for entries confirmed before that capture
+      // existed, so the close-on-goal trigger matches Stripe's real figures.
+      const { data: confirmedEntries } = await supabase.from('show_entries')
+        .select('entry_net_amount').eq('show_id', showId).eq('status', 'confirmed');
       const { data: feeRows } = await supabase.from('platform_settings')
         .select('key, value').or('key.like.service_fee_%,key.like.stripe_fee_%');
       const serviceFees: Record<string, number> = {};
       for (const r of (feeRows || [])) serviceFees[r.key] = parseFloat(r.value) || 0;
       const netPerEntry = organiserNet(show.entry_fee || 0, show.currency || 'AUD', serviceFees) ?? 0;
-      currentGoalTotal = confirmedCount * netPerEntry;
+      let missingNet = 0;
+      currentGoalTotal = 0;
+      for (const e of (confirmedEntries || [])) {
+        if (e.entry_net_amount != null) currentGoalTotal += Number(e.entry_net_amount);
+        else missingNet++;
+      }
+      currentGoalTotal += missingNet * netPerEntry;
     }
   }
 

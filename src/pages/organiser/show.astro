@@ -1101,14 +1101,25 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     if (show.fundraising_goal) {
       (feeRes.data || []).forEach(r => { serviceFees[r.key] = parseFloat(r.value) || 0; });
-      const { count } = await supabase.from('show_entries')
-        .select('id', { count: 'exact', head: true }).eq('show_id', showId).eq('status', 'confirmed');
-      const confirmedCount = count || 0;
       if (show.fundraising_goal_type === 'entries') {
-        goalTotal = confirmedCount;
+        const { count } = await supabase.from('show_entries')
+          .select('id', { count: 'exact', head: true }).eq('show_id', showId).eq('status', 'confirmed');
+        goalTotal = count || 0;
       } else {
+        // Sums the real net Stripe recorded per entry (captured at
+        // confirmation) instead of multiplying by the estimate — falls back
+        // to the estimate only for entries confirmed before that capture
+        // existed, so the close-on-goal trigger matches Stripe's real figures.
+        const { data: confirmedEntries } = await supabase.from('show_entries')
+          .select('entry_net_amount').eq('show_id', showId).eq('status', 'confirmed');
         const netPerEntry = organiserNet(show.entry_fee || 0, show.currency || 'AUD', serviceFees) ?? 0;
-        goalTotal = confirmedCount * netPerEntry;
+        let missingNet = 0;
+        goalTotal = 0;
+        for (const e of (confirmedEntries || [])) {
+          if (e.entry_net_amount != null) goalTotal += Number(e.entry_net_amount);
+          else missingNet++;
+        }
+        goalTotal += missingNet * netPerEntry;
       }
     }
     if (show.is_judged === true) {

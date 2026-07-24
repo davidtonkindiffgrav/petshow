@@ -27,6 +27,25 @@ function organiserNet(total: number, currency: string, settings: Record<string, 
   return Math.max(0, total - platformFee - stripeFee);
 }
 
+// Real net-per-entry (captured from Stripe's balance transaction by
+// stripe-webhook at confirmation) summed directly, falling back to the
+// organiserNet() estimate only for rows confirmed before that capture
+// existed — mirrors stripe-webhook/index.ts's sumConfirmedNet, keeping this
+// reminder's progress figure consistent with what organisers see elsewhere.
+async function sumConfirmedNet(
+  supabase: ReturnType<typeof createClient>, showId: string, entryFee: number, currency: string, settings: Record<string, number>,
+): Promise<{ total: number; confirmedCount: number }> {
+  const { data: entries } = await supabase
+    .from('show_entries').select('entry_net_amount').eq('show_id', showId).eq('status', 'confirmed');
+  let total = 0, missing = 0;
+  for (const e of (entries || [])) {
+    if (e.entry_net_amount != null) total += Number(e.entry_net_amount);
+    else missing++;
+  }
+  if (missing > 0) total += missing * (organiserNet(entryFee || 0, currency || 'AUD', settings) ?? 0);
+  return { total, confirmedCount: (entries || []).length };
+}
+
 // Mirrors src/lib/fees.js. Persists Resend's used-quota headers, same as
 // every other Resend-sending function in this project — keep in sync.
 async function persistResendQuota(supabase: any, res: Response) {
@@ -87,17 +106,17 @@ serve(async (_req: Request) => {
     for (const show of (candidates || [])) {
       if (!show.contact_email) { skipped++; continue; }
 
-      const { count } = await supabase
-        .from('show_entries')
-        .select('id', { count: 'exact', head: true }).eq('show_id', show.id).eq('status', 'confirmed');
-      const confirmedCount = count || 0;
-
-      let current: number;
+      let current: number, confirmedCount: number;
       if (show.fundraising_goal_type === 'entries') {
+        const { count } = await supabase
+          .from('show_entries')
+          .select('id', { count: 'exact', head: true }).eq('show_id', show.id).eq('status', 'confirmed');
+        confirmedCount = count || 0;
         current = confirmedCount;
       } else {
-        const netPerEntry = organiserNet(show.entry_fee || 0, show.currency || 'AUD', settings) ?? 0;
-        current = confirmedCount * netPerEntry;
+        const summed = await sumConfirmedNet(supabase, show.id, show.entry_fee, show.currency, settings);
+        current = summed.total;
+        confirmedCount = summed.confirmedCount;
       }
 
       // Goal already met — the webhook should have closed entries already;

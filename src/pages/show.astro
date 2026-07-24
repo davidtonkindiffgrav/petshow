@@ -236,7 +236,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       showQ.single(),
       supabase.from('show_categories').select('id, name, award_id, has_certificate').eq('show_id', showId),
       supabase.from('show_entries')
-        .select('id, animal_name, breed, photo_url, category_id, entry_number, exhibitor_name, result_place')
+        .select('id, animal_name, breed, photo_url, category_id, entry_number, exhibitor_name, result_place, entry_net_amount')
         .eq('show_id', showId).eq('status', 'confirmed').order('entry_number'),
       supabase.from('show_sponsors').select('id, name, website, logo_url').eq('show_id', showId),
       supabase.from('awards').select('*').eq('show_id', showId),
@@ -281,10 +281,20 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     // "Total raised" is what the organiser actually receives — the all-in fee
     // the exhibitor paid, minus the platform + Stripe fees. Never show gross.
     // Computed before showState since a goal-based auto-close needs it.
+    // Sums the real net Stripe recorded per entry (captured at confirmation)
+    // instead of multiplying by the estimate — falls back to the estimate
+    // only for entries confirmed before that capture existed, so this public
+    // figure matches what the organiser's own Stripe account shows.
     const serviceFees = {};
     for (const r of (feesRes.data || [])) serviceFees[r.key] = parseFloat(r.value) || 0;
     const netPerEntry = organiserNet(show.entry_fee || 0, show.currency || 'AUD', serviceFees) ?? 0;
-    totalRaised = entries.length * netPerEntry;
+    let missingNet = 0;
+    totalRaised = 0;
+    for (const e of entries) {
+      if (e.entry_net_amount != null) totalRaised += Number(e.entry_net_amount);
+      else missingNet++;
+    }
+    totalRaised += missingNet * netPerEntry;
     showState   = getShowState(show);
     earlyVoting  = showState === 'entries_open' && show.is_judged === false && show.vote_open_mode === 'on_entries_open';
     votingActive = showState === 'voting' || earlyVoting;

@@ -694,7 +694,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     } else {
       const sevenDaysAgo = new Date(Date.now() - 5 * 86400000).toISOString();
       const [countRes, catsRes, catCountRes, recentRes, trendRes, judgeRes, feesRes] = await Promise.all([
-        supabase.from('show_entries').select('*', { count: 'exact', head: true }).eq('show_id', show.id).eq('status', 'confirmed'),
+        supabase.from('show_entries').select('id, entry_net_amount').eq('show_id', show.id).eq('status', 'confirmed'),
         supabase.from('show_categories').select('id, name').eq('show_id', show.id),
         supabase.from('show_entries').select('category_id').eq('show_id', show.id).eq('status', 'confirmed'),
         supabase.from('show_entries').select('id, animal_name, exhibitor_name, breed, photo_url, category_id, created_at').eq('show_id', show.id).eq('status', 'confirmed').order('created_at', { ascending: false }).limit(3),
@@ -702,13 +702,26 @@ const base = raw.endsWith('/') ? raw : raw + '/';
         supabase.from('show_judges').select('first_name, last_name, photo_url').eq('show_id', show.id).limit(1).maybeSingle(),
         supabase.from('platform_settings').select('key, value').or('key.like.service_fee_%,key.like.stripe_fee_%'),
       ]);
-      entryCount  = countRes.count ?? 0;
+      const confirmedEntries = countRes.data || [];
+      entryCount  = confirmedEntries.length;
       // "Raised" figures show the organiser's take-home (net of platform + Stripe
       // fees), never the all-in amount exhibitors paid.
       const serviceFees = {};
       for (const r of (feesRes.data || [])) serviceFees[r.key] = parseFloat(r.value) || 0;
       netPerEntry = organiserNet(show.entry_fee || 0, show.currency || 'AUD', serviceFees) ?? 0;
-      totalRaised = entryCount * netPerEntry;
+      // "Total Raised" sums the real net Stripe recorded per entry (captured
+      // at confirmation) instead of multiplying by the estimate — falls back
+      // to netPerEntry only for entries confirmed before that capture existed.
+      // The 5-day trend mini-chart below still uses the netPerEntry estimate
+      // per day (per-day real sums would need a bigger restructure of its
+      // own query) — a smaller supplementary chart, not this headline figure.
+      let missingNet = 0;
+      totalRaised = 0;
+      for (const e of confirmedEntries) {
+        if (e.entry_net_amount != null) totalRaised += Number(e.entry_net_amount);
+        else missingNet++;
+      }
+      totalRaised += missingNet * netPerEntry;
       categories  = catsRes.data || [];
       judge       = judgeRes.data || null;
 
