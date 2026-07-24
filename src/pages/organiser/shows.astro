@@ -156,7 +156,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 <script>
   import { getAuth } from '../../lib/auth.js';
   import { supabase } from '../../lib/supabase.js';
-  import { zonedDateTime } from '../../lib/voteWindow.js';
+  import { zonedDateTime, getEntriesCloseInfo } from '../../lib/voteWindow.js';
+  import { organiserNet } from '../../lib/fees.js';
   import { copyImage } from '../../lib/storage.js';
 
   const SHOW_TYPE_LABELS   = { beauty_contest: 'Beauty Contest', fun_stakes: 'Fun Stakes', memorial: 'Memorial Show', other: 'Other' };
@@ -194,10 +195,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.getElementById('btn-new-show')?.addEventListener('click', () => { window.location.href = base + 'organiser/new-show'; });
     document.getElementById('btn-create-first')?.addEventListener('click', () => { window.location.href = base + 'organiser/new-show'; });
 
-    const [activeRes, archivedRes] = await Promise.all([
+    const [activeRes, archivedRes, feeRes] = await Promise.all([
       supabase.from('shows').select('*').eq('created_by', session.user.id).is('archived_at', null).order('created_at', { ascending: false }),
       supabase.from('shows').select('id').eq('created_by', session.user.id).not('archived_at', 'is', null),
+      supabase.from('platform_settings').select('key, value').or('key.like.service_fee_%,key.like.stripe_fee_%'),
     ]);
+    const serviceFees = {};
+    (feeRes.data || []).forEach(r => { serviceFees[r.key] = parseFloat(r.value) || 0; });
 
     const loadingEl = document.getElementById('state-loading');
     const emptyEl   = document.getElementById('state-empty');
@@ -257,32 +261,55 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       const catCounts = {};
       const confirmedCounts = {};
       const awardedCounts = {};
+      const goalTotals = {};
       await Promise.all(shows.map(async s => {
+        // Needs per-entry net amounts (not just a head count) whenever this
+        // show can auto-close on a fundraising goal, so getEntriesCloseInfo
+        // has a real running total to compare. See organiser/show.astro's
+        // identical goalTotal computation for the single-show case.
+        const needsNet = s.close_entries_on_goal && s.fundraising_goal != null && s.fundraising_goal_type !== 'entries';
         const [catRes, entryRes, awardedRes] = await Promise.all([
           supabase.from('show_categories').select('*', { count: 'exact', head: true }).eq('show_id', s.id),
-          supabase.from('show_entries').select('*', { count: 'exact', head: true }).eq('show_id', s.id).eq('status', 'confirmed'),
+          needsNet
+            ? supabase.from('show_entries').select('entry_net_amount').eq('show_id', s.id).eq('status', 'confirmed')
+            : supabase.from('show_entries').select('*', { count: 'exact', head: true }).eq('show_id', s.id).eq('status', 'confirmed'),
           supabase.from('show_categories').select('*', { count: 'exact', head: true }).eq('show_id', s.id).or('award_id.not.is.null,has_certificate.eq.true'),
         ]);
         catCounts[s.id]       = catRes.count  || 0;
-        confirmedCounts[s.id] = entryRes.count || 0;
+        confirmedCounts[s.id] = needsNet ? (entryRes.data || []).length : (entryRes.count || 0);
         awardedCounts[s.id]   = awardedRes.count || 0;
+
+        if (s.close_entries_on_goal && s.fundraising_goal != null) {
+          if (s.fundraising_goal_type === 'entries') {
+            goalTotals[s.id] = confirmedCounts[s.id];
+          } else {
+            const netPerEntry = organiserNet(s.entry_fee || 0, s.currency || 'AUD', serviceFees) ?? 0;
+            let missingNet = 0;
+            let netTotal = 0;
+            for (const e of (entryRes.data || [])) {
+              if (e.entry_net_amount != null) netTotal += Number(e.entry_net_amount);
+              else missingNet++;
+            }
+            goalTotals[s.id] = netTotal + missingNet * netPerEntry;
+          }
+        }
       }));
       if (listEl) listEl.style.display = 'block';
       const container = document.getElementById('shows-list');
-      shows.forEach(show => container.appendChild(buildRow(show, catCounts[show.id] || 0, confirmedCounts[show.id] || 0, awardedCounts[show.id] || 0)));
+      shows.forEach(show => container.appendChild(buildRow(show, catCounts[show.id] || 0, confirmedCounts[show.id] || 0, awardedCounts[show.id] || 0, goalTotals[show.id])));
     }
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────────
 
-  function showStatus(s) {
+  function showStatus(s, goalTotal) {
     if (s.archived_at)        return { label: 'Archived',          color: '#92400e', bg: '#fef3c7' };
     if (s.status === 'draft') return { label: 'Draft',             color: '#6f6880', bg: '#f5f3fa' };
-    const now = Date.now();
-    const openAt  = zonedDateTime(s.entry_open_date,  s.entry_open_time,  s.timezone);
-    const closeAt = zonedDateTime(s.entry_close_date, s.entry_close_time, s.timezone);
-    if (openAt  && openAt.getTime()  > now)  return { label: 'Scheduled',        color: '#2563eb', bg: '#eff6ff' };
-    if (closeAt && closeAt.getTime() >= now) return { label: 'Open for Entries', color: '#16a34a', bg: '#f0fdf4' };
+    const now = new Date();
+    const openAt = zonedDateTime(s.entry_open_date, s.entry_open_time, s.timezone);
+    if (openAt && openAt.getTime() > now.getTime()) return { label: 'Scheduled', color: '#2563eb', bg: '#eff6ff' };
+    const close = getEntriesCloseInfo(s, goalTotal, now);
+    if (close.isOpen) return { label: 'Open for Entries', color: '#16a34a', bg: '#f0fdf4' };
     return { label: 'Closed', color: '#6b7280', bg: '#f9fafb' };
   }
 
@@ -326,10 +353,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     ].join('');
   }
 
-  function buildRow(show, catCount, confirmedEntryCount = 0, awardedCatCount = 0) {
+  function buildRow(show, catCount, confirmedEntryCount = 0, awardedCatCount = 0, goalTotal = null) {
     const showUrl    = `${window.location.origin}${base}show?id=${show.id}`;
     const previewUrl = `${base}show?id=${show.id}&preview=1`;
-    const status     = showStatus(show);
+    const status     = showStatus(show, goalTotal);
     const showDate   = show.show_date
       ? new Date(show.show_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
       : '—';
