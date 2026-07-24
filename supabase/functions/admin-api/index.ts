@@ -8,7 +8,6 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // unaffected since the wire format is pinned by apiVersion below, not the SDK
 // major version.
 import Stripe from 'npm:stripe@22';
-import { PDFDocument, StandardFonts, rgb } from 'npm:pdf-lib@1.17.1';
 
 import { createOnboardingAccountLink } from '../_shared/connect.ts';
 
@@ -173,19 +172,13 @@ async function getStats(supabase: any, payload: any) {
 
   const settings = await loadSettingsMap(supabase);
 
-  const [entriesTodayRes, entriesMonthRes, showsRes, orgsRes, entrantsRes, accountsRes, pendingRes, paidRes, paidThisMonthRes] = await Promise.all([
+  const [entriesTodayRes, entriesMonthRes, showsRes, orgsRes, entrantsRes, accountsRes] = await Promise.all([
     supabase.from('show_entries').select('entry_fee_paid, created_at, shows(currency)').eq('status', 'confirmed').gte('created_at', todayStart),
     supabase.from('show_entries').select('entry_fee_paid, created_at, shows(currency)').eq('status', 'confirmed').gte('created_at', monthStart),
     supabase.from('shows').select('id', { count: 'exact', head: true }).eq('status', 'published'),
     supabase.from('organisations').select('id', { count: 'exact', head: true }),
     supabase.from('show_entries').select('id', { count: 'exact', head: true }).eq('status', 'confirmed'),
     supabase.from('profiles').select('id', { count: 'exact', head: true }),
-    supabase.from('settlements').select('net_amount_owed, currency').eq('status', 'pending_approval'),
-    supabase.from('settlements').select('amount_paid, currency').eq('status', 'paid'),
-    // finalised_at (not the admin-editable payment_date) is the system
-    // timestamp of when a settlement actually became 'paid' — matches how
-    // every other "this month" figure here buckets by a real event time.
-    supabase.from('settlements').select('amount_paid, currency').eq('status', 'paid').gte('finalised_at', monthStart),
   ]);
 
   const revenue_today = sumByCurrency(entriesTodayRes.data || [], 'entry_fee_paid', (r) => r.shows?.currency);
@@ -197,19 +190,6 @@ async function getStats(supabase: any, payload: any) {
     const fee = platformFee(Number(r.entry_fee_paid) || 0, cur, settings);
     if (fee != null) platform_fees_month[cur] = (platform_fees_month[cur] || 0) + fee;
   }
-
-  const pending_payouts = {
-    count: (pendingRes.data || []).length,
-    by_currency: sumByCurrency(pendingRes.data || [], 'net_amount_owed', (r) => r.currency),
-  };
-  const completed_payouts = {
-    count: (paidRes.data || []).length,
-    by_currency: sumByCurrency(paidRes.data || [], 'amount_paid', (r) => r.currency),
-  };
-  const paid_this_month = {
-    count: (paidThisMonthRes.data || []).length,
-    by_currency: sumByCurrency(paidThisMonthRes.data || [], 'amount_paid', (r) => r.currency),
-  };
 
   let stripe_balance: any = null;
   try {
@@ -231,10 +211,6 @@ async function getStats(supabase: any, payload: any) {
     for (const o of data || []) activity.push({ type: 'organisation', text: `New organisation: ${o.name}`, timestamp: o.created_at });
   } catch { /* skip */ }
   try {
-    const { data } = await supabase.from('settlements').select('id, show_id, created_at, shows(title)').eq('status', 'pending_approval').order('created_at', { ascending: false }).limit(5);
-    for (const s of data || []) activity.push({ type: 'settlement', text: `Settlement pending approval: ${s.shows?.title || s.show_id}`, timestamp: s.created_at });
-  } catch { /* skip */ }
-  try {
     const { data } = await supabase.from('show_entries').select('id, animal_name, entry_fee_paid, created_at, shows(title, currency)').eq('status', 'confirmed').gte('entry_fee_paid', 50).order('created_at', { ascending: false }).limit(5);
     for (const e of data || []) activity.push({ type: 'payment', text: `Large payment: ${e.shows?.currency || ''} ${Number(e.entry_fee_paid).toFixed(2)} for ${e.shows?.title || 'a show'}`, timestamp: e.created_at });
   } catch { /* skip */ }
@@ -246,9 +222,6 @@ async function getStats(supabase: any, payload: any) {
     revenue_today,
     revenue_month,
     platform_fees_month,
-    pending_payouts,
-    completed_payouts,
-    paid_this_month,
     active_shows: showsRes.count || 0,
     active_organisations: orgsRes.count || 0,
     total_entrants: entrantsRes.count || 0,
@@ -256,46 +229,6 @@ async function getStats(supabase: any, payload: any) {
     stripe_balance,
     activity: activity.slice(0, 15),
     trends,
-  };
-}
-
-// Adjust here if the overdue threshold ever needs to change — there's no
-// admin UI for this yet (Platform Config is a separate, untouched section),
-// so a named constant is the "easy to find and adjust" mechanism for now.
-const SETTLEMENT_OVERDUE_DAYS = 14;
-
-// Two distinct "needs action" signals for the Dashboard's alert strip:
-// (1) a show whose results are published but has no settlement yet — the
-// admin needs to generate one; (2) a settlement that's been sitting in
-// pending_approval too long. Both are computed for alerting only — neither
-// writes back to the settlement's stored `status`, so the real status/pill
-// shown everywhere else stays exactly what an admin actually set it to.
-async function getNeedsAttention(supabase: any) {
-  const overdueThresholdIso = new Date(Date.now() - SETTLEMENT_OVERDUE_DAYS * 86400000).toISOString();
-
-  const [showsRes, settlementsRes] = await Promise.all([
-    supabase.from('shows').select('id').not('results_published_at', 'is', null),
-    supabase.from('settlements').select('show_id, status, created_at, currency, net_amount_owed'),
-  ]);
-
-  // Any existing settlement row (including 'cancelled') counts as already
-  // actioned — generateSettlement() already refuses to regenerate over a
-  // cancelled settlement, so flagging those shows here would point at an
-  // alert with nothing left to do behind it.
-  const settledShowIds = new Set((settlementsRes.data || []).map((s: any) => s.show_id));
-  const showsNeedingSettlementCount = (showsRes.data || []).filter((s: any) => !settledShowIds.has(s.id)).length;
-
-  const overdue = (settlementsRes.data || []).filter(
-    (s: any) => s.status === 'pending_approval' && s.created_at < overdueThresholdIso
-  );
-
-  return {
-    shows_needing_settlement: { count: showsNeedingSettlementCount },
-    settlements_overdue: {
-      count: overdue.length,
-      by_currency: sumByCurrency(overdue, 'net_amount_owed', (r: any) => r.currency),
-    },
-    overdue_threshold_days: SETTLEMENT_OVERDUE_DAYS,
   };
 }
 
@@ -430,255 +363,6 @@ async function getStripeEvents(stripe: Stripe, payload: any) {
   };
 }
 
-// ── Settlement Management ─────────────────────────────────────────────────────
-async function generateSettlement(supabase: any, payload: any, actorId: string) {
-  const { show_id } = payload || {};
-  if (!show_id) throw new Error('Missing show_id');
-
-  const { data: show, error: showErr } = await supabase
-    .from('shows')
-    .select('id, title, currency, organisation_id')
-    .eq('id', show_id)
-    .single();
-  if (showErr || !show) throw new Error('Show not found');
-
-  const { data: existing } = await supabase
-    .from('settlements')
-    .select('id, status')
-    .eq('show_id', show_id)
-    .maybeSingle();
-  if (existing?.status === 'paid') throw new Error('This settlement is already paid — record an adjustment instead of regenerating.');
-  if (existing?.status === 'cancelled') throw new Error('This settlement was cancelled — a new one cannot be auto-generated over it.');
-
-  const settings = await loadSettingsMap(supabase);
-  const { data: entries, error: entriesErr } = await supabase
-    .from('show_entries')
-    .select('id, entry_fee_paid, stripe_session_id')
-    .eq('show_id', show_id)
-    .eq('status', 'confirmed');
-  if (entriesErr) throw new Error('Failed to load entries: ' + entriesErr.message);
-
-  const currency = show.currency;
-  let gross = 0, platformFeeSum = 0, stripeFeeSum = 0;
-  for (const e of entries || []) {
-    const total = Number(e.entry_fee_paid) || 0;
-    gross += total;
-    platformFeeSum += platformFee(total, currency, settings) ?? 0;
-    stripeFeeSum += stripeFeeEstimate(total, currency, settings) ?? 0;
-  }
-
-  // Refunds — summed live from Stripe by this show's checkout sessions
-  // (refunds are inherently Stripe-sourced truth, not duplicated locally).
-  let refunds = 0;
-  const sessionIds = [...new Set((entries || []).map((e: any) => e.stripe_session_id).filter(Boolean))] as string[];
-  const stripe = stripeClient();
-  for (const sid of sessionIds) {
-    try {
-      const session = await stripe.checkout.sessions.retrieve(sid);
-      if (session.payment_intent) {
-        const refundList = await stripe.refunds.list({ payment_intent: session.payment_intent as string, limit: 10 });
-        for (const r of refundList.data) refunds += r.amount / 100;
-      }
-    } catch { /* session may be unavailable (test data, mode mismatch) — skip */ }
-  }
-
-  const netOwed = Math.max(0, gross - platformFeeSum - stripeFeeSum - refunds);
-  const row = {
-    show_id,
-    organisation_id: show.organisation_id,
-    currency,
-    gross_entry_fees: gross,
-    platform_fee: platformFeeSum,
-    stripe_fees: stripeFeeSum,
-    refunds,
-    net_amount_owed: netOwed,
-    entry_count: (entries || []).length,
-    generated_by: actorId,
-  };
-
-  let settlementId: string;
-  if (existing) {
-    const { data: updated, error: updErr } = await supabase.from('settlements').update(row).eq('id', existing.id).select('id').single();
-    if (updErr) throw new Error('Failed to update settlement: ' + updErr.message);
-    settlementId = updated.id;
-  } else {
-    const { data: inserted, error: insErr } = await supabase.from('settlements').insert({ ...row, status: 'draft' }).select('id').single();
-    if (insErr) throw new Error('Failed to create settlement: ' + insErr.message);
-    settlementId = inserted.id;
-  }
-
-  await writeAudit(supabase, actorId, 'settlement.generated', 'settlement', settlementId, { show_id, gross, net_amount_owed: netOwed });
-  return { settlement_id: settlementId };
-}
-
-async function buildSettlementPdf(supabase: any, payload: any) {
-  const { settlement_id } = payload || {};
-  if (!settlement_id) throw new Error('Missing settlement_id');
-
-  const { data: s, error } = await supabase
-    .from('settlements')
-    .select('*, shows(title, host_org, charity_number)')
-    .eq('id', settlement_id)
-    .single();
-  if (error || !s) throw new Error('Settlement not found');
-
-  const doc = await PDFDocument.create();
-  const page = doc.addPage([595.28, 841.89]); // A4 portrait
-  const font = await doc.embedFont(StandardFonts.Helvetica);
-  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
-  const { width: W } = page.getSize();
-  let y = page.getHeight() - 60;
-
-  page.drawText('Settlement Statement', { x: 40, y, size: 20, font: bold, color: rgb(0.1, 0.1, 0.1) });
-  y -= 30;
-  page.drawText(s.shows?.title || 'Show', { x: 40, y, size: 13, font: bold });
-  y -= 18;
-  if (s.shows?.host_org) { page.drawText(`Organisation: ${s.shows.host_org}`, { x: 40, y, size: 10, font }); y -= 14; }
-  if (s.shows?.charity_number) { page.drawText(`Charity/Non-profit ID: ${s.shows.charity_number}`, { x: 40, y, size: 10, font }); y -= 14; }
-  page.drawText(`Settlement ID: ${s.id}`, { x: 40, y, size: 9, font, color: rgb(0.4, 0.4, 0.4) }); y -= 12;
-  page.drawText(`Generated: ${new Date(s.created_at).toLocaleDateString()}`, { x: 40, y, size: 9, font, color: rgb(0.4, 0.4, 0.4) }); y -= 30;
-
-  const money = (n: number) => `${s.currency} ${Number(n).toFixed(2)}`;
-  const line = (label: string, value: string, isBold = false) => {
-    page.drawText(label, { x: 40, y, size: 11, font: isBold ? bold : font });
-    page.drawText(value, { x: W - 160, y, size: 11, font: isBold ? bold : font });
-    y -= 20;
-  };
-
-  line('Gross entry fees', money(s.gross_entry_fees));
-  line('Platform fee (estimated)', `-${money(s.platform_fee)}`);
-  line('Stripe processing fees (estimated)', `-${money(s.stripe_fees)}`);
-  line('Refunds', `-${money(s.refunds)}`);
-  y -= 6;
-  page.drawLine({ start: { x: 40, y: y + 14 }, end: { x: W - 40, y: y + 14 }, thickness: 0.5, color: rgb(0.7, 0.7, 0.7) });
-  line('Net amount owed to organiser', money(s.net_amount_owed), true);
-  line('Amount paid to date', money(s.amount_paid));
-  line('Status', String(s.status).replace('_', ' ').toUpperCase(), true);
-
-  y -= 20;
-  page.drawText('Fee figures are estimated from platform settings applied per entry, not a sum of', { x: 40, y, size: 8, font, color: rgb(0.5, 0.5, 0.5) }); y -= 10;
-  page.drawText('individually captured Stripe transaction fees.', { x: 40, y, size: 8, font, color: rgb(0.5, 0.5, 0.5) });
-
-  const pdfBytes = await doc.save();
-  const path = `settlements/${s.show_id}/${s.id}.pdf`;
-  const { error: upErr } = await supabase.storage.from('show-assets').upload(path, pdfBytes, { contentType: 'application/pdf', upsert: true });
-  if (upErr) throw new Error('Failed to upload PDF: ' + upErr.message);
-
-  const { data: { publicUrl } } = supabase.storage.from('show-assets').getPublicUrl(path);
-  await supabase.from('settlements').update({ pdf_url: publicUrl }).eq('id', settlement_id);
-
-  return { pdf_url: publicUrl };
-}
-
-async function sendSettlementEmail(supabase: any, payload: any, actorId: string) {
-  const { settlement_id } = payload || {};
-  if (!settlement_id) throw new Error('Missing settlement_id');
-
-  const { data: s, error } = await supabase
-    .from('settlements')
-    .select('*, shows(title, contact_email)')
-    .eq('id', settlement_id)
-    .single();
-  if (error || !s) throw new Error('Settlement not found');
-  if (!s.pdf_url) throw new Error('Generate the PDF before emailing the statement');
-  if (!s.shows?.contact_email) throw new Error('This show has no contact email on file');
-
-  const resendKey = Deno.env.get('RESEND_API_KEY');
-  if (!resendKey) throw new Error('RESEND_API_KEY secret is not set');
-  const fromAddr = Deno.env.get('RESEND_FROM') || 'Fur to Feathers <noreply@furtofeathers.com>';
-
-  const emailRes = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${resendKey}` },
-    body: JSON.stringify({
-      from: fromAddr,
-      to: [s.shows.contact_email],
-      subject: `Settlement Statement — ${s.shows.title}`,
-      html: `
-        <div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;color:#1c1626">
-          <p>Hi,</p>
-          <p>Attached is the settlement statement for <strong>${s.shows.title}</strong>.</p>
-          <p style="margin:24px 0"><a href="${s.pdf_url}" style="display:inline-block;padding:10px 20px;background:#1ba89a;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Download Statement</a></p>
-          <p style="font-size:12px;color:#9BB4AF">Fur to Feathers</p>
-        </div>
-      `,
-    }),
-  });
-  await persistResendQuota(supabase, emailRes);
-  if (!emailRes.ok) throw new Error(`Resend API error ${emailRes.status}: ${await emailRes.text()}`);
-
-  await writeAudit(supabase, actorId, 'settlement.emailed', 'settlement', settlement_id, { to: s.shows.contact_email });
-  return { success: true };
-}
-
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  draft: ['pending_approval', 'cancelled'],
-  pending_approval: ['paid', 'cancelled', 'draft'],
-  paid: [],
-  cancelled: [],
-  overdue: ['paid', 'cancelled'],
-};
-
-async function updateSettlementStatus(supabase: any, payload: any, actorId: string) {
-  const { settlement_id, new_status, note, adjustment_amount, adjustment_reason, amount_paid, payment_date } = payload || {};
-  if (!settlement_id || !new_status) throw new Error('Missing settlement_id or new_status');
-
-  const { data: s, error } = await supabase.from('settlements').select('id, status').eq('id', settlement_id).single();
-  if (error || !s) throw new Error('Settlement not found');
-
-  // Post-paid correction path — never mutate the paid figures directly;
-  // the DB trigger backs this up even if this check has a bug.
-  if (s.status === 'paid' && new_status === 'paid') {
-    if (adjustment_amount == null || !adjustment_reason) throw new Error('This settlement is paid — provide adjustment_amount and adjustment_reason');
-    const { data: adj, error: adjErr } = await supabase
-      .from('settlement_adjustments')
-      .insert({ settlement_id, amount: adjustment_amount, reason: adjustment_reason, created_by: actorId })
-      .select('id')
-      .single();
-    if (adjErr) throw new Error('Failed to record adjustment: ' + adjErr.message);
-    await writeAudit(supabase, actorId, 'settlement.adjusted', 'settlement', settlement_id, { amount: adjustment_amount, reason: adjustment_reason });
-    return { adjustment_id: adj.id };
-  }
-
-  if (!VALID_TRANSITIONS[s.status]?.includes(new_status)) {
-    throw new Error(`Cannot move a settlement from '${s.status}' to '${new_status}'`);
-  }
-
-  const update: Record<string, unknown> = { status: new_status };
-  if (note != null) update.notes = note;
-  if (new_status === 'paid') {
-    update.finalised_at = new Date().toISOString();
-    update.paid_by = actorId;
-    if (amount_paid != null) update.amount_paid = amount_paid;
-    if (payment_date != null) update.payment_date = payment_date;
-  }
-
-  const { error: updErr } = await supabase.from('settlements').update(update).eq('id', settlement_id);
-  if (updErr) throw new Error('Failed to update status: ' + updErr.message);
-
-  await writeAudit(supabase, actorId, 'settlement.status_changed', 'settlement', settlement_id, { from: s.status, to: new_status });
-  return { success: true };
-}
-
-// show_payout_details has no admin UPDATE policy (only an admin SELECT
-// policy, mirroring settlements) — verification writes go through here with
-// the service-role client, same reasoning as updateSettlementStatus above.
-async function verifyPayoutDetails(supabase: any, payload: any, actorId: string) {
-  const { show_id } = payload || {};
-  if (!show_id) throw new Error('Missing show_id');
-
-  const { data: row, error } = await supabase.from('show_payout_details').select('id').eq('show_id', show_id).single();
-  if (error || !row) throw new Error('No payout details found for this show');
-
-  const { error: updErr } = await supabase.from('show_payout_details')
-    .update({ verified_at: new Date().toISOString(), verified_by: actorId })
-    .eq('show_id', show_id);
-  if (updErr) throw new Error('Failed to verify payout details: ' + updErr.message);
-
-  await writeAudit(supabase, actorId, 'payout_details.verified', 'show_payout_details', row.id, { show_id });
-  return { success: true };
-}
-
 // ── Stripe Connect oversight ─────────────────────────────────────────────────
 // Read-only status list across both places a Connect account can live
 // (individual organiser profiles, and shared club organisations) — same
@@ -726,8 +410,7 @@ async function resendConnectOnboardingLink(supabase: any, stripe: Stripe, payloa
 // settlement_adjustments/audit_log do) — admin pages must never rely on
 // direct client-side supabase.from('shows')/('organisations') queries, since
 // those tables' existing RLS is scoped to each organiser's own rows. This
-// action gives the UI a service-role-backed list for filter dropdowns and
-// the "Generate Settlement" picker.
+// action gives the UI a service-role-backed list for filter dropdowns.
 async function getFilterOptions(supabase: any) {
   const [showsRes, orgsRes] = await Promise.all([
     supabase.from('shows').select('id, title, status, currency, organisation_id, host_org, charity_number, contact_email, suspended_at, featured').order('title'),
@@ -1120,26 +803,14 @@ async function getOrganisationDetail(supabase: any, payload: any) {
   const { data: org, error } = await supabase.from('organisations').select('*').eq('id', organisation_id).single();
   if (error || !org) throw new Error('Organisation not found');
 
-  const [showsRes, settlementsRes, summary] = await Promise.all([
+  const [showsRes, summary] = await Promise.all([
     supabase.from('shows').select('id, title, status, show_date, currency').eq('organisation_id', organisation_id).order('created_at', { ascending: false }),
-    supabase.from('settlements').select('*').eq('organisation_id', organisation_id).order('created_at', { ascending: false }),
     getFinancialSummary(supabase, { organisation_id }),
   ]);
-
-  const settlements = settlementsRes.data || [];
-  const total_paid_out: Record<string, number> = {};
-  const pending_payouts: Record<string, number> = {};
-  for (const s of settlements) {
-    if (s.status === 'paid') total_paid_out[s.currency] = (total_paid_out[s.currency] || 0) + Number(s.amount_paid);
-    if (s.status === 'pending_approval') pending_payouts[s.currency] = (pending_payouts[s.currency] || 0) + Number(s.net_amount_owed);
-  }
 
   return {
     organisation: org,
     shows: showsRes.data || [],
-    settlements,
-    total_paid_out,
-    pending_payouts,
     financial_summary: summary,
   };
 }
@@ -1336,7 +1007,7 @@ async function getStorageUsage(supabase: any) {
 // by testing both /domains and GET /emails directly, neither carried the
 // header. So there's no synthetic probe that can read "current quota" on
 // demand; instead every Resend-sending function (send-certificate,
-// send-vote-magic-link, invite-judges, sendSettlementEmail above) captures
+// send-vote-magic-link, invite-judges) captures
 // the header off its own real send and persists it to platform_settings via
 // persistResendQuota(). This action just reads the last-observed values back.
 async function getEmailUsage(supabase: any) {
@@ -1499,10 +1170,7 @@ async function getAnalyticsLeaderboards(supabase: any, payload: any) {
 }
 
 // ── Documents ────────────────────────────────────────────────────────────────────
-// Settlements are NOT covered by this action — the settlements table already
-// has an admin RLS-bypass policy from Phase 1, so the Documents page queries
-// it directly client-side, same as settlements.astro already does. This
-// covers only certificates, since show_entries has no such bypass.
+// Covers only certificates, since show_entries has no admin RLS-bypass policy.
 async function getDocumentsList(supabase: any, payload: any) {
   const { page = 1, page_size = 25 } = payload || {};
   const from = (page - 1) * page_size;
@@ -1562,21 +1230,6 @@ serve(async (req: Request) => {
         break;
       case 'stripe-events':
         result = await getStripeEvents(stripeClient(), payload);
-        break;
-      case 'generate-settlement':
-        result = await generateSettlement(supabase, payload, user.id);
-        break;
-      case 'settlement-pdf':
-        result = await buildSettlementPdf(supabase, payload);
-        break;
-      case 'send-settlement-email':
-        result = await sendSettlementEmail(supabase, payload, user.id);
-        break;
-      case 'update-settlement-status':
-        result = await updateSettlementStatus(supabase, payload, user.id);
-        break;
-      case 'verify-payout-details':
-        result = await verifyPayoutDetails(supabase, payload, user.id);
         break;
       case 'connect-accounts-list':
         result = await getConnectAccountsList(supabase, payload);
@@ -1646,9 +1299,6 @@ serve(async (req: Request) => {
         break;
       case 'documents-list':
         result = await getDocumentsList(supabase, payload);
-        break;
-      case 'needs-attention':
-        result = await getNeedsAttention(supabase);
         break;
       default:
         throw new Error(`Unknown action: ${action}`);

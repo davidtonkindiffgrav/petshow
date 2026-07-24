@@ -46,8 +46,12 @@ const sections = [
         a: `Entry fees go straight into your own connected Stripe account — Fur to Feathers never holds your money. Stripe pays you out directly on its normal payout schedule. Before publishing a paid show you'll need to connect a free Stripe account, which takes a couple of minutes and can even be started straight away — you can publish as soon as Stripe can accept payments for you, and finish full verification before your show wraps up.`,
       },
       {
+        q: 'Why does my dashboard show a slightly different amount raised than my Stripe account?',
+        a: `When an entry is confirmed, we ask Stripe for the exact amount it recorded for that transaction. Very occasionally, usually just for a connected account's first few payments, Stripe hasn't quite finished settling that specific transaction yet, so we show a close estimate in the meantime, based on typical card-processing costs. Once Stripe finishes settling (usually within about an hour), we automatically swap the estimate for Stripe's real figure. No action needed on your part.`,
+      },
+      {
         q: 'Are entry fees refundable?',
-        a: `The platform fee component is never refundable. Beyond that, Fur to Feathers is a platform provider, not a party to the agreement between an exhibitor and an organiser — we don't issue entry-fee refunds ourselves. If you believe you're owed a refund, contact the organising club directly. See our <a href="${base}terms" style="color:#1ba89a;font-weight:600;">Terms &amp; Conditions</a> for the full refund policy.`,
+        a: `The platform fee component is non-refundable to exhibitors. Organisers can separately ask us to reverse it, but only if they've refunded the exhibitor's entry in full; it's never refundable otherwise. Beyond that, Fur to Feathers is a platform provider, not a party to the agreement between an exhibitor and an organiser, so we don't issue entry-fee refunds ourselves. If you believe you're owed a refund, contact the organising club directly. See our <a href="${base}terms" style="color:#1ba89a;font-weight:600;">Terms &amp; Conditions</a> for the full refund policy.`,
       },
     ],
   },

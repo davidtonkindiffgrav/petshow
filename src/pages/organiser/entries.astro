@@ -71,6 +71,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
                 <th data-sort="category"       style="text-align:left;padding:11px 16px;font-size:12px;font-weight:700;color:#9b94a8;text-transform:uppercase;letter-spacing:0.05em;cursor:pointer;user-select:none;">Category<span class="sort-arrow" style="font-size:11px;opacity:0.3;"> ↕</span></th>
                 <th data-sort="exhibitor_name" style="text-align:left;padding:11px 16px;font-size:12px;font-weight:700;color:#9b94a8;text-transform:uppercase;letter-spacing:0.05em;cursor:pointer;user-select:none;">Exhibitor<span class="sort-arrow" style="font-size:11px;opacity:0.3;"> ↕</span></th>
                 <th data-sort="created_at"     style="text-align:left;padding:11px 16px;font-size:12px;font-weight:700;color:#9b94a8;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;cursor:pointer;user-select:none;">Date Entered<span class="sort-arrow" style="font-size:11px;opacity:0.3;"> ↕</span></th>
+                <th style="text-align:right;padding:11px 16px;font-size:12px;font-weight:700;color:#9b94a8;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;">Entry Fee</th>
+                <th style="text-align:right;padding:11px 16px;font-size:12px;font-weight:700;color:#9b94a8;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;">You Received</th>
                 <th style="padding:11px 16px;"></th>
               </tr>
             </thead>
@@ -149,6 +151,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 <script>
   import { getAuth } from '../../lib/auth.js';
   import { supabase } from '../../lib/supabase.js';
+  import { organiserNet } from '../../lib/fees.js';
 
   const { session, profile, base } = await getAuth();
   if (!session) { window.location.replace(base + 'login'); throw 0; }
@@ -178,19 +181,25 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   function fmtDate(d: string) { return new Date(d).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }); }
 
   const CAT_PALETTE = ['#1ba89a','#002d6b','#f59e0b','#ef4444','#8b5cf6','#ec4899','#10b981','#f97316'];
+  const CURRENCY_SYMBOLS = { GBP: '£', USD: '$', EUR: '€', AUD: 'A$', CAD: 'C$', NZD: 'NZ$', ZAR: 'R', SGD: 'S$' };
 
   let allEntries:      any[]              = [];
   let categories:      any[]              = [];
   let catMap:          Record<string,any> = {};
-  let currentShowDate: string | null      = null;
+  let currentShow:     any                = null;
   let editingEntryId:  string | null      = null;
   let sortCol = 'entry_number';
   let sortDir: 'asc' | 'desc' = 'asc';
 
-  // ── Load organiser's shows ───────────────────────────────────────────────────
-  const { data: shows } = await supabase
-    .from('shows').select('id, title, show_date, status')
-    .eq('created_by', uid).order('show_date', { ascending: false });
+  // ── Load organiser's shows + fee settings (for the "you received" estimate
+  // fallback; real entry_net_amount is used whenever it's populated) ─────────
+  const [{ data: shows }, { data: feeRows }] = await Promise.all([
+    supabase.from('shows').select('id, title, show_date, status, entry_fee, currency')
+      .eq('created_by', uid).order('show_date', { ascending: false }),
+    supabase.from('platform_settings').select('key, value').or('key.like.service_fee_%,key.like.stripe_fee_%'),
+  ]);
+  const serviceFees: Record<string, number> = {};
+  for (const r of (feeRows || [])) serviceFees[r.key] = parseFloat(r.value) || 0;
 
   document.getElementById('state-loading')!.style.display = 'none';
   document.getElementById('state-content')!.style.display = 'block';
@@ -272,6 +281,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     }
 
     empty.style.display = 'none';
+    const sym = CURRENCY_SYMBOLS[currentShow?.currency] || '$';
+    const estimatePerEntry = organiserNet(currentShow?.entry_fee || 0, currentShow?.currency || 'AUD', serviceFees) ?? 0;
     tbody.innerHTML = sorted.map((e, i) => {
       const cat      = catMap[e.category_id];
       const catIdx   = categories.findIndex((c: any) => c.id === e.category_id);
@@ -279,6 +290,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       const catName  = cat?.name || 'Uncategorised';
       const num      = e.entry_number ?? (i + 1);
       const rowBg    = i % 2 === 0 ? '#fff' : '#fafbfc';
+
+      const grossText = e.entry_fee_paid != null ? `${sym}${Number(e.entry_fee_paid).toFixed(2)}` : '—';
+      const netText = e.entry_net_amount != null
+        ? `${sym}${Number(e.entry_net_amount).toFixed(2)}`
+        : `<span title="Estimated: Stripe hasn't confirmed the exact amount for this entry yet. It'll switch to the real figure automatically, usually within an hour." style="border-bottom:1.5px dotted #1ba89a;cursor:help;">≈ ${sym}${estimatePerEntry.toFixed(2)}</span>`;
 
       const thumb = e.photo_url
         ? `<img src="${esc(e.photo_url)}" style="width:36px;height:36px;border-radius:8px;object-fit:cover;flex-shrink:0;" alt="" />`
@@ -298,6 +314,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         </td>
         <td style="padding:10px 16px;color:#4a4357;">${esc(e.exhibitor_name || '—')}</td>
         <td style="padding:10px 16px;color:#9b94a8;font-size:13px;white-space:nowrap;">${fmtDate(e.created_at)}</td>
+        <td style="padding:10px 16px;text-align:right;color:#4a4357;white-space:nowrap;">${grossText}</td>
+        <td style="padding:10px 16px;text-align:right;color:#1ba89a;font-weight:600;white-space:nowrap;">${netText}</td>
         <td style="padding:10px 16px;text-align:right;">
           <button data-edit-id="${esc(e.id)}" title="Edit entry"
             style="width:30px;height:30px;border-radius:8px;border:1.5px solid #e7eef0;background:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:#9b94a8;"
@@ -317,18 +335,18 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   async function loadShow(showId: string) {
     document.getElementById('state-no-show')!.style.display = 'none';
     document.getElementById('entries-tbody')!.innerHTML = `
-      <tr><td colspan="7" style="padding:40px;text-align:center;">
+      <tr><td colspan="9" style="padding:40px;text-align:center;">
         <div style="width:28px;height:28px;border:3px solid rgba(27,168,154,0.2);border-top-color:#1ba89a;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto;"></div>
       </td></tr>`;
     document.getElementById('state-show')!.style.display    = 'block';
     document.getElementById('entries-empty')!.style.display = 'none';
 
-    currentShowDate = (shows || []).find((s: any) => s.id === showId)?.show_date ?? null;
+    currentShow = (shows || []).find((s: any) => s.id === showId) ?? null;
 
     const [catsRes, entriesRes] = await Promise.all([
       supabase.from('show_categories').select('id, name').eq('show_id', showId),
       supabase.from('show_entries')
-        .select('id, entry_number, animal_name, exhibitor_name, breed, photo_url, category_id, created_at')
+        .select('id, entry_number, animal_name, exhibitor_name, breed, photo_url, category_id, created_at, entry_fee_paid, entry_net_amount')
         .eq('show_id', showId).eq('status', 'confirmed')
         .order('entry_number', { ascending: true }),
     ]);
@@ -338,9 +356,22 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     catMap = {};
     categories.forEach((c: any) => { catMap[c.id] = c; });
 
-    document.getElementById('entry-count-label')!.textContent = allEntries.length === 0
+    const sym = CURRENCY_SYMBOLS[currentShow?.currency] || '$';
+    let grossTotal = 0, netTotal = 0, missingNet = 0;
+    const estimatePerEntry = organiserNet(currentShow?.entry_fee || 0, currentShow?.currency || 'AUD', serviceFees) ?? 0;
+    for (const e of allEntries) {
+      grossTotal += Number(e.entry_fee_paid) || 0;
+      if (e.entry_net_amount != null) netTotal += Number(e.entry_net_amount);
+      else missingNet++;
+    }
+    netTotal += missingNet * estimatePerEntry;
+
+    const netLabel = missingNet > 0
+      ? `<span title="${missingNet} ${missingNet === 1 ? 'entry hasn’t' : 'entries haven’t'} been confirmed by Stripe yet, so ${missingNet === 1 ? 'it’s' : 'they’re'} included as an estimate here. This updates automatically, usually within an hour." style="border-bottom:1.5px dotted #1ba89a;cursor:help;">≈ ${sym}${netTotal.toFixed(2)} to you</span>`
+      : `${sym}${netTotal.toFixed(2)} to you`;
+    document.getElementById('entry-count-label')!.innerHTML = allEntries.length === 0
       ? 'No confirmed entries yet'
-      : `${allEntries.length} confirmed ${allEntries.length === 1 ? 'entry' : 'entries'}`;
+      : `${allEntries.length} confirmed ${allEntries.length === 1 ? 'entry' : 'entries'} · ${sym}${grossTotal.toFixed(2)} raised · ${netLabel}`;
 
     const catFilter = document.getElementById('cat-filter') as HTMLSelectElement;
     catFilter.innerHTML = '<option value="">All categories</option>';
@@ -368,7 +399,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       `<option value="${esc(c.id)}" ${c.id === entry.category_id ? 'selected' : ''}>${esc(c.name)}</option>`
     ).join('');
 
-    const isJudgingDay = currentShowDate && new Date(currentShowDate) <= new Date();
+    const isJudgingDay = currentShow?.show_date && new Date(currentShow.show_date) <= new Date();
     document.getElementById('edit-judging-warning')!.style.display = isJudgingDay ? 'block' : 'none';
     document.getElementById('edit-error')!.style.display           = 'none';
 

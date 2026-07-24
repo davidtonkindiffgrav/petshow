@@ -95,17 +95,8 @@ const base = rawBase.endsWith('/') ? rawBase : rawBase + '/';
     });
   }
 
-  function renderAlerts(needsAttention, stats, health) {
+  function renderAlerts(stats, health) {
     const alerts = [];
-    if (needsAttention.shows_needing_settlement.count > 0) {
-      alerts.push({ text: `${needsAttention.shows_needing_settlement.count} show${needsAttention.shows_needing_settlement.count === 1 ? '' : 's'} need a settlement`, href: `${base}admin/settlements` });
-    }
-    if (needsAttention.settlements_overdue.count > 0) {
-      alerts.push({ text: `${needsAttention.settlements_overdue.count} settlement${needsAttention.settlements_overdue.count === 1 ? '' : 's'} overdue`, href: `${base}admin/settlements` });
-    }
-    if (stats.pending_payouts.count > 0) {
-      alerts.push({ text: `${stats.pending_payouts.count} settlement${stats.pending_payouts.count === 1 ? '' : 's'} pending approval`, href: `${base}admin/settlements` });
-    }
     if (health && Object.values(health).some(v => v && v.status && v.status !== 'green')) {
       alerts.push({ text: 'System health degraded', href: `${base}admin/health` });
     }
@@ -153,8 +144,6 @@ const base = rawBase.endsWith('/') ? rawBase : rawBase + '/';
 
   function renderSecondaryKpis(stats) {
     document.getElementById('secondary-kpi-grid').innerHTML = [
-      smallKpi('Pending Payouts', String(stats.pending_payouts.count)),
-      smallKpi('Completed Payouts', String(stats.completed_payouts.count)),
       smallKpi('Active Shows', String(stats.active_shows)),
       smallKpi('Active Organisations', String(stats.active_organisations)),
       smallKpi('Total Entrants', String(stats.total_entrants)),
@@ -195,22 +184,12 @@ const base = rawBase.endsWith('/') ? rawBase : rawBase + '/';
     return `<div><div class="text-[11px] font-semibold" style="color:#8492a3;">${esc(label)}</div><div class="text-[16px] font-extrabold" style="color:${color || '#10233f'};">${value}</div></div>`;
   }
 
-  function renderSectionSummaries(stats, needsAttention, financial, stripeEvents, health, storage, email) {
+  function renderSectionSummaries(stats, financial, stripeEvents, health, storage, email) {
     const financialCard = summaryCard('Financial Centre', `${base}admin/financial`,
       statBlock('Gross revenue', primaryAmount(financial.gross_revenue) || '—') +
       statBlock('Net to organisers', primaryAmount(financial.net_paid_to_organisers) || '—') +
       statBlock('Failed payments', String(stripeEvents.failed_payments.length), stripeEvents.failed_payments.length ? '#c53d3d' : null) +
       statBlock('Open disputes', String(stripeEvents.disputes.length), stripeEvents.disputes.length ? '#c53d3d' : null)
-    );
-
-    const pendingAmt = primaryAmount(stats.pending_payouts.by_currency);
-    const overdueAmt = primaryAmount(needsAttention.settlements_overdue.by_currency);
-    const paidAmt = primaryAmount(stats.paid_this_month.by_currency);
-    const settlementsCard = summaryCard('Settlements', `${base}admin/settlements`,
-      statBlock('Pending approval', `${stats.pending_payouts.count}${pendingAmt ? ` · ${pendingAmt}` : ''}`, stats.pending_payouts.count ? '#b9770e' : null) +
-      statBlock('Overdue', `${needsAttention.settlements_overdue.count}${overdueAmt ? ` · ${overdueAmt}` : ''}`, needsAttention.settlements_overdue.count ? '#c53d3d' : null) +
-      statBlock('Paid this month', `${stats.paid_this_month.count}${paidAmt ? ` · ${paidAmt}` : ''}`) +
-      `<div><a href="${base}admin/settlements" style="font-size:12px;font-weight:700;color:#10233f;background:#f4f6f8;border:1px solid #e6eaee;border-radius:8px;padding:5px 9px;display:inline-block;">+ Generate</a></div>`
     );
 
     const showsCard = summaryCard('Shows & Entrants', `${base}admin/shows`,
@@ -239,7 +218,7 @@ const base = rawBase.endsWith('/') ? rawBase : rawBase + '/';
       </div>
     </div>`;
 
-    document.getElementById('section-summary-grid').innerHTML = financialCard + settlementsCard + showsCard + healthCard;
+    document.getElementById('section-summary-grid').innerHTML = financialCard + showsCard + healthCard;
   }
 
   function renderActivity(activity) {
@@ -251,7 +230,6 @@ const base = rawBase.endsWith('/') ? rawBase : rawBase + '/';
     const ICON = {
       show: { bg: '#ff6b54', letter: 'S' },
       organisation: { bg: '#10233f', letter: 'O' },
-      settlement: { bg: '#b9770e', letter: 'T' },
       payment: { bg: '#1d8a4e', letter: 'P' },
     };
     el.innerHTML = activity.map(a => {
@@ -286,9 +264,8 @@ const base = rawBase.endsWith('/') ? rawBase : rawBase + '/';
     document.getElementById('state-error').style.display = 'none';
     renderRangeToggle(currentRange);
     try {
-      const [stats, needsAttention, financial, stripeEvents, health, storage, email, leaderboards] = await Promise.all([
+      const [stats, financial, stripeEvents, health, storage, email, leaderboards] = await Promise.all([
         callAdminApi('stats', { range: currentRange }),
-        callAdminApi('needs-attention'),
         callAdminApi('financial-summary', {}),
         callAdminApi('stripe-events', { limit: 25 }),
         callAdminApi('health-check'),
@@ -298,11 +275,11 @@ const base = rawBase.endsWith('/') ? rawBase : rawBase + '/';
       ]);
 
       document.getElementById('range-label').textContent = `— ${RANGE_LABELS[currentRange]}`;
-      renderAlerts(needsAttention, stats, health);
+      renderAlerts(stats, health);
       renderHeroKpis(stats);
       renderSecondaryKpis(stats);
       renderCharts(stats.trends);
-      renderSectionSummaries(stats, needsAttention, financial, stripeEvents, health, storage, email);
+      renderSectionSummaries(stats, financial, stripeEvents, health, storage, email);
       renderActivity(stats.activity);
       renderTopOrgs(leaderboards.top_organisations_by_currency);
       document.getElementById('state-dashboard').style.display = 'block';
