@@ -728,7 +728,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     has_sponsor: null, sponsors: [{ id: null, name: '', website: '', logo_url: '' }],
     is_judged: null, judge_count: 1, judge_setup: 'later',
     judges: [],
-    awards: [],
+    awards: [], awards_choice: null,
     is_fundraising: true,
     fundraising_goal: null,
     show_fundraising_publicly: null,
@@ -1166,6 +1166,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           photo_url:  show.judges[0]?.photo_url || '',
         }];
       }
+    }
+    if (n === 7) {
+      show.awards_choice = getYNAValue('awards-choice');
     }
     if (n === 8) {
       show.is_fundraising            = true;
@@ -1795,7 +1798,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           ${reviewRow('Sponsor', show.has_sponsor === true ? (show.sponsors[0]?.name || 'Yes') : show.has_sponsor === false ? 'No sponsor' : null, 5)}
           ${reviewRow('Judging', judges, 6)}
           ${reviewRow('Certificates', `${show.classes.filter(c => c.enabled && c.has_certificate).length} of ${show.classes.filter(c => c.enabled).length} categories`, 4)}
-          ${reviewRow('Physical Prizes', show.awards.filter(a => a.name.trim()).length > 0 ? `${show.awards.filter(a => a.name.trim()).length} prize(s) defined` : null, 7)}
+          ${reviewRow('Physical Prizes', show.awards.filter(a => a.name.trim()).length > 0
+            ? `${show.awards.filter(a => a.name.trim()).length} prize(s) defined`
+            : show.awards_choice === 'no' ? 'No physical prizes' : null, 7)}
         </div>
       </div>
       <div class="border border-[#efebf5] rounded-[14px] overflow-hidden">
