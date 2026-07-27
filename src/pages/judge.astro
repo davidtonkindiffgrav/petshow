@@ -267,8 +267,16 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
           <!-- Slider card -->
           <div class="bg-white rounded-card border border-[#b8e4e0] px-5 pt-4 pb-3 mb-3">
-            <input id="score-slider" type="range" min="0" max="100" value="0"
-                   class="score-slider w-full mb-3" />
+            <div style="position:relative;" class="mb-3">
+              <!-- Subtle halfway tick — a feel-for-it reference point, not a
+                   labelled value, so it can't be read as "the" middle score. -->
+              <div aria-hidden="true"
+                   style="position:absolute;left:50%;top:50%;width:2px;height:10px;
+                          transform:translate(-50%,-50%);background:rgba(255,255,255,0.85);
+                          border-radius:1px;pointer-events:none;z-index:1;"></div>
+              <input id="score-slider" type="range" min="0" max="100" value="0"
+                     class="score-slider w-full" style="position:relative;z-index:2;" />
+            </div>
             <div class="flex justify-between">
               <span class="text-[12px] font-semibold text-[#9b94a8]">Not This Time</span>
               <span class="text-[12px] font-semibold text-[#9b94a8]">Top Contender</span>
