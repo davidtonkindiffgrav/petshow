@@ -1075,6 +1075,13 @@ const base = raw.endsWith('/') ? raw : raw + '/';
                background:${bg};color:${col};font-size:11px;font-weight:700;transition:all 0.15s;${ring}"
         aria-label="Go to entry ${i + 1}">${i + 1}</button>`;
     }).join('');
+
+    // The pill strip is horizontally scrollable once entries overflow its
+    // width — without this the active pill can scroll out of view as the
+    // judge advances with Prev/Next and never comes back on screen.
+    document.getElementById('r1-entry-pills')
+      .querySelector(`.entry-pill[data-idx="${idx}"]`)
+      ?.scrollIntoView({ block: 'nearest', inline: 'center' });
   }
 
   function renderInterstitial() {
