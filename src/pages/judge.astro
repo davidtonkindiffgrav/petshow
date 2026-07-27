@@ -1079,9 +1079,15 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     // The pill strip is horizontally scrollable once entries overflow its
     // width — without this the active pill can scroll out of view as the
     // judge advances with Prev/Next and never comes back on screen.
-    document.getElementById('r1-entry-pills')
-      .querySelector(`.entry-pill[data-idx="${idx}"]`)
-      ?.scrollIntoView({ block: 'nearest', inline: 'center' });
+    // Deferred to the next frame because render() calls renderRound1() while
+    // panel-round1 is still display:none (it only shows the panel right
+    // after this returns) — scrollIntoView on a hidden element is a no-op,
+    // so this has to run after the panel is actually visible.
+    requestAnimationFrame(() => {
+      document.getElementById('r1-entry-pills')
+        .querySelector(`.entry-pill[data-idx="${idx}"]`)
+        ?.scrollIntoView({ block: 'nearest', inline: 'center' });
+    });
   }
 
   function renderInterstitial() {
