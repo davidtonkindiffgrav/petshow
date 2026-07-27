@@ -213,7 +213,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
           </div>
 
           <!-- Progress bar -->
-          <div class="flex items-center gap-3 mb-3">
+          <div class="flex items-center gap-3 mb-2">
             <div class="flex-1 h-1.5 bg-[#efebf5] rounded-full overflow-hidden">
               <div id="r1-progress-bar" class="h-full rounded-full transition-all duration-300"
                    style="background:#1ba89a;width:0%"></div>
@@ -221,6 +221,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
             <span id="r1-progress-text"
                   class="text-[12px] font-semibold text-[#9b94a8] shrink-0 tabular-nums"></span>
           </div>
+          <p id="r1-perfect-remaining" class="text-[11.5px] font-semibold text-[#9b94a8] mb-3"></p>
 
           <!-- Photo card -->
           <div class="bg-white rounded-card border border-[#b8e4e0] overflow-hidden mb-3">
@@ -329,35 +330,6 @@ const base = raw.endsWith('/') ? raw : raw + '/';
           </button>
         </div>
 
-        <!-- FINAL_ROUND ──────────────────────────────────────────────── -->
-        <div id="panel-final-round" style="display:none">
-          <button id="btn-back-to-cats-final"
-            class="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand
-                   hover:text-brand-dark transition-colors mb-4">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polyline points="15 18 9 12 15 6"/>
-            </svg>
-            Categories
-          </button>
-          <p class="text-[11px] font-bold uppercase tracking-wider text-[#9b94a8] mb-1">Final Round</p>
-          <h2 id="final-cat-name"
-              class="text-[20px] font-extrabold text-[#1c1626] tracking-tight mb-1"></h2>
-          <p class="text-[13px] text-[#9b94a8] mb-6">Drag to rank — top is 1st place.</p>
-          <div id="final-rank-list" class="space-y-3 mb-6"></div>
-          <button id="btn-confirm-rankings"
-            class="w-full flex items-center justify-center gap-2 bg-brand text-white
-                   text-[15px] font-bold rounded-btn py-4 shadow-btn-primary
-                   hover:bg-brand-dark transition-colors">
-            Confirm Rankings ✓
-          </button>
-          <button id="btn-change-rankings" style="display:none"
-            class="w-full text-center text-[13px] font-semibold text-[#9b94a8]
-                   hover:text-[#1c1626] transition-colors mt-3 py-1">
-            Change rankings
-          </button>
-        </div>
-
         <!-- ALL_DONE ─────────────────────────────────────────────────── -->
         <div id="panel-all-done" style="display:none"
              class="flex flex-col items-center justify-center text-center py-20 gap-5">
@@ -377,8 +349,116 @@ const base = raw.endsWith('/') ? raw : raw + '/';
         </div>
 
       </div><!-- /max-width container -->
+
+      <!-- FINAL_ROUND, its own wider wrapper, sibling of the 680px column,
+           so the top-3 list and the ranks 4-12 grid can sit side by side -->
+      <div id="panel-final-round" style="display:none;max-width:1040px;margin:0 auto;">
+        <button id="btn-back-to-cats-final"
+          class="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand
+                 hover:text-brand-dark transition-colors mb-4">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+          Categories
+        </button>
+        <p class="text-[11px] font-bold uppercase tracking-wider text-[#9b94a8] mb-1">Final Round</p>
+        <h2 id="final-cat-name"
+            class="text-[20px] font-extrabold text-[#1c1626] tracking-tight mb-1"></h2>
+        <p class="text-[13px] text-[#9b94a8] mb-6">Drag to rank. Top is 1st place.</p>
+
+        <div class="flex flex-col gap-6 min-[900px]:flex-row min-[900px]:items-start">
+          <div class="min-[900px]:w-[360px] min-[900px]:shrink-0">
+            <div id="final-rank-list" class="space-y-3"></div>
+          </div>
+          <div id="final-grid-zone" class="flex-1 min-w-0" style="display:none">
+            <div class="flex items-center justify-between mb-3">
+              <p class="text-[11px] font-bold uppercase tracking-wide text-[#9b94a8]">Ranks 4-12</p>
+              <button id="btn-auto-order-grid"
+                class="text-[12px] font-bold text-brand hover:text-brand-dark transition-colors">
+                Auto-Order by Score
+              </button>
+            </div>
+            <div id="final-grid-list" class="grid grid-cols-3 gap-2.5"></div>
+          </div>
+        </div>
+
+        <button id="btn-confirm-rankings"
+          class="w-full flex items-center justify-center gap-2 bg-brand text-white
+                 text-[15px] font-bold rounded-btn py-4 shadow-btn-primary
+                 hover:bg-brand-dark transition-colors mt-6">
+          Confirm Rankings ✓
+        </button>
+        <button id="btn-change-rankings" style="display:none"
+          class="w-full text-center text-[13px] font-semibold text-[#9b94a8]
+                 hover:text-[#1c1626] transition-colors mt-3 py-1">
+          Change rankings
+        </button>
+      </div>
+
     </main>
   </div><!-- /main area -->
+
+  <!-- ── Round 1 complete confirmation modal ─────────────────────────────── -->
+  <div id="round-complete-modal" style="display:none"
+       class="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4"
+       role="dialog" aria-modal="true" aria-labelledby="round-complete-title">
+    <div class="bg-white rounded-[20px] w-full max-w-[440px] shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="p-6">
+        <div class="flex items-start gap-3 mb-5">
+          <div class="w-11 h-11 rounded-full bg-brand-tint flex items-center justify-center shrink-0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1ba89a"
+                 stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20 6L9 17l-5-5"/>
+            </svg>
+          </div>
+          <div>
+            <h2 id="round-complete-title" class="text-[16px] font-extrabold text-[#1c1626] leading-snug">
+              Every entry is scored. Ready for the Final Round?
+            </h2>
+            <p class="text-[12.5px] text-[#9b94a8] leading-relaxed mt-1">
+              This is your last chance to change a Round 1 score. Once you continue, they're locked in.
+            </p>
+          </div>
+        </div>
+
+        <button id="rc-opt-restart"
+          class="round-complete-opt w-full text-left flex items-start gap-3 rounded-[13px] border p-3 mb-2"
+          style="border-color:#f3d9ae;background:#fef9ef;">
+          <span class="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold"
+                style="background:#fbeed4;color:#92400e;">1</span>
+          <span class="flex-1">
+            <span class="block text-[13.5px] font-bold text-[#1c1626]">Clear scores and start over</span>
+            <span class="block text-[12px] text-[#6f6880] leading-snug mt-0.5">
+              Wipe every score in this round and rejudge each entry from the beginning.
+            </span>
+          </span>
+        </button>
+
+        <button id="rc-opt-review"
+          class="round-complete-opt w-full text-left flex items-start gap-3 rounded-[13px] border border-[#efebf5] p-3 mb-2">
+          <span class="shrink-0 w-6 h-6 rounded-full bg-[#f5f3fa] flex items-center justify-center text-[11px] font-bold text-[#9b94a8]">2</span>
+          <span class="flex-1">
+            <span class="block text-[13.5px] font-bold text-[#1c1626]">Review before I decide</span>
+            <span class="block text-[12px] text-[#6f6880] leading-snug mt-0.5">
+              Step back through Round 1 in order. Nothing changes unless you change it.
+            </span>
+          </span>
+        </button>
+
+        <button id="rc-opt-continue"
+          class="round-complete-opt w-full text-left flex items-start gap-3 rounded-[13px] border border-brand/40 bg-brand-tint p-3">
+          <span class="shrink-0 w-6 h-6 rounded-full bg-brand flex items-center justify-center text-[11px] font-bold text-white">3</span>
+          <span class="flex-1">
+            <span class="block text-[13.5px] font-bold text-brand">Lock in scores and continue</span>
+            <span class="block text-[12px] text-[#6f6880] leading-snug mt-0.5">
+              I'm happy with how I scored this round. Move on to the Final Round.
+            </span>
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- ── Photo fullscreen modal ──────────────────────────────────────────── -->
   <div id="photo-modal"
@@ -462,6 +542,19 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     box-shadow: 0 12px 32px rgba(28,22,38,0.15);
     transform: scale(1.01);
   }
+
+  /* ── Ranks 4-12 grid tile drag states ─────────────────────────── */
+  .grid-item { touch-action: none; }
+  .grid-item.sortable-ghost  { opacity: 0.3; }
+  .grid-item.sortable-chosen {
+    box-shadow: 0 12px 32px rgba(28,22,38,0.15);
+    transform: scale(1.03);
+  }
+
+  /* ── Round complete modal option cards ────────────────────────── */
+  .round-complete-opt { cursor: pointer; transition: filter 0.12s, background 0.12s; }
+  .round-complete-opt:hover { filter: brightness(0.97); }
+  .round-complete-opt:disabled { opacity: 0.6; cursor: default; filter: none; }
 </style>
 
 <script>
@@ -542,6 +635,42 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     el.textContent = (unscored === 0 && val > 0)
       ? 'Complete ✓'
       : idx === entries.length - 1 ? 'Review →' : 'Next →';
+  }
+
+  // ── Perfect-score cap ────────────────────────────────────────────────────
+  // Counts saved perfect scores (100) in a category, excluding one entry,
+  // used to exclude "the entry currently being viewed" so an existing 100 on
+  // it never counts against itself while the judge is sitting on it.
+  function perfectScoreCount(categoryId, excludeEntryId) {
+    const entries = state.entries[categoryId] || [];
+    return entries.filter(e => e.id !== excludeEntryId && (state.scores[e.id] ?? 0) === 100).length;
+  }
+
+  function updatePerfectRemainingIndicator() {
+    const el = document.getElementById('r1-perfect-remaining');
+    if (!el) return;
+    const entries      = state.entries[state.activeCategoryId] || [];
+    const currentEntry = entries[state.currentEntryIndex];
+    const cap          = state.perfectScoreCap ?? 12;
+    const used         = perfectScoreCount(state.activeCategoryId, currentEntry?.id);
+    const remaining    = Math.max(0, cap - used);
+    el.textContent = `${remaining} of ${cap} perfect score${cap === 1 ? '' : 's'} remaining`;
+    el.style.color = remaining === 0 ? '#b45309' : '#9b94a8';
+  }
+
+  // ── Round complete modal ─────────────────────────────────────────────────
+  function openRoundCompleteModal() {
+    document.getElementById('round-complete-modal').style.display = 'flex';
+  }
+
+  function closeRoundCompleteModal() {
+    document.getElementById('round-complete-modal').style.display = 'none';
+  }
+
+  function setRoundCompleteOptionsDisabled(disabled) {
+    ['rc-opt-restart', 'rc-opt-review', 'rc-opt-continue'].forEach(id => {
+      document.getElementById(id).disabled = disabled;
+    });
   }
 
   // ── Photo zoom/pan state ─────────────────────────────────────────────────
@@ -679,7 +808,9 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     rankings:         {},   // { [category_id]: [{entry_id, rank}] }
     activeCategoryId: null,
     currentEntryIndex:0,
-    sortableInstance: null,
+    perfectScoreCap:  12,   // platform default until fetched at init
+    top3Sortable:     null,
+    gridSortable:     null,
   };
 
   const PANELS = [
@@ -761,8 +892,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   }
 
   function getShortlist(catId) {
-    const cat = state.categories.find(c => c.id === catId);
-    const N   = cat?.shortlist_count ?? 3;
+    const N = 12; // Final Round always covers the top 12 scored entries
     return (state.entries[catId] || [])
       .filter(e => (state.scores[e.id] ?? 0) > 0)
       .sort((a, b) => (state.scores[b.id] ?? 0) - (state.scores[a.id] ?? 0))
@@ -1066,6 +1196,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     document.getElementById('btn-prev-entry').disabled = (idx === 0);
 
     updateNextLabel();
+    updatePerfectRemainingIndicator();
 
     const anyScored = entries.some(e => (state.scores[e.id] ?? 0) > 0);
     document.getElementById('r1-entry-pills').innerHTML = entries.map((e, i) => {
@@ -1109,20 +1240,8 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       `${n} ${n === 1 ? 'entry advances' : 'entries advance'} to the Final Round for ${cat?.name || 'this category'}.`;
   }
 
-  function renderFinalRound() {
-    const cat       = state.categories.find(c => c.id === state.activeCategoryId);
-    const shortlist = getShortlist(state.activeCategoryId);
-    document.getElementById('final-cat-name').textContent = cat?.name || '';
-
-    let ordered = shortlist;
-    const existing = (state.rankings[state.activeCategoryId] || []).sort((a, b) => a.rank - b.rank);
-    if (existing.length > 0) {
-      const byId = Object.fromEntries(shortlist.map(e => [e.id, e]));
-      ordered = existing.map(r => byId[r.entry_id]).filter(Boolean);
-    }
-
-    const listEl = document.getElementById('final-rank-list');
-    listEl.innerHTML = ordered.map((entry, i) => `
+  function renderTop3Row(entry, i) {
+    return `
       <div class="rank-item bg-white rounded-card border border-[#b8e4e0] p-4
                   flex items-center gap-4 select-none"
            data-entry-id="${esc(entry.id)}">
@@ -1150,24 +1269,121 @@ const base = raw.endsWith('/') ? raw : raw + '/';
             <circle cx="4" cy="14" r="1.8"/><circle cx="10" cy="14" r="1.8"/>
           </svg>
         </div>
-      </div>
-    `).join('');
+      </div>`;
+  }
 
-    if (state.sortableInstance) {
-      state.sortableInstance.destroy();
-      state.sortableInstance = null;
+  function renderGridTile(entry, i) {
+    return `
+      <div class="grid-item bg-white rounded-card border border-[#b8e4e0] p-2
+                  flex flex-col items-center text-center select-none cursor-grab"
+           data-entry-id="${esc(entry.id)}">
+        <div class="grid-rank-badge w-6 h-6 rounded-full flex items-center justify-center
+                    text-[10px] font-extrabold text-white mb-1.5"
+             style="background:#9b94a8;">
+          ${ordinal(3 + i + 1)}
+        </div>
+        ${entry.photo_url
+          ? `<div class="w-full aspect-square rounded-[8px] overflow-hidden mb-1.5">
+               <img src="${esc(entry.photo_url)}" class="w-full h-full object-cover" alt="" loading="lazy" />
+             </div>`
+          : `<div class="w-full aspect-square rounded-[8px] bg-[#f5f3fa] mb-1.5 flex items-center justify-center">
+               <span style="font-size:18px;">🐾</span>
+             </div>`
+        }
+        <p class="text-[11px] font-bold text-[#1c1626] truncate w-full">#${esc(entry.entry_number ?? '—')}</p>
+        ${entry.breed ? `<p class="text-[10px] text-[#9b94a8] truncate w-full">${esc(entry.breed)}</p>` : ''}
+      </div>`;
+  }
+
+  function refreshFinalRoundBadges() {
+    const top3Items = [...document.querySelectorAll('#final-rank-list [data-entry-id]')];
+    top3Items.forEach((el, i) => {
+      const badge = el.querySelector('.rank-badge');
+      if (badge) badge.textContent = ordinal(i + 1);
+    });
+    document.querySelectorAll('#final-grid-list [data-entry-id]').forEach((el, i) => {
+      const badge = el.querySelector('.grid-rank-badge');
+      if (badge) badge.textContent = ordinal(top3Items.length + i + 1);
+    });
+  }
+
+  // Cross-list drags between the top-3 list and the ranks-4-12 grid are a
+  // true swap, not an insert/shift. Dragging entry #6 onto the #2 slot
+  // must put #6 in #2's spot AND put the old #2 in #6's old grid slot, not
+  // just shove the tail item out. Sortable only performs the insert half of
+  // that; the element now sitting right after the dropped item (pushed down
+  // one slot by the insert) is exactly the one that used to occupy the drop
+  // slot, so moving it back into the origin list's vacated slot completes
+  // the swap in one DOM operation.
+  function handleFinalRoundDragEnd(evt) {
+    if (evt.from !== evt.to) {
+      const draggedEl = evt.item;
+      let displacedEl = evt.to.children[evt.newIndex + 1] || evt.to.children[evt.newIndex - 1] || null;
+      if (displacedEl === draggedEl) displacedEl = null;
+
+      if (displacedEl) {
+        evt.from.insertBefore(displacedEl, evt.from.children[evt.oldIndex] || null);
+      }
     }
-    state.sortableInstance = Sortable.create(listEl, {
-      animation:   180,
+    refreshFinalRoundBadges();
+  }
+
+  function createFinalRoundSortables() {
+    const top3ListEl = document.getElementById('final-rank-list');
+    const gridListEl = document.getElementById('final-grid-list');
+
+    if (state.top3Sortable) { state.top3Sortable.destroy(); state.top3Sortable = null; }
+    if (state.gridSortable) { state.gridSortable.destroy(); state.gridSortable = null; }
+
+    state.top3Sortable = Sortable.create(top3ListEl, {
+      group:       'final-rank-group',
       handle:      '.drag-handle',
+      animation:   180,
       ghostClass:  'sortable-ghost',
       chosenClass: 'sortable-chosen',
-      onEnd() {
-        listEl.querySelectorAll('.rank-badge').forEach((badge, i) => {
-          badge.textContent = ordinal(i + 1);
-        });
-      },
+      onEnd:       handleFinalRoundDragEnd,
     });
+
+    if (gridListEl && gridListEl.children.length > 0) {
+      state.gridSortable = Sortable.create(gridListEl, {
+        group:       'final-rank-group',
+        animation:   180,
+        ghostClass:  'sortable-ghost',
+        chosenClass: 'sortable-chosen',
+        onEnd:       handleFinalRoundDragEnd,
+      });
+    }
+  }
+
+  function renderFinalRound() {
+    const cat       = state.categories.find(c => c.id === state.activeCategoryId);
+    const shortlist = getShortlist(state.activeCategoryId);
+    document.getElementById('final-cat-name').textContent = cat?.name || '';
+
+    let ordered = shortlist;
+    const existing = (state.rankings[state.activeCategoryId] || []).sort((a, b) => a.rank - b.rank);
+    if (existing.length > 0) {
+      const byId = Object.fromEntries(shortlist.map(e => [e.id, e]));
+      ordered = existing.map(r => byId[r.entry_id]).filter(Boolean);
+    }
+
+    const top3 = ordered.slice(0, 3);
+    const rest = ordered.slice(3);
+
+    document.getElementById('final-rank-list').innerHTML =
+      top3.map((entry, i) => renderTop3Row(entry, i)).join('');
+
+    const gridZone   = document.getElementById('final-grid-zone');
+    const gridListEl = document.getElementById('final-grid-list');
+    if (rest.length > 0) {
+      gridZone.style.display = '';
+      gridListEl.innerHTML = rest.map((entry, i) => renderGridTile(entry, i)).join('');
+    } else {
+      gridZone.style.display = 'none';
+      gridListEl.innerHTML = '';
+    }
+
+    createFinalRoundSortables();
 
     // Lock / unlock confirm button based on whether rankings are already saved
     const hasRankings  = (state.rankings[state.activeCategoryId] || []).length > 0;
@@ -1270,10 +1486,22 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       transition('CATEGORY_GRID');
     });
 
-    // Slider live fill + button label update
+    // Slider live fill + button label update + perfect-score cap
     document.getElementById('score-slider').addEventListener('input', e => {
-      updateSliderFill(e.target);
+      const slider = e.target;
+      if (parseInt(slider.value, 10) === 100) {
+        const entries      = state.entries[state.activeCategoryId] || [];
+        const currentEntry = entries[state.currentEntryIndex];
+        const cap           = state.perfectScoreCap ?? 12;
+        const used          = perfectScoreCount(state.activeCategoryId, currentEntry?.id);
+        if (used >= cap) {
+          slider.value = '99';
+          showScoringWarning('No perfect scores left in this category. Change another entry\'s score first to free one up.');
+        }
+      }
+      updateSliderFill(slider);
       updateNextLabel();
+      updatePerfectRemainingIndicator();
     });
 
     // Round 1 — Next / Complete
@@ -1294,7 +1522,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       if (!ok) { showToast('Could not save — check your connection', true); return; }
 
       const allScored = entries.every(e => (state.scores[e.id] ?? 0) > 0);
-      if (allScored) { transition('R1_INTERSTITIAL'); return; }
+      if (allScored) { openRoundCompleteModal(); return; }
 
       const nextIdx = state.currentEntryIndex + 1;
       if (nextIdx >= entries.length) {
@@ -1341,6 +1569,44 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       transition('FINAL_ROUND');
     });
 
+    // Round complete modal, option 1: clear scores and start over
+    document.getElementById('rc-opt-restart').addEventListener('click', async () => {
+      setRoundCompleteOptionsDisabled(true);
+      const catId = state.activeCategoryId;
+      const { error } = await supabase.from('judge_scores')
+        .delete()
+        .eq('category_id', catId)
+        .eq('judge_email', state.judgeEmail);
+      setRoundCompleteOptionsDisabled(false);
+      if (error) { showToast('Could not clear scores, please try again', true); return; }
+
+      for (const e of (state.entries[catId] || [])) delete state.scores[e.id];
+      closeRoundCompleteModal();
+      transition('ROUND1_SCORING', { currentEntryIndex: 0 });
+    });
+
+    // Round complete modal, option 2: review before deciding
+    document.getElementById('rc-opt-review').addEventListener('click', () => {
+      closeRoundCompleteModal();
+      transition('ROUND1_SCORING', { currentEntryIndex: 0 });
+    });
+
+    // Round complete modal, option 3: lock in and continue
+    document.getElementById('rc-opt-continue').addEventListener('click', () => {
+      closeRoundCompleteModal();
+      transition('R1_INTERSTITIAL');
+    });
+
+    // Round complete modal, dismiss without deciding (stays on last entry)
+    document.getElementById('round-complete-modal').addEventListener('click', e => {
+      if (e.target === e.currentTarget) closeRoundCompleteModal();
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && document.getElementById('round-complete-modal')?.style.display === 'flex') {
+        closeRoundCompleteModal();
+      }
+    });
+
     // Back to categories from final round
     document.getElementById('btn-back-to-cats-final').addEventListener('click', () => {
       transition('CATEGORY_GRID');
@@ -1358,12 +1624,24 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       changeBtn.style.display     = 'none';
     });
 
-    // Confirm rankings
+    // Confirm rankings, read the top-3 list then the grid, in DOM order
     document.getElementById('btn-confirm-rankings').addEventListener('click', () => {
-      const listEl     = document.getElementById('final-rank-list');
-      const orderedIds = [...listEl.querySelectorAll('[data-entry-id]')]
+      const top3Ids = [...document.getElementById('final-rank-list').querySelectorAll('[data-entry-id]')]
         .map(el => el.dataset.entryId);
-      saveRankings(state.activeCategoryId, orderedIds);
+      const gridEl  = document.getElementById('final-grid-list');
+      const gridIds = gridEl
+        ? [...gridEl.querySelectorAll('[data-entry-id]')].map(el => el.dataset.entryId)
+        : [];
+      saveRankings(state.activeCategoryId, [...top3Ids, ...gridIds]);
+    });
+
+    // Auto-Order, re-sorts the ranks-4-12 grid by score only; never touches the top-3 list
+    document.getElementById('btn-auto-order-grid').addEventListener('click', () => {
+      const gridListEl = document.getElementById('final-grid-list');
+      const items = [...gridListEl.querySelectorAll('[data-entry-id]')];
+      items.sort((a, b) => (state.scores[b.dataset.entryId] ?? 0) - (state.scores[a.dataset.entryId] ?? 0));
+      items.forEach(el => gridListEl.appendChild(el));
+      refreshFinalRoundBadges();
     });
 
     // Profile photo upload
@@ -1435,15 +1713,19 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
     setupEvents();
 
-    // Load existing profile photo
-    const { data: photoRow } = await supabase
-      .from('show_judges')
-      .select('photo_url')
-      .ilike('email', state.judgeEmail)
-      .limit(1)
-      .maybeSingle();
+    // Load existing profile photo + the platform-wide perfect-score cap.
+    // Neither is show-scoped, so both fit here alongside the rest of the
+    // pre-show-discovery init calls, fetched together since neither depends
+    // on the other.
+    const [{ data: photoRow }, { data: capRow }] = await Promise.all([
+      supabase.from('show_judges').select('photo_url').ilike('email', state.judgeEmail).limit(1).maybeSingle(),
+      supabase.from('platform_settings').select('value').eq('key', 'max_perfect_scores_per_category').maybeSingle(),
+    ]);
     state.judgePhoto = photoRow?.photo_url || null;
     renderTopbarAvatar();
+
+    const parsedCap = parseInt(capRow?.value, 10);
+    state.perfectScoreCap = Number.isFinite(parsedCap) ? parsedCap : 12;
 
     // Discover assigned shows
     const { data: assignments, error: assignErr } = await supabase

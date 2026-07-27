@@ -18,6 +18,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       <div id="platform-fees-card" class="bg-white rounded-card border border-[#b8e4e0] p-5"></div>
       <div id="stripe-card" class="bg-white rounded-card border border-[#b8e4e0] p-5"></div>
       <div id="upload-card" class="bg-white rounded-card border border-[#b8e4e0] p-5"></div>
+      <div id="perfect-score-cap-card" class="bg-white rounded-card border border-[#b8e4e0] p-5"></div>
       <div id="other-card" style="display:none" class="bg-white rounded-card border border-[#b8e4e0] p-5"></div>
     </div>
 
@@ -171,6 +172,16 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     wireSaveButton(el);
   }
 
+  function renderPerfectScoreCapCard() {
+    const el = document.getElementById('perfect-score-cap-card');
+    el.innerHTML = cardHeader('Judging — Perfect Score Cap', 'Maximum number of perfect (100) scores a judge may award per category in Round 1.') +
+      `<div class="flex items-end gap-2">
+        <input data-key="max_perfect_scores_per_category" type="text" value="${esc(settingsMap['max_perfect_scores_per_category'] ?? '')}" class="setting-input text-[13px] border border-[#b8e4e0] rounded-btn-sm px-2.5 py-2 bg-white w-[90px]" />
+        <span class="text-[13px] text-[#6f6880] pb-2">per category</span>
+      </div>`;
+    wireSaveButton(el);
+  }
+
   function renderOtherCard(categorizedKeys) {
     const el = document.getElementById('other-card');
     const leftover = Object.keys(settingsMap).filter(k => !categorizedKeys.has(k)).sort();
@@ -190,9 +201,10 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     renderPlatformFeesCard();
     renderStripeCard();
     renderUploadCard();
+    renderPerfectScoreCapCard();
 
     const categorized = new Set([
-      'service_fee_pct', 'stripe_fee_pct', 'max_upload_mb',
+      'service_fee_pct', 'stripe_fee_pct', 'max_upload_mb', 'max_perfect_scores_per_category',
       ...currenciesFor('service_fee_floor').map(c => `service_fee_floor_${c}`),
       ...currenciesFor('min_entry_fee').map(c => `min_entry_fee_${c}`),
       ...currenciesFor('stripe_fee_fixed').map(c => `stripe_fee_fixed_${c}`),
