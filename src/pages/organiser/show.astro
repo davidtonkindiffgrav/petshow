@@ -2569,8 +2569,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         </button>
       </div>
       <div class="mb-2.5">
-        <label class="block text-[10.5px] font-bold text-[#9b94a8] uppercase tracking-wide mb-1">Description <span class="normal-case font-medium text-[#c4bed0]">(shown as a tooltip to entrants)</span></label>
-        <input type="text" value="${esc(cls.description || '')}" placeholder="Briefly describe this category"
+        <label class="block text-[10.5px] font-bold text-[#9b94a8] uppercase tracking-wide mb-1">Judging Criteria <span class="normal-case font-medium text-[#c4bed0]">(shown to entrants when entering, and to judges when scoring)</span></label>
+        <input type="text" value="${esc(cls.description || '')}" placeholder="What should judges look for? e.g. Best overall grooming and coat condition"
           class="cls-desc-input w-full border border-[#efebf5] rounded-[11px] px-3 py-2 text-[12.5px] text-[#6f6880] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" />
       </div>
       <label class="flex items-center gap-2 cursor-pointer select-none">

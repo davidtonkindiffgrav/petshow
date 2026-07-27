@@ -208,7 +208,8 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
           <div class="mb-3">
             <h2 id="r1-cat-name" class="text-[20px] font-extrabold text-[#1c1626] leading-tight"></h2>
-            <p id="r1-criteria" class="text-[13px] text-[#9b94a8] leading-relaxed mt-1"></p>
+            <p id="r1-criteria-label" class="text-[10px] font-bold text-[#9b94a8] uppercase tracking-wide mt-1.5" style="display:none">Judging Criteria</p>
+            <p id="r1-criteria" class="text-[13px] text-[#9b94a8] leading-relaxed mt-0.5"></p>
           </div>
 
           <!-- Progress bar -->
@@ -1015,7 +1016,8 @@ const base = raw.endsWith('/') ? raw : raw + '/';
             </span>
           </div>
           ${cat.description
-            ? `<p class="text-[12.5px] text-[#9b94a8] leading-relaxed text-left"
+            ? `<p class="text-[10px] font-bold text-[#9b94a8] uppercase tracking-wide text-left mb-0.5">Judging Criteria</p>
+               <p class="text-[12.5px] text-[#9b94a8] leading-relaxed text-left"
                   style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
                  ${esc(cat.description)}
                </p>`
@@ -1033,6 +1035,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
     document.getElementById('r1-cat-name').textContent = cat?.name || '';
     document.getElementById('r1-criteria').textContent = cat?.description || '';
+    document.getElementById('r1-criteria-label').style.display = cat?.description ? '' : 'none';
 
     document.getElementById('r1-progress-text').textContent = `Entry ${idx + 1} of ${entries.length}`;
     document.getElementById('r1-progress-bar').style.width  =
