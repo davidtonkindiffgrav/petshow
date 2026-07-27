@@ -98,19 +98,14 @@ function navClass(page: string) {
           Judging &amp; Results
         </a>
 
-        <a href={`${base}organiser/settings#payments-section`} class={navClass('payments')}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="9" x2="23" y2="9"/>
-          </svg>
-          Payments
-        </a>
-
-<a href={`${base}organiser/settings`} class={navClass('settings')}>
+        <a href={`${base}organiser/settings`} class={navClass('settings')}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="3"/>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
           </svg>
-          Settings
+          <span class="flex-1">Settings</span>
+          <span id="settings-payment-badge" title="Set up payments to publish paid shows"
+            style="display:none" class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
         </a>
 
       </nav>
@@ -276,5 +271,20 @@ function navClass(page: string) {
         judgeBtn.addEventListener('click', () => { window.location.href = base + 'judge'; });
       }
     }
+  })();
+
+  // Nudge dot on "Settings" until Stripe payouts are fully set up — same
+  // resolution as settings.astro's Payments card (organisation vs profile).
+  (async () => {
+    const { supabase } = await import('../lib/supabase.js');
+    const { getAuth }  = await import('../lib/auth.js');
+    const { session, profile } = await getAuth();
+    if (!session || !profile) return;
+    const organisationId = profile.organisation_id || null;
+    const { data: status } = organisationId
+      ? await supabase.from('organisations').select('stripe_charges_ready, stripe_payouts_ready').eq('id', organisationId).single()
+      : await supabase.from('profiles').select('stripe_charges_ready, stripe_payouts_ready').eq('id', session.user.id).single();
+    const badge = document.getElementById('settings-payment-badge');
+    if (badge && !(status?.stripe_charges_ready && status?.stripe_payouts_ready)) badge.style.display = 'block';
   })();
 </script>
