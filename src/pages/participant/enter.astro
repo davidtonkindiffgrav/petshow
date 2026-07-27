@@ -83,7 +83,7 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
     supabase.from('shows')
       .select('id,title,host_org,entry_fee,currency,animal_type,breed_scope,breed_filter,entry_close_date,entry_close_time,show_date,show_time,timezone,logo_url,status,suspended_at,fundraising_goal,fundraising_goal_type,close_entries_on_goal,entries_closed_at,entries_closed_reason')
       .eq('id', showId).single(),
-    supabase.from('show_categories').select('id,name,description,award_id,has_certificate').eq('show_id', showId),
+    supabase.from('show_categories').select('id,name,criteria,award_id,has_certificate').eq('show_id', showId),
     supabase.from('awards').select('*').eq('show_id', showId),
   ]);
 
@@ -338,8 +338,8 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
     if (cat.has_certificate) parts.push('🎓 Certificate included');
     if (award) parts.push(`🎁 ${esc(award.name)}${award.physical_description ? ' — ' + esc(award.physical_description) : ''}`);
     const infoLine = parts.length ? `<p style="font-size:12.5px;color:#1ba89a;font-weight:600;margin:8px 0 0;">${parts.join(' · ')}</p>` : '';
-    const criteriaLine = cat.description
-      ? `<p style="font-size:12.5px;color:#6b7c89;margin:8px 0 0;"><strong style="color:#4a4357;">🎯 Judging Criteria:</strong> ${esc(cat.description)}</p>`
+    const criteriaLine = cat.criteria
+      ? `<p style="font-size:12.5px;color:#6b7c89;margin:8px 0 0;"><strong style="color:#4a4357;">🎯 Judging Criteria:</strong> ${esc(cat.criteria)}</p>`
       : '';
     return criteriaLine + infoLine;
   }

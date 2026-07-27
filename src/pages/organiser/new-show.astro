@@ -1315,7 +1315,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (removedIds.length) await supabase.from('show_categories').delete().in('id', removedIds);
     if (rows.length) {
       await supabase.from('show_categories').upsert(
-        rows.map(c => ({ id: c.id, show_id: show.id, name: c.name, description: c.description || null, award_id: c.award_id || null, has_certificate: !!c.has_certificate })),
+        rows.map(c => ({ id: c.id, show_id: show.id, name: c.name, criteria: c.criteria || null, award_id: c.award_id || null, has_certificate: !!c.has_certificate })),
         { onConflict: 'id' }
       );
     }
@@ -1325,7 +1325,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   // ─── Step 4 init ─────────────────────────────────────────────────────────────
   function initStep4() {
     if (show.classes.length === 0) {
-      show.classes.push({ id: crypto.randomUUID(), name: '', description: '', award_id: null, has_certificate: true, enabled: true, custom: true });
+      show.classes.push({ id: crypto.randomUUID(), name: '', criteria: '', award_id: null, has_certificate: true, enabled: true, custom: true });
     }
     renderFunStakesCategories();
   }
@@ -1355,7 +1355,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       </div>
       <div class="mb-2.5">
         <label class="block text-[10.5px] font-bold text-[#9b94a8] uppercase tracking-wide mb-1">Judging Criteria <span class="normal-case font-medium text-[#c4bed0]">(shown to entrants when entering, and to judges when scoring)</span></label>
-        <input type="text" value="${cls.description || ''}" placeholder="What should judges look for? e.g. Best overall grooming and coat condition"
+        <input type="text" value="${cls.criteria || ''}" placeholder="What should judges look for? e.g. Best overall grooming and coat condition"
           class="cls-desc-input w-full border border-[#efebf5] rounded-[11px] px-3 py-2 text-[12.5px] text-[#6f6880] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" />
       </div>
       <label class="flex items-center gap-2 cursor-pointer select-none">
@@ -1364,7 +1364,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       </label>
     `;
     row.querySelector('.cls-name-input').addEventListener('input', e => { show.classes[idx].name = e.target.value; });
-    row.querySelector('.cls-desc-input').addEventListener('input', e => { show.classes[idx].description = e.target.value; });
+    row.querySelector('.cls-desc-input').addEventListener('input', e => { show.classes[idx].criteria = e.target.value; });
     row.querySelector('.cls-cert-checkbox').addEventListener('change', e => { show.classes[idx].has_certificate = e.target.checked; });
     row.querySelector('.fs-remove').addEventListener('click', () => {
       show.classes.splice(idx, 1);
@@ -1388,16 +1388,16 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       btn.style.cursor      = already ? 'default' : 'pointer';
       btn.disabled = already;
       btn.textContent = already ? `${cat.name} ✓` : `+ ${cat.name}`;
-      attachTooltip(btn, cat.description);
+      attachTooltip(btn, cat.criteria);
       btn.addEventListener('click', () => {
         if (existingNames.has(cat.name)) return;
         _tip.style.display = 'none';
         const blankIdx = show.classes.findIndex(c => !c.name.trim());
         if (blankIdx !== -1) {
           show.classes[blankIdx].name = cat.name;
-          show.classes[blankIdx].description = cat.description;
+          show.classes[blankIdx].criteria = cat.criteria;
         } else {
-          show.classes.push({ id: crypto.randomUUID(), name: cat.name, description: cat.description, award_id: null, has_certificate: true, enabled: true, custom: true });
+          show.classes.push({ id: crypto.randomUUID(), name: cat.name, criteria: cat.criteria, award_id: null, has_certificate: true, enabled: true, custom: true });
         }
         renderFunStakesCategories();
       });
@@ -1837,7 +1837,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       supabase.from('show_sponsors').select('*').eq('show_id', id),
       supabase.from('show_judges').select('*').eq('show_id', id),
       supabase.from('awards').select('*').eq('show_id', id),
-      supabase.from('show_categories').select('id, name, description, award_id, has_certificate').eq('show_id', id),
+      supabase.from('show_categories').select('id, name, criteria, award_id, has_certificate').eq('show_id', id),
     ]);
     if (!data) return;
 
@@ -1871,7 +1871,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         ? judgesData.map(j => ({ first_name: j.first_name || '', last_name: j.last_name || '', email: j.email || '', phone: j.phone || '', photo_url: j.photo_url || '' }))
         : [],
       awards: awardsData || [],
-      classes: cats?.length > 0 ? cats.map(c => ({ id: c.id, name: c.name, description: c.description || '', award_id: c.award_id || null, has_certificate: !!c.has_certificate, enabled: true, custom: false })) : [],
+      classes: cats?.length > 0 ? cats.map(c => ({ id: c.id, name: c.name, criteria: c.criteria || '', award_id: c.award_id || null, has_certificate: !!c.has_certificate, enabled: true, custom: false })) : [],
       is_fundraising: data.is_fundraising ?? true,
       fundraising_goal: data.fundraising_goal,
       fundraising_goal_type: data.fundraising_goal_type || 'amount',
@@ -2149,7 +2149,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     selectCard(document.getElementById('breed-scope-cards'), 'all');
     // Step 4: add category
     document.getElementById('s4-add-funstakes').addEventListener('click', () => {
-      show.classes.push({ id: crypto.randomUUID(), name: '', description: '', award_id: null, has_certificate: true, enabled: true, custom: true });
+      show.classes.push({ id: crypto.randomUUID(), name: '', criteria: '', award_id: null, has_certificate: true, enabled: true, custom: true });
       renderFunStakesCategories();
     });
     // Step 5: sponsorship YNA

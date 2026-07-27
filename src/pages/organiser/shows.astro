@@ -758,7 +758,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       // disables the Awards checkbox whenever Classes is unticked). Awards
       // clone first so category rows can resolve their new award_id.
       if (sections.has('classes')) {
-        const { data: cats } = await supabase.from('show_categories').select('id, name, description, award_id, has_certificate').eq('show_id', show.id);
+        const { data: cats } = await supabase.from('show_categories').select('id, name, criteria, award_id, has_certificate').eq('show_id', show.id);
         if (cats?.length) {
           let awardIdMap = new Map();
           if (sections.has('awards')) {
@@ -778,7 +778,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
             }
           }
           await supabase.from('show_categories').insert(cats.map(c => ({
-            show_id: newId, name: c.name, description: c.description,
+            show_id: newId, name: c.name, criteria: c.criteria,
             award_id: c.award_id ? (awardIdMap.get(c.award_id) || null) : null,
             has_certificate: sections.has('awards') ? !!c.has_certificate : true,
           })));

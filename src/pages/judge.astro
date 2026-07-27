@@ -775,7 +775,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
     const [catsRes, entriesRes, scoresRes, rankingsRes, showRes] = await Promise.all([
       supabase.from('show_categories')
-        .select('id, name, description, shortlist_count')
+        .select('id, name, criteria, shortlist_count')
         .eq('show_id', showId).order('name'),
       supabase.from('show_entries')
         .select('id, category_id, entry_number, breed, photo_url')
@@ -1015,11 +1015,11 @@ const base = raw.endsWith('/') ? raw : raw + '/';
               ${status.label}
             </span>
           </div>
-          ${cat.description
+          ${cat.criteria
             ? `<p class="text-[10px] font-bold text-[#9b94a8] uppercase tracking-wide text-left mb-0.5">Judging Criteria</p>
                <p class="text-[12.5px] text-[#9b94a8] leading-relaxed text-left"
                   style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
-                 ${esc(cat.description)}
+                 ${esc(cat.criteria)}
                </p>`
             : ''}
           ${progressBar}
@@ -1034,8 +1034,8 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     const cat     = state.categories.find(c => c.id === state.activeCategoryId);
 
     document.getElementById('r1-cat-name').textContent = cat?.name || '';
-    document.getElementById('r1-criteria').textContent = cat?.description || '';
-    document.getElementById('r1-criteria-label').style.display = cat?.description ? '' : 'none';
+    document.getElementById('r1-criteria').textContent = cat?.criteria || '';
+    document.getElementById('r1-criteria-label').style.display = cat?.criteria ? '' : 'none';
 
     document.getElementById('r1-progress-text').textContent = `Entry ${idx + 1} of ${entries.length}`;
     document.getElementById('r1-progress-bar').style.width  =

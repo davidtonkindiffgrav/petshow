@@ -799,7 +799,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   let serviceFees    = {};
   let savedJudges    = [];
   let maxUploadMb    = 5;
-  let mgmtClasses    = []; // { id, name, description, award_id }
+  let mgmtClasses    = []; // { id, name, criteria, award_id }
   let mgmtAwards     = []; // { id, name, physical_description, image_url, sponsor_id } — physical prizes only
   let mgmtAssignments = []; // { id, name, award_id } — Awards panel's own staged copy of category->award links
   let loadedCategoryIds = new Set();
@@ -1920,7 +1920,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     // Classes — add a category
     document.getElementById('mgmt-add-class').addEventListener('click', () => {
-      mgmtClasses.push({ id: crypto.randomUUID(), name: '', description: '', award_id: null, has_certificate: true });
+      mgmtClasses.push({ id: crypto.randomUUID(), name: '', criteria: '', award_id: null, has_certificate: true });
       renderClassesRows();
     });
 
@@ -2265,7 +2265,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (removedIds.length) await supabase.from('show_categories').delete().in('id', removedIds);
     if (rows.length) {
       await supabase.from('show_categories').upsert(
-        rows.map(c => ({ id: c.id, show_id: showId, name: c.name.trim(), description: c.description || null, award_id: c.award_id || null, has_certificate: !!c.has_certificate })),
+        rows.map(c => ({ id: c.id, show_id: showId, name: c.name.trim(), criteria: c.criteria || null, award_id: c.award_id || null, has_certificate: !!c.has_certificate })),
         { onConflict: 'id' }
       );
     }
@@ -2407,7 +2407,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         // carry the current value through unchanged rather than defaulting it.
         const catRows = mgmtAssignments.map(a => {
           const src = categories.find(c => c.id === a.id);
-          return { id: a.id, name: src?.name || a.name, description: src?.description || null, award_id: a.award_id, has_certificate: !!src?.has_certificate };
+          return { id: a.id, name: src?.name || a.name, criteria: src?.criteria || null, award_id: a.award_id, has_certificate: !!src?.has_certificate };
         });
         await upsertCategories(catRows);
       });
@@ -2416,7 +2416,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         await supabase.from('awards').delete().eq('show_id', showId);
         awards = [];
         loadedAwardIds = new Set();
-        const catRows = categories.map(c => ({ id: c.id, name: c.name, description: c.description, award_id: null, has_certificate: !!c.has_certificate }));
+        const catRows = categories.map(c => ({ id: c.id, name: c.name, criteria: c.criteria, award_id: null, has_certificate: !!c.has_certificate }));
         await upsertCategories(catRows);
       });
     }
@@ -2540,8 +2540,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   // no preset toggle buttons; organisers type category rows directly, with a
   // handful of suggested presets offered as fill-in-the-blank shortcuts.
   function initClassesPanel() {
-    mgmtClasses = categories.map(c => ({ id: c.id, name: c.name, description: c.description || '', award_id: c.award_id || null, has_certificate: !!c.has_certificate }));
-    if (mgmtClasses.length === 0) mgmtClasses.push({ id: crypto.randomUUID(), name: '', description: '', award_id: null, has_certificate: true });
+    mgmtClasses = categories.map(c => ({ id: c.id, name: c.name, criteria: c.criteria || '', award_id: c.award_id || null, has_certificate: !!c.has_certificate }));
+    if (mgmtClasses.length === 0) mgmtClasses.push({ id: crypto.randomUUID(), name: '', criteria: '', award_id: null, has_certificate: true });
     renderClassesRows();
   }
 
@@ -2570,7 +2570,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       </div>
       <div class="mb-2.5">
         <label class="block text-[10.5px] font-bold text-[#9b94a8] uppercase tracking-wide mb-1">Judging Criteria <span class="normal-case font-medium text-[#c4bed0]">(shown to entrants when entering, and to judges when scoring)</span></label>
-        <input type="text" value="${esc(cls.description || '')}" placeholder="What should judges look for? e.g. Best overall grooming and coat condition"
+        <input type="text" value="${esc(cls.criteria || '')}" placeholder="What should judges look for? e.g. Best overall grooming and coat condition"
           class="cls-desc-input w-full border border-[#efebf5] rounded-[11px] px-3 py-2 text-[12.5px] text-[#6f6880] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand transition-colors" />
       </div>
       <label class="flex items-center gap-2 cursor-pointer select-none">
@@ -2579,7 +2579,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       </label>
     `;
     row.querySelector('.cls-name-input').addEventListener('input', e => { mgmtClasses[idx].name = e.target.value; });
-    row.querySelector('.cls-desc-input').addEventListener('input', e => { mgmtClasses[idx].description = e.target.value; });
+    row.querySelector('.cls-desc-input').addEventListener('input', e => { mgmtClasses[idx].criteria = e.target.value; });
     row.querySelector('.cls-cert-checkbox').addEventListener('change', e => { mgmtClasses[idx].has_certificate = e.target.checked; });
     row.querySelector('.cls-remove').addEventListener('click', () => {
       mgmtClasses.splice(idx, 1);
@@ -2603,16 +2603,16 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       btn.style.cursor      = already ? 'default' : 'pointer';
       btn.disabled = already;
       btn.textContent = already ? `${cat.name} ✓` : `+ ${cat.name}`;
-      attachTooltip(btn, cat.description);
+      attachTooltip(btn, cat.criteria);
       btn.addEventListener('click', () => {
         if (existingNames.has(cat.name)) return;
         _tip.style.display = 'none';
         const blankIdx = mgmtClasses.findIndex(c => !c.name.trim());
         if (blankIdx !== -1) {
           mgmtClasses[blankIdx].name = cat.name;
-          mgmtClasses[blankIdx].description = cat.description;
+          mgmtClasses[blankIdx].criteria = cat.criteria;
         } else {
-          mgmtClasses.push({ id: crypto.randomUUID(), name: cat.name, description: cat.description, award_id: null, has_certificate: true });
+          mgmtClasses.push({ id: crypto.randomUUID(), name: cat.name, criteria: cat.criteria, award_id: null, has_certificate: true });
         }
         renderClassesRows();
       });
