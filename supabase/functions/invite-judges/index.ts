@@ -105,14 +105,14 @@ serve(async (req: Request) => {
           inviteErr.message?.toLowerCase().includes('registered') ||
           (inviteErr as any).code === 'user_already_exists'
         ) {
-          // Existing user — add judge role and send a working sign-in link via
-          // Resend. A plain "log in at /judge" link is a dead end for anyone
-          // whose account was created by an earlier invite that was never
-          // completed (no password set, possibly still unconfirmed) — a
-          // generated recovery link works regardless of confirmed status:
-          // confirmed users get a normal password reset, unconfirmed ones get
-          // a link that confirms them and lets them set a password, landing
-          // on judge-accept.astro exactly like a fresh invite would.
+          // Existing user — add judge role, then decide how to reach them.
+          // Most existing users already have a working account (they use the
+          // platform in some other role) and just need a plain heads-up. Only
+          // an unconfirmed account — created by an earlier invite that was
+          // never completed, so it has no password and can't be logged into
+          // at all — needs a fresh link. We check confirmed status via the
+          // generateLink response itself rather than emailing an unsolicited
+          // password-reset link to someone who already has a working login.
           await adminClient.rpc('add_judge_role_by_email', { p_email: judge.email });
 
           const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
@@ -123,7 +123,8 @@ serve(async (req: Request) => {
           if (linkErr || !linkData?.properties?.action_link) {
             throw new Error(`Failed to generate sign-in link: ${linkErr?.message || 'no link returned'}`);
           }
-          const signInLink = linkData.properties.action_link;
+          const isUnconfirmed = !linkData.user?.email_confirmed_at && !(linkData.user as any)?.confirmed_at;
+          const signInLink    = linkData.properties.action_link;
 
           if (!resendKey) throw new Error('RESEND_API_KEY secret is not set');
 
@@ -137,12 +138,20 @@ serve(async (req: Request) => {
               from: fromAddr,
               to:   [judge.email],
               subject: `You've been added as a judge for ${show.title}`,
-              html: `
+              html: isUnconfirmed
+                ? `
                 <p>Hi ${judge.first_name},</p>
                 <p><strong>${organiserName}</strong> has added you as a judge
                    for <strong>${show.title}</strong> on Fur to Feathers.</p>
-                <p>Click below to access your judging account:</p>
+                <p>Click below to finish setting up your account:</p>
                 <p><a href="${signInLink}">${signInLink}</a></p>
+              `
+                : `
+                <p>Hi ${judge.first_name},</p>
+                <p><strong>${organiserName}</strong> has added you as a judge
+                   for <strong>${show.title}</strong> on Fur to Feathers.</p>
+                <p>Log in to access the judging portal:</p>
+                <p><a href="${siteUrl}/judge">${siteUrl}/judge</a></p>
               `,
             }),
           });
