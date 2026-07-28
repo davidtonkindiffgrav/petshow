@@ -11,6 +11,12 @@ function esc(s: unknown) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+// show_date is a plain date column (no time component), so this is a
+// straight display format with no timezone conversion involved.
+function formatShowDate(d: string) {
+  return new Date(d).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
 // Mirrors src/lib/fees.js — duplicated here since this Deno function can't
 // import a Vite-bundled frontend module (same reasoning as stripe-webhook).
 function organiserNet(total: number, currency: string, settings: Record<string, number>): number | null {
@@ -138,7 +144,7 @@ serve(async (_req: Request) => {
           subject: `Heads up: "${show.title}" hasn't hit its goal yet`,
           html: `
             <div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;color:#1c1626;padding:20px 0">
-              <p style="font-size:15px;margin:0 0 12px">Your show <strong>${esc(show.title)}</strong> is coming up on ${esc(show.show_date)}, and entries are still set to close automatically once its fundraising goal is reached.</p>
+              <p style="font-size:15px;margin:0 0 12px">Your show <strong>${esc(show.title)}</strong> is coming up on <strong>${esc(formatShowDate(show.show_date))}</strong>, and entries are still set to close automatically once its fundraising goal is reached.</p>
               <p style="font-size:15px;margin:0 0 12px">Currently at <strong>${esc(progressText)}</strong>.</p>
               <p style="font-size:15px;margin:0 0 12px">If the goal isn't reached by Show Day, entries will close then regardless. You can adjust the goal, turn off auto-close, or close entries manually any time before then.</p>
               <p style="font-size:15px;margin:16px 0 0"><a href="${siteUrl}/organiser/show?id=${show.id}" style="color:#1ba89a;font-weight:700">Review this show →</a></p>

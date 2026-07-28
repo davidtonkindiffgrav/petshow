@@ -629,6 +629,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   import { supabase }    from '../lib/supabase.js';
   import { uploadImage } from '../lib/storage.js';
   import { showUploadOverlay, hideUploadOverlay } from '../lib/uploadOverlay.js';
+  import { getEntriesCloseInfo } from '../lib/voteWindow.js';
   import Sortable, { Swap } from 'sortablejs';
   // Swap mode: hovering a drop target just highlights it (swapClass) instead
   // of live-reordering the whole list; the actual swap only happens on drop.
@@ -639,6 +640,14 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     return String(s ?? '')
       .replace(/&/g,'&amp;').replace(/</g,'&lt;')
       .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // A show is ready for judging once it's a judged (not public-voted) show
+  // AND entries have actually closed (manually, by goal, by entry_close_date,
+  // or by show_date backstop) — is_judged alone only says "this show uses
+  // judges", not "judging can start now".
+  function isReadyForJudging(show) {
+    return show.is_judged === true && !getEntriesCloseInfo(show).isOpen;
   }
 
   function ordinal(n) {
@@ -1012,6 +1021,14 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
   // ── Supabase ─────────────────────────────────────────────────────────────
   async function loadShow(showId) {
+    // Belt-and-braces: the picker/sidebar already disable not-ready shows,
+    // but guard here too since this is the actual gate into scoring.
+    const knownShow = state.shows.find(s => s.id === showId);
+    if (knownShow && !isReadyForJudging(knownShow)) {
+      transition('NOT_READY', { activeShow: knownShow, activeShowId: knownShow.id });
+      return;
+    }
+
     transition('LOADING');
 
     const [catsRes, entriesRes, scoresRes, rankingsRes, showRes] = await Promise.all([
@@ -1129,7 +1146,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       return;
     }
     el.innerHTML = state.shows.map(show => {
-      const ready  = show.is_judged === true;
+      const ready  = isReadyForJudging(show);
       const active = show.id === state.activeShowId;
       const cls = active
         ? 'sidebar-show-btn flex items-center gap-2.5 w-full text-left px-3 py-2.5 rounded-[10px] text-[13px] font-semibold bg-brand/20 text-white transition-colors'
@@ -1160,7 +1177,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
   function renderShowPicker() {
     document.getElementById('show-picker-list').innerHTML = state.shows.map(show => {
-      const ready = show.is_judged === true;
+      const ready = isReadyForJudging(show);
       const logo = show.logo_url
         ? `<img src="${esc(show.logo_url)}" style="width:52px;height:52px;border-radius:10px;object-fit:contain;background:#f5f3fa;border:1.5px solid #efebf5;flex-shrink:0;" alt="" />`
         : `<div style="width:52px;height:52px;border-radius:10px;background:#e8f7f6;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -2085,7 +2102,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
     const { data: shows, error: showsErr } = await supabase
       .from('shows')
-      .select('id, title, host_org, logo_url, show_date, is_judged')
+      .select('id, title, host_org, logo_url, show_date, show_time, timezone, entry_close_date, entry_close_time, entries_closed_at, entries_closed_reason, is_judged')
       .in('id', showIds);
 
     if (showsErr) console.error('shows query error:', showsErr);
@@ -2096,7 +2113,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     if (state.shows.length === 0) {
       transition('NO_SHOWS');
     } else {
-      const readyShows = state.shows.filter(s => s.is_judged === true);
+      const readyShows = state.shows.filter(isReadyForJudging);
       if (readyShows.length === 0 && state.shows.length === 1) {
         transition('NOT_READY', { activeShow: state.shows[0], activeShowId: state.shows[0].id });
       } else if (readyShows.length === 1 && state.shows.length === 1) {
