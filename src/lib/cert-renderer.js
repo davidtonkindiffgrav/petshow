@@ -15,6 +15,8 @@ export const CERT_DEFAULTS = {
   show_signature: false,
   bg_color:      '#ffffff',
   photo_size:    0.33,   // image column width fraction 0.25–0.50 (default 33/67 split)
+  place_text_size:    30,  // "1st Place" font size, px (slider 20–72)
+  category_text_size: 18,  // category name font size, px (slider 14–44)
   page_size:     'a4',   // 'a4' | 'letter'
   fields:        ['animal_name', 'breed', 'exhibitor_name', 'category', 'place', 'show_date'],
 };
@@ -307,30 +309,48 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
   const catName  = category?.name     ?? 'Best in Show';
 
   ctx.textAlign = 'center';
+  const bannerMaxW = W - 2 * PAD;
   if (d.fields.includes('place')) {
-    ctx.font      = `700 30px ${MAIN}`;
+    const hasIcon = ribbonImg && d.image_mode !== 'ribbon';
+    let px = d.place_text_size ?? 30;
+    ctx.font = `700 ${px}px ${MAIN}`;
+    // Shrink to fit if the text (plus inline ribbon icon, when shown) would overflow the page.
+    while (px > 16) {
+      const rh    = hasIcon ? Math.round(px * 1.067) : 0;
+      const rw    = hasIcon ? Math.round(rh * ribbonImg.naturalWidth / ribbonImg.naturalHeight) : 0;
+      const textW = ctx.measureText(placeStr).width;
+      const totalW = hasIcon ? rw + 10 + textW : textW;
+      if (totalW <= bannerMaxW) break;
+      px--; ctx.font = `700 ${px}px ${MAIN}`;
+    }
     ctx.fillStyle = ACCENT;
-    if (ribbonImg && d.image_mode !== 'ribbon') {
+    const offset  = Math.round(px * 0.8);
+    const advance = Math.round(px * 1.13);
+    if (hasIcon) {
       // Small ribbon icon inline with place text
-      const rh     = 32;
+      const rh     = Math.round(px * 1.067);
       const rw     = Math.round(rh * ribbonImg.naturalWidth / ribbonImg.naturalHeight);
       const textW  = ctx.measureText(placeStr).width;
       const startX = Math.round((W - rw - 10 - textW) / 2);
       ctx.drawImage(ribbonImg, startX, y, rw, rh);
       ctx.textAlign = 'left';
-      ctx.fillText(placeStr, startX + rw + 10, y + 22);
+      ctx.fillText(placeStr, startX + rw + 10, y + offset);
       ctx.textAlign = 'center';
-      y += 36;
+      y += Math.max(advance, rh + 4);
     } else {
-      ctx.fillText(placeStr, W / 2, y + 24);
-      y += 34;
+      ctx.fillText(placeStr, W / 2, y + offset);
+      y += advance;
     }
   }
   if (d.fields.includes('category')) {
-    ctx.font      = `500 18px ${MAIN}`;
+    let px = d.category_text_size ?? 18;
+    ctx.font = `500 ${px}px ${MAIN}`;
+    while (ctx.measureText(catName).width > bannerMaxW && px > 12) {
+      px--; ctx.font = `500 ${px}px ${MAIN}`;
+    }
     ctx.fillStyle = TEXT_MID;
-    ctx.fillText(catName, W / 2, y + 15);
-    y += 26;
+    ctx.fillText(catName, W / 2, y + Math.round(px * 0.83));
+    y += Math.round(px * 1.44);
   }
 
   y += 10;
@@ -344,7 +364,7 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
   // ── Content zone ──────────────────────────────────────────────────────────
   // Extra room reserves space for the "Proudly Sponsored By" label above the logos.
   const footerH = hasSponsorLogos ? 70 : 36;
-  const contentH = H - y - footerH - PAD;
+  const contentH = Math.max(0, H - y - footerH - PAD);
   const contentW = W - 2 * PAD;
 
   // With no image, the text is centred across the whole page — give it a size

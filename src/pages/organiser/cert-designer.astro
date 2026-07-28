@@ -223,6 +223,35 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
             </label>
           </div>
 
+          <!-- Text Size -->
+          <div class="bg-white rounded-card border border-[#b8e4e0] p-4 space-y-3">
+            <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider">Text Size</p>
+
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between">
+                <span class="text-[12px] text-[#6f6880]">Placing Text</span>
+                <span id="place-size-val" class="text-[12px] font-bold text-brand">30px</span>
+              </div>
+              <input type="range" id="place-size-slider" min="20" max="72" step="1" value="30"
+                class="w-full accent-brand h-1.5 cursor-pointer" />
+              <div class="flex justify-between text-[10px] text-[#c4bed0]">
+                <span>Smaller</span><span>Larger</span>
+              </div>
+            </div>
+
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between">
+                <span class="text-[12px] text-[#6f6880]">Category Text</span>
+                <span id="category-size-val" class="text-[12px] font-bold text-brand">18px</span>
+              </div>
+              <input type="range" id="category-size-slider" min="14" max="44" step="1" value="18"
+                class="w-full accent-brand h-1.5 cursor-pointer" />
+              <div class="flex justify-between text-[10px] text-[#c4bed0]">
+                <span>Smaller</span><span>Larger</span>
+              </div>
+            </div>
+          </div>
+
           <!-- Fields -->
           <div class="bg-white rounded-card border border-[#b8e4e0] p-4">
             <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider mb-3">Fields to Show</p>
@@ -479,6 +508,22 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (wrapper) wrapper.style.aspectRatio = ratios[ps] || '842/595';
 
     syncPhotoControls();
+
+    // Text size sliders
+    const placeSlider = document.getElementById('place-size-slider');
+    const placeVal     = document.getElementById('place-size-val');
+    if (placeSlider) {
+      const px = design.place_text_size ?? 30;
+      placeSlider.value = px;
+      placeVal.textContent = px + 'px';
+    }
+    const categorySlider = document.getElementById('category-size-slider');
+    const categoryVal     = document.getElementById('category-size-val');
+    if (categorySlider) {
+      const px = design.category_text_size ?? 18;
+      categorySlider.value = px;
+      categoryVal.textContent = px + 'px';
+    }
   }
 
   function updateLockUI(isLocked) {
@@ -493,6 +538,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.querySelectorAll('.border-opt, .frame-opt, .font-opt, .bg-opt, .img-mode-opt, .ratio-opt, .page-size-opt').forEach(el => el.disabled = isLocked);
     const slider = document.getElementById('photo-size-slider');
     if (slider) slider.disabled = isLocked;
+    const placeSlider = document.getElementById('place-size-slider');
+    if (placeSlider) placeSlider.disabled = isLocked;
+    const categorySlider = document.getElementById('category-size-slider');
+    if (categorySlider) categorySlider.disabled = isLocked;
     const togPhoto = document.getElementById('btn-toggle-photo');
     if (togPhoto) togPhoto.disabled = isLocked;
   }
@@ -725,6 +774,20 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.getElementById('photo-size-slider')?.addEventListener('input', e => {
       design.photo_size = parseInt(e.target.value) / 100;
       document.getElementById('photo-size-val').textContent = e.target.value + '%';
+      redraw();
+    });
+
+    // Placing text size slider
+    document.getElementById('place-size-slider')?.addEventListener('input', e => {
+      design.place_text_size = parseInt(e.target.value);
+      document.getElementById('place-size-val').textContent = e.target.value + 'px';
+      redraw();
+    });
+
+    // Category text size slider
+    document.getElementById('category-size-slider')?.addEventListener('input', e => {
+      design.category_text_size = parseInt(e.target.value);
+      document.getElementById('category-size-val').textContent = e.target.value + 'px';
       redraw();
     });
 
