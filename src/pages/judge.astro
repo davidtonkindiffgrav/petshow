@@ -402,9 +402,17 @@ const base = raw.endsWith('/') ? raw : raw + '/';
             class="text-[20px] font-extrabold text-[#1c1626] tracking-tight mb-1"></h2>
         <p class="text-[13px] text-[#9b94a8] mb-6">Drag to rank. Top is 1st place.</p>
 
-        <div class="flex flex-col gap-8 min-[900px]:flex-row min-[900px]:items-start">
-          <div class="min-[900px]:w-[calc(50%-16px)] min-[900px]:shrink-0">
-            <div id="final-rank-list" class="space-y-3"></div>
+        <!-- items-stretch (default) so the top-3 column matches the grid
+             column's height — its 3 rows are shorter overall than the grid's
+             landscape tiles + text, so centering them in that matched height
+             (plus a touch more gap) reads better than leaving them short and
+             top-aligned against a taller neighbour. -->
+        <div class="flex flex-col gap-8 min-[900px]:flex-row">
+          <div class="min-[900px]:w-[calc(50%-16px)] min-[900px]:shrink-0 flex flex-col">
+            <div class="flex items-center justify-between mb-3">
+              <p class="text-[11px] font-bold uppercase tracking-wide text-[#9b94a8]">Top 3</p>
+            </div>
+            <div id="final-rank-list" class="space-y-4 flex-1 flex flex-col justify-center"></div>
           </div>
           <div id="final-grid-zone" class="flex-1 min-w-0" style="display:none">
             <div class="flex items-center justify-between mb-3">
@@ -417,8 +425,13 @@ const base = raw.endsWith('/') ? raw : raw + '/';
             <!-- Columns have a 150px floor — below that, the fixed badge/text/padding
                  chrome in each card starts to outweigh the (already-landscape) photo
                  and cards drift back to portrait. Below the floor this scrolls
-                 horizontally instead of squeezing cards that thin. -->
-            <div style="overflow-x:auto">
+                 horizontally instead of squeezing cards that thin.
+                 overflow-x:auto clips anything poking past its own edge — including
+                 the swap-highlight ring's box-shadow on any tile touching that edge
+                 (every tile except the dead-centre one). Padding the scroll box out
+                 and pulling it back in with an equal negative margin gives the
+                 shadow room without shifting the grid's visible position. -->
+            <div style="overflow-x:auto;margin:-8px;padding:8px">
               <div id="final-grid-list" style="display:grid;grid-template-columns:repeat(3,minmax(150px,1fr));gap:12px"></div>
             </div>
           </div>
@@ -577,11 +590,20 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   }
 
   /* ── SortableJS drag states ───────────────────────────────────── */
+  /* sortable-ghost stays on the ORIGINAL element at its origin slot for the
+     whole drag (swap mode never removes/shifts it) — faded in place, a
+     placeholder for "this is where it came from". sortable-fallback is the
+     cloned element that actually follows the cursor (forceFallback mode).
+     sortable-swap-highlight marks whichever card is currently under the
+     cursor as the pending drop target — nothing else in the list moves. */
   .rank-item { touch-action: none; }
   .rank-item.sortable-ghost  { opacity: 0.3; }
   .rank-item.sortable-chosen {
     box-shadow: 0 12px 32px rgba(28,22,38,0.15);
     transform: scale(1.01);
+  }
+  .rank-item.sortable-swap-highlight {
+    box-shadow: 0 0 0 2px #1ba89a, 0 12px 32px rgba(28,22,38,0.15);
   }
 
   /* ── Ranks 4-12 grid tile drag states ─────────────────────────── */
@@ -591,6 +613,10 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     box-shadow: 0 12px 32px rgba(28,22,38,0.15);
     transform: scale(1.03);
   }
+  .grid-item.sortable-swap-highlight {
+    box-shadow: 0 0 0 2px #1ba89a, 0 12px 32px rgba(28,22,38,0.15);
+  }
+  .sortable-fallback { border-radius: 14px; }
 
   /* ── Round complete modal option cards ────────────────────────── */
   .round-complete-opt { cursor: pointer; transition: filter 0.12s, background 0.12s; }
@@ -603,7 +629,10 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   import { supabase }    from '../lib/supabase.js';
   import { uploadImage } from '../lib/storage.js';
   import { showUploadOverlay, hideUploadOverlay } from '../lib/uploadOverlay.js';
-  import Sortable        from 'sortablejs';
+  import Sortable, { Swap } from 'sortablejs';
+  // Swap mode: hovering a drop target just highlights it (swapClass) instead
+  // of live-reordering the whole list; the actual swap only happens on drop.
+  Sortable.mount(new Swap());
 
   // ── Helpers ─────────────────────────────────────────────────────────────
   function esc(s) {
@@ -1455,9 +1484,19 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     createFinalRoundSortables();
   }
 
-  // Reads the current (post-swap) DOM order of both lists and re-renders
-  // them from scratch, so cards crossing between lists pick up the right
-  // card style rather than keeping the markup they were dragged in with.
+  // Re-renders both lists from a given order of entry ids, so cards crossing
+  // between lists pick up the right card style rather than keeping the
+  // markup they were dragged in with.
+  function renderFinalListsFromIds(top3Ids, gridIds) {
+    const shortlist = getShortlist(state.activeCategoryId);
+    const byId      = Object.fromEntries(shortlist.map(e => [e.id, e]));
+    renderFinalLists(
+      top3Ids.map(id => byId[id]).filter(Boolean),
+      gridIds.map(id => byId[id]).filter(Boolean),
+    );
+  }
+
+  // Reads the current (post-swap) DOM order of both lists.
   function syncFinalRoundAfterDrag() {
     const top3Ids = [...document.getElementById('final-rank-list').querySelectorAll('[data-entry-id]')]
       .map(el => el.dataset.entryId);
@@ -1465,38 +1504,150 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     const gridIds = gridEl
       ? [...gridEl.querySelectorAll('[data-entry-id]')].map(el => el.dataset.entryId)
       : [];
-
-    const shortlist = getShortlist(state.activeCategoryId);
-    const byId      = Object.fromEntries(shortlist.map(e => [e.id, e]));
-
-    renderFinalLists(
-      top3Ids.map(id => byId[id]).filter(Boolean),
-      gridIds.map(id => byId[id]).filter(Boolean),
-    );
+    renderFinalListsFromIds(top3Ids, gridIds);
   }
 
-  // Cross-list drags between the top-3 list and the ranks-4-12 grid are a
-  // true swap, not an insert/shift. Dragging entry #6 onto the #2 slot
-  // must put #6 in #2's spot AND put the old #2 in #6's old grid slot, not
-  // just shove the tail item out. Sortable only performs the insert half of
-  // that; the element now sitting right after the dropped item (pushed down
-  // one slot by the insert) is exactly the one that used to occupy the drop
-  // slot, so moving it back into the origin list's vacated slot completes
-  // the swap in one DOM operation. Once the order is correct, both lists are
-  // fully re-rendered so the swapped cards reformat to their new list's size.
-  function handleFinalRoundDragEnd(evt) {
-    if (evt.from !== evt.to) {
-      const draggedEl = evt.item;
-      let displacedEl = evt.to.children[evt.newIndex + 1] || evt.to.children[evt.newIndex - 1] || null;
-      if (displacedEl === draggedEl) displacedEl = null;
-
-      if (displacedEl) {
-        evt.from.insertBefore(displacedEl, evt.from.children[evt.oldIndex] || null);
-      }
+  // Swap mode's own drop handler does a clean two-element DOM swap (dragEl <->
+  // whichever card was highlighted) using its own internal record of "last
+  // highlighted card" — but that record is never updated while hovering the
+  // dragged card's own original slot (same library quirk noted below), so if
+  // the user crosses over and then drops back on their starting spot, the
+  // library would silently execute the *stale* swap from before they came
+  // back, instead of the no-op the ghost was just showing them. When our own
+  // pointer tracking says they ended on their own origin, override that and
+  // restore the exact order the drag started with instead of trusting the
+  // (already-applied) DOM swap.
+  function handleFinalRoundDragEnd() {
+    document.removeEventListener('mousemove', handleFinalRoundPointerProbe);
+    document.removeEventListener('touchmove', handleFinalRoundPointerProbe);
+    finalDragEntryId  = null;
+    finalDragGhostKind = null;
+    if (finalDragEndedOnOwnOrigin && finalDragStartOrder) {
+      renderFinalListsFromIds(finalDragStartOrder.top3, finalDragStartOrder.grid);
+    } else {
       syncFinalRoundAfterDrag();
-      return;
     }
-    refreshFinalRoundBadges();
+    finalDragEndedOnOwnOrigin = false;
+    finalDragStartOrder = null;
+  }
+
+  // ── Live ghost restyling ────────────────────────────────────────────────
+  // forceFallback mode renders its own cursor-following ghost (a clone of the
+  // dragged element) instead of relying on the browser's native drag-image
+  // snapshot, which means we can rewrite that ghost's markup ourselves while
+  // the drag is still in progress. As the cursor crosses from one list into
+  // the other, swap the ghost's content/size to the destination list's card
+  // style, so a top-3 row visibly becomes a small grid tile (and vice versa)
+  // the moment it crosses over — not only after the card is dropped.
+  let finalDragGhostKind = null; // 'top3' | 'grid' | null
+
+  function finalRoundEntryById(id) {
+    return getShortlist(state.activeCategoryId).find(e => e.id === id) || null;
+  }
+
+  function styleFinalGhostAs(kind, entry, badgeIndex, clientX, clientY) {
+    const ghost = Sortable.ghost;
+    if (!ghost || !entry) return;
+    const html = kind === 'top3' ? renderTop3Row(entry, badgeIndex) : renderGridTile(entry, badgeIndex);
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html.trim();
+    const rendered = tmp.firstElementChild;
+    if (!rendered) return;
+    ghost.className = rendered.className + ' sortable-fallback';
+    ghost.innerHTML = rendered.innerHTML;
+    // Match whatever size that list's cards are actually rendering at right
+    // now (both are responsive to viewport width) rather than guessing.
+    const sample = document.querySelector(
+      kind === 'top3' ? '#final-rank-list .rank-item' : '#final-grid-list .grid-item'
+    );
+    if (!sample) return;
+    const size = sample.getBoundingClientRect();
+    ghost.style.width  = size.width + 'px';
+    ghost.style.height = size.height + 'px';
+
+    // SortableJS anchors the ghost to wherever it was originally grabbed —
+    // fine for a top-3 row (grabbed by its drag handle near the right edge),
+    // but that same offset stays baked in even once the ghost shrinks to a
+    // grid tile, leaving it dangling off to the side of the cursor instead
+    // of under it. Re-centre by nudging the fallback ghost's runtime offset:
+    // measure where the ghost actually landed after the resize vs. where we
+    // want it (centred on the cursor), and feed that delta back in. This
+    // only touches the *current* drag's offset, not the tap-anchored
+    // behaviour within a single list (which is left alone).
+    if (Number.isFinite(clientX) && Number.isFinite(clientY)) {
+      const rect   = ghost.getBoundingClientRect();
+      const shiftX = (clientX - size.width  / 2) - rect.left;
+      const shiftY = (clientY - size.height / 2) - rect.top;
+      const active = Sortable.active;
+      if (active) {
+        const fo = active.options.fallbackOffset || { x: 0, y: 0 };
+        active.options.fallbackOffset = { x: (fo.x || 0) + shiftX, y: (fo.y || 0) + shiftY };
+      }
+    }
+  }
+
+  // SortableJS skips its own move/target detection whenever the pointer is
+  // over the dragged item's OWN original slot (`dragEl.contains(evt.target)`
+  // short-circuits before onMove ever fires) — there's nothing to reorder
+  // there, so the library doesn't bother. That's exactly the "drop it back
+  // where I started" case, though, so the ghost never re-detected being back
+  // over its origin's list — swap in one direction only, appearing "stuck" if
+  // you crossed over and changed your mind. Track pointer position ourselves
+  // during the drag instead of relying solely on Sortable's onMove, so every
+  // crossing (in either direction, any number of times) gets caught,
+  // including hovering back over the card's own placeholder.
+  let finalDragEntryId        = null;
+  let finalDragStartOrder     = null;  // { top3: [...ids], grid: [...ids] } captured at drag start
+  let finalDragEndedOnOwnOrigin = false; // whether the pointer is (as of the last probe) back over dragEl itself
+
+  function finalRoundPointerXY(evt) {
+    const p = evt.touches ? evt.touches[0] : evt;
+    return p ? { x: p.clientX, y: p.clientY } : null;
+  }
+
+  function handleFinalRoundPointerProbe(evt) {
+    if (!finalDragEntryId) return;
+    const xy = finalRoundPointerXY(evt);
+    if (!xy) return;
+    const el = document.elementFromPoint(xy.x, xy.y);
+    const listEl  = el && el.closest('#final-rank-list, #final-grid-list');
+    const hovered = el && el.closest('[data-entry-id]');
+
+    // Track this on every probe tick (not just kind changes) — it's what
+    // handleFinalRoundDragEnd uses to decide whether to trust the DOM's own
+    // (possibly stale) swap result or restore the original order instead.
+    finalDragEndedOnOwnOrigin = !!hovered && hovered.dataset.entryId === finalDragEntryId;
+    if (finalDragEndedOnOwnOrigin) {
+      // Sortable's own highlight tracking doesn't clear itself for this case
+      // (it never processes hovering the origin at all) — clear it ourselves
+      // so nothing looks like a pending swap target while sitting at home.
+      document.querySelectorAll('.sortable-swap-highlight')
+        .forEach(el => el.classList.remove('sortable-swap-highlight'));
+    }
+
+    if (!listEl) return;
+    const targetKind = listEl.id === 'final-grid-list' ? 'grid' : 'top3';
+    if (targetKind === finalDragGhostKind) return;
+    finalDragGhostKind = targetKind;
+    const entry = finalRoundEntryById(finalDragEntryId);
+    const idx   = hovered ? [...listEl.children].indexOf(hovered) : listEl.children.length;
+    styleFinalGhostAs(targetKind, entry, Math.max(0, idx), xy.x, xy.y);
+  }
+
+  function handleFinalRoundDragStart(evt) {
+    finalDragGhostKind = evt.from.id === 'final-grid-list' ? 'grid' : 'top3';
+    finalDragEntryId   = evt.item?.dataset?.entryId ?? null;
+    finalDragEndedOnOwnOrigin = false;
+    finalDragStartOrder = {
+      top3: [...document.getElementById('final-rank-list').querySelectorAll('[data-entry-id]')].map(el => el.dataset.entryId),
+      grid: [...document.getElementById('final-grid-list').querySelectorAll('[data-entry-id]')].map(el => el.dataset.entryId),
+    };
+    document.addEventListener('mousemove', handleFinalRoundPointerProbe);
+    document.addEventListener('touchmove', handleFinalRoundPointerProbe);
+  }
+
+  function handleFinalRoundMove() {
+    return true; // no gating needed — the pointer probe above drives the ghost restyle
   }
 
   function createFinalRoundSortables() {
@@ -1506,26 +1657,33 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     if (state.top3Sortable) { state.top3Sortable.destroy(); state.top3Sortable = null; }
     if (state.gridSortable) { state.gridSortable.destroy(); state.gridSortable = null; }
 
+    const shared = {
+      group:            'final-rank-group',
+      animation:        180,
+      ghostClass:       'sortable-ghost',
+      chosenClass:      'sortable-chosen',
+      forceFallback:     true,
+      fallbackClass:    'sortable-fallback',
+      fallbackOnBody:    true,
+      swap:              true,
+      swapClass:        'sortable-swap-highlight',
+      onStart:           handleFinalRoundDragStart,
+      onMove:            handleFinalRoundMove,
+      onEnd:             handleFinalRoundDragEnd,
+    };
+
     state.top3Sortable = Sortable.create(top3ListEl, {
-      group:       'final-rank-group',
-      handle:      '.drag-handle',
-      animation:   180,
-      ghostClass:  'sortable-ghost',
-      chosenClass: 'sortable-chosen',
-      onEnd:       handleFinalRoundDragEnd,
+      ...shared,
+      handle: '.drag-handle',
     });
 
     if (gridListEl && gridListEl.children.length > 0) {
       state.gridSortable = Sortable.create(gridListEl, {
-        group:            'final-rank-group',
-        animation:        180,
-        ghostClass:       'sortable-ghost',
-        chosenClass:      'sortable-chosen',
+        ...shared,
         // Grid tiles have no drag handle (the whole tile drags) — exclude the
         // preview button so tapping it opens the photo instead of starting a drag.
         filter:            '.final-preview-btn',
         preventOnFilter:   true,
-        onEnd:             handleFinalRoundDragEnd,
       });
     }
   }
