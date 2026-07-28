@@ -285,7 +285,7 @@ async function getPayments(supabase: any, stripe: Stripe, payload: any) {
 
   let query = supabase
     .from('show_entries')
-    .select('id, animal_name, exhibitor_name, exhibitor_email, entry_fee_paid, status, stripe_session_id, created_at, shows!inner(id, title, currency, organisation_id)', { count: 'exact' })
+    .select('id, animal_name, exhibitor_name, exhibitor_email, entry_fee_paid, status, stripe_session_id, stripe_account_id, created_at, shows!inner(id, title, currency, organisation_id)', { count: 'exact' })
     .order('created_at', { ascending: false });
 
   if (show_id) query = query.eq('show_id', show_id);
@@ -303,11 +303,16 @@ async function getPayments(supabase: any, stripe: Stripe, payload: any) {
 
   // Enrich only the current page with a light Stripe status lookup —
   // avoids bulk-listing/reconciling all Stripe sessions for every request.
+  // Direct-charge sessions (the normal case once an organiser has Connect
+  // set up) live on the connected account, not the platform account — must
+  // pass stripeAccount or retrieve() 404s and silently leaves this blank.
   const enriched = await Promise.all((data || []).map(async (row: any) => {
     let stripe_status: string | null = null;
     if (row.stripe_session_id) {
       try {
-        const session = await stripe.checkout.sessions.retrieve(row.stripe_session_id);
+        const session = row.stripe_account_id
+          ? await stripe.checkout.sessions.retrieve(row.stripe_session_id, {}, { stripeAccount: row.stripe_account_id })
+          : await stripe.checkout.sessions.retrieve(row.stripe_session_id);
         stripe_status = session.payment_status;
       } catch { /* session may not exist (test cleanup, mode mismatch) */ }
     }
@@ -333,15 +338,45 @@ async function getPayouts(stripe: Stripe, payload: any) {
   };
 }
 
-async function getStripeEvents(stripe: Stripe, payload: any) {
-  const { limit = 25 } = payload || {};
-  const [intents, disputes, refunds] = await Promise.all([
-    stripe.paymentIntents.list({ limit }),
-    stripe.disputes.list({ limit }),
-    stripe.refunds.list({ limit }),
+// Same account-scope model as getConnectAccountsList — capped at 50 since
+// this fans out 3 Stripe list calls per account below; revisit (e.g. only
+// polling accounts with recent activity) if the organiser count grows well
+// past that.
+const MAX_CONNECT_ACCOUNTS_FOR_EVENTS = 50;
+
+async function listActiveConnectAccountIds(supabase: any): Promise<string[]> {
+  const [{ data: profiles }, { data: orgs }] = await Promise.all([
+    supabase.from('profiles').select('stripe_account_id').eq('stripe_charges_ready', true).not('stripe_account_id', 'is', null),
+    supabase.from('organisations').select('stripe_account_id').eq('stripe_charges_ready', true).not('stripe_account_id', 'is', null),
   ]);
-  const failed_payments = intents.data
+  const ids = [...(profiles || []), ...(orgs || [])].map((r: any) => r.stripe_account_id).filter(Boolean);
+  return ids.slice(0, MAX_CONNECT_ACCOUNTS_FOR_EVENTS);
+}
+
+async function getStripeEvents(supabase: any, stripe: Stripe, payload: any) {
+  const { limit = 25 } = payload || {};
+
+  // Direct-charge disputes/refunds/failed payments happen on the connected
+  // account, never the platform account — without also scoping to every
+  // active connected account, this always reported "none" once real Connect
+  // traffic started, regardless of what actually happened.
+  const accountIds = await listActiveConnectAccountIds(supabase);
+  const scopes: ({ stripeAccount: string } | undefined)[] = [undefined, ...accountIds.map((id) => ({ stripeAccount: id }))];
+  const results = await Promise.all(scopes.map((opts) => Promise.all([
+    stripe.paymentIntents.list({ limit }, opts),
+    stripe.disputes.list({ limit }, opts),
+    stripe.refunds.list({ limit }, opts),
+  ])));
+
+  const intents = results.flatMap((r) => r[0].data);
+  const disputes = results.flatMap((r) => r[1].data);
+  const refunds = results.flatMap((r) => r[2].data);
+  const byCreatedDesc = (a: any, b: any) => b.created - a.created;
+
+  const failed_payments = intents
     .filter((pi: any) => pi.last_payment_error || pi.status === 'requires_payment_method')
+    .sort(byCreatedDesc)
+    .slice(0, limit)
     .map((pi: any) => ({
       id: pi.id,
       amount: pi.amount / 100,
@@ -352,11 +387,11 @@ async function getStripeEvents(stripe: Stripe, payload: any) {
 
   return {
     failed_payments,
-    disputes: disputes.data.map((d: any) => ({
+    disputes: disputes.sort(byCreatedDesc).slice(0, limit).map((d: any) => ({
       id: d.id, amount: d.amount / 100, currency: d.currency.toUpperCase(),
       status: d.status, reason: d.reason, created: new Date(d.created * 1000).toISOString(),
     })),
-    refunds: refunds.data.map((r: any) => ({
+    refunds: refunds.sort(byCreatedDesc).slice(0, limit).map((r: any) => ({
       id: r.id, amount: r.amount / 100, currency: r.currency.toUpperCase(),
       status: r.status, created: new Date(r.created * 1000).toISOString(),
     })),
@@ -1229,7 +1264,7 @@ serve(async (req: Request) => {
         result = await getPayouts(stripeClient(), payload);
         break;
       case 'stripe-events':
-        result = await getStripeEvents(stripeClient(), payload);
+        result = await getStripeEvents(supabase, stripeClient(), payload);
         break;
       case 'connect-accounts-list':
         result = await getConnectAccountsList(supabase, payload);
