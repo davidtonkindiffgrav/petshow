@@ -4,6 +4,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // expose v2.core.* at all. Bumped to @22.
 import Stripe from 'npm:stripe@22';
 
+import { computeConnectStatus } from '../_shared/connect.ts';
+
 // Separate function/webhook destination from stripe-webhook/index.ts on
 // purpose: this is Stripe's V2 Accounts API, delivered as "thin events" (the
 // payload only carries an id/type — the full object is a second fetch) to a
@@ -59,6 +61,19 @@ serve(async (req: Request) => {
     'v2.core.account[configuration.recipient].capability_status_updated',
   ]);
 
+  // Temporary diagnostic: 29 Jul 2026 live-cutover testing showed Stripe
+  // delivering these exact event types and getting 200 back, but nothing
+  // ever reached audit_log and nothing appeared in this function's console
+  // logs either — which only happens if HANDLED_TYPES.has(eventNotification
+  // .type) is false, skipping both the success and error log paths entirely.
+  // Logging unconditionally here to see the real type/keys on the next
+  // delivery instead of guessing again. Remove once root-caused.
+  console.log('Connect webhook received', {
+    type: eventNotification?.type,
+    keys: eventNotification ? Object.keys(eventNotification) : null,
+    relatedObjectId: eventNotification?.related_object?.id ?? eventNotification?.relatedObject?.id,
+  });
+
   if (HANDLED_TYPES.has(eventNotification.type)) {
     try {
       const accountId: string | undefined = eventNotification.related_object?.id;
@@ -67,9 +82,6 @@ serve(async (req: Request) => {
       const account = await (stripe as any).v2.core.accounts.retrieve(accountId, {
         include: ['configuration.merchant', 'configuration.recipient', 'requirements'],
       });
-
-      const cardPaymentsStatus: string | null = account.configuration?.merchant?.capabilities?.card_payments?.status ?? null;
-      const chargesReady = cardPaymentsStatus === 'active';
 
       // TODO(verify against current Stripe docs / during live testing): we
       // dropped configuration.recipient entirely from account creation (see
@@ -85,20 +97,13 @@ serve(async (req: Request) => {
       // and adjust the path; stripe_payouts_ready never blocks anything
       // (only drives the settings page's "finish verification" banner), so
       // it's safe to leave under-reporting while this gets nailed down.
-      const payoutsStatus: string | null = account.configuration?.merchant?.capabilities?.stripe_balance?.payouts?.status ?? null;
-      const payoutsReady = payoutsStatus === 'active';
+      const updates = computeConnectStatus(account);
+      const { stripe_card_payments_status: cardPaymentsStatus, stripe_charges_ready: chargesReady, stripe_payouts_ready: payoutsReady } = updates;
 
       const supabase = createClient(
         Deno.env.get('SUPABASE_URL')!,
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
       );
-
-      const updates = {
-        stripe_card_payments_status: cardPaymentsStatus,
-        stripe_charges_ready: chargesReady,
-        stripe_payouts_ready: payoutsReady,
-        stripe_account_updated_at: new Date().toISOString(),
-      };
 
       // Account id is unique across both tables (enforced by the Phase 1
       // migration's partial unique indexes) — try profiles first, then
@@ -118,7 +123,7 @@ serve(async (req: Request) => {
         updatedOrgs = data;
       }
       console.log('Connect webhook processed', {
-        type: eventNotification.type, accountId, cardPaymentsStatus, chargesReady, payoutsStatus, payoutsReady,
+        type: eventNotification.type, accountId, cardPaymentsStatus, chargesReady, payoutsReady,
         matchedProfile: updatedProfiles?.[0]?.id ?? null, matchedOrg: updatedOrgs?.[0]?.id ?? null,
       });
 

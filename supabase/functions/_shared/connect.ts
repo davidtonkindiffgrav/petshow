@@ -57,6 +57,38 @@ export async function persistStripeAccountId(supabase: any, owner: ConnectOwner,
   if (error) throw new Error(`Failed to save Stripe account id: ${error.message}`);
 }
 
+// Computes an account's capability status from a live Stripe fetch — same
+// interpretation of configuration.merchant.capabilities used by
+// stripe-connect-webhook's v2.core.account[...] thin-events handler.
+// Factored out so stripe-connect-status (a synchronous fetch-on-return) can
+// share it: that webhook's "Connected accounts" event destination —
+// correctly configured, event types matching, Ping succeeding — never once
+// delivered a real account event in live mode during the 29 Jul 2026 cutover
+// test, while the platform checkout webhook on the same account worked
+// fine. Scoped to the v2 preview thin-events path specifically, not a
+// broader Connect problem, so don't wait on that webhook alone for the
+// "onboarding just completed" moment.
+export function computeConnectStatus(account: any) {
+  const cardPaymentsStatus: string | null = account.configuration?.merchant?.capabilities?.card_payments?.status ?? null;
+  const payoutsStatus: string | null = account.configuration?.merchant?.capabilities?.stripe_balance?.payouts?.status ?? null;
+  return {
+    stripe_card_payments_status: cardPaymentsStatus,
+    stripe_charges_ready: cardPaymentsStatus === 'active',
+    stripe_payouts_ready: payoutsStatus === 'active',
+    stripe_account_updated_at: new Date().toISOString(),
+  };
+}
+
+export async function refreshConnectStatusFromStripe(supabase: any, stripe: any, table: 'organisations' | 'profiles', ownerId: string, accountId: string) {
+  const account = await stripe.v2.core.accounts.retrieve(accountId, {
+    include: ['configuration.merchant', 'configuration.recipient', 'requirements'],
+  });
+  const updates = computeConnectStatus(account);
+  const { error } = await supabase.from(table).update(updates).eq('id', ownerId);
+  if (error) throw new Error(`Failed to save Connect status: ${error.message}`);
+  return updates;
+}
+
 // Shared by stripe-connect-onboarding (organiser self-serve) and admin-api's
 // connect-resend-onboarding-link (admin-triggered) — issuing a fresh Account
 // Link against an existing account is also the normal way to resume

@@ -460,11 +460,32 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     // Section P — payments (Stripe Connect)
     const connectParam = new URLSearchParams(window.location.search).get('connect');
-    renderPayments(await loadConnectStatus());
-    // Stripe's account.updated webhook may take a moment to land after
-    // returning from onboarding — the rendered status reflects whatever was
-    // last synced, so let the organiser know a fresher status may follow.
-    if (connectParam === 'return') showStatus('connect-status', "Welcome back — we're checking your latest Stripe status.", false);
+    let connectStatus = await loadConnectStatus();
+    if (connectParam === 'return' && connectStatus.stripe_account_id) {
+      // Don't rely solely on the account-status webhook to sync this — it's
+      // on Stripe's newer v2 thin-events pipeline, which turned out not to
+      // deliver reliably in live mode. Ask Stripe directly the moment the
+      // organiser lands back here so the page reflects reality immediately
+      // instead of whatever was last synced (possibly nothing).
+      renderPayments(connectStatus);
+      showStatus('connect-status', "Welcome back, checking your latest Stripe status…", false);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const resp = await fetch(`${import.meta.env.PUBLIC_SUPABASE_URL}/functions/v1/stripe-connect-status`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${session.access_token}` },
+        });
+        const fresh = await resp.json();
+        if (resp.ok) {
+          connectStatus = { ...connectStatus, ...fresh };
+        } else {
+          console.error('stripe-connect-status failed:', fresh?.error);
+        }
+      } catch (err) {
+        console.error('stripe-connect-status request failed:', err);
+      }
+    }
+    renderPayments(connectStatus);
     // Clean the ?connect= param out of the URL without a reload/history entry
     if (connectParam) window.history.replaceState({}, '', window.location.pathname);
   })();
