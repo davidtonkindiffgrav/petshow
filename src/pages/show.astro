@@ -371,10 +371,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     const activeLogoUrl = show.logo_source === 'club' ? show.org_logo_url : show.logo_url;
     const logoEl = activeLogoUrl
-      ? `<div style="width:110px;height:110px;border-radius:16px;overflow:hidden;border:3px solid rgba(255,255,255,0.3);flex-shrink:0">
+      ? `<div class="w-16 h-16 md:w-[110px] md:h-[110px] rounded-2xl overflow-hidden border-[3px] flex-shrink-0" style="border-color:rgba(255,255,255,0.3)">
            <img src="${esc(activeLogoUrl)}" alt="Show logo" style="width:100%;height:100%;object-fit:cover;object-position:center;display:block">
          </div>`
-      : `<div style="width:110px;height:110px;border-radius:16px;background:#1E8E7E;border:3px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;color:white;font-size:36px;font-weight:800;flex-shrink:0">${esc((show.title||'S').charAt(0).toUpperCase())}</div>`;
+      : `<div class="w-16 h-16 md:w-[110px] md:h-[110px] rounded-2xl border-[3px] flex items-center justify-center text-white font-extrabold flex-shrink-0 text-2xl md:text-4xl" style="background:#1E8E7E;border-color:rgba(255,255,255,0.3)">${esc((show.title||'S').charAt(0).toUpperCase())}</div>`;
 
     const typePill = show.show_type && SHOW_TYPE_LABELS[show.show_type]
       ? `<span style="background:rgba(255,255,255,0.15);color:white;font-size:11px;font-weight:700;padding:4px 12px;border-radius:999px;letter-spacing:0.03em">${esc(SHOW_TYPE_LABELS[show.show_type])}</span>`
@@ -389,25 +389,25 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
 
     el.innerHTML = `
-      <div style="position:relative;height:300px;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(14,42,42,0.18)">
+      <div class="relative rounded-2xl overflow-hidden md:h-[300px]" style="box-shadow:0 8px 32px rgba(14,42,42,0.18)">
         <!-- Dark base -->
         <div style="position:absolute;inset:0;background:${accentColor}"></div>
 
-        <!-- Right: banner photo -->
-        <div style="position:absolute;top:0;right:0;bottom:0;width:58%;overflow:hidden">
+        <!-- Banner photo: small standalone strip on mobile, right-side panel from md up -->
+        <div class="relative md:absolute md:inset-y-0 md:right-0 w-full md:w-[58%] h-[140px] md:h-auto overflow-hidden">
           ${bannerLayer}
-          <!-- Gradient fade from dark into photo -->
-          <div style="position:absolute;inset:0;background:linear-gradient(to right,${accentColor} 0%,rgba(${accentRgb},0.4) 35%,transparent 65%);pointer-events:none"></div>
+          <!-- Gradient fade from dark into photo (desktop overlay only) -->
+          <div class="hidden md:block" style="position:absolute;inset:0;background:linear-gradient(to right,${accentColor} 0%,rgba(${accentRgb},0.4) 35%,transparent 65%);pointer-events:none"></div>
         </div>
 
-        <!-- Left: text panel -->
-        <div style="position:absolute;left:0;top:0;bottom:0;width:50%;padding:28px 32px;display:flex;flex-direction:column;justify-content:space-between;z-index:1">
+        <!-- Text panel: stacks below the photo on mobile, overlays the left half from md up -->
+        <div class="relative md:absolute md:inset-y-0 md:left-0 w-full md:w-1/2 p-4 md:py-7 md:px-8 flex flex-col justify-between gap-4 md:gap-0 z-[1]">
           <div>
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
               ${logoEl}
               ${typePill}
             </div>
-            <h1 style="font-size:28px;font-weight:800;color:white;line-height:1.22;letter-spacing:-0.02em;margin:0 0 8px">${esc(show.title || 'Untitled Show')}</h1>
+            <h1 class="text-xl md:text-[28px]" style="font-weight:800;color:white;line-height:1.22;letter-spacing:-0.02em;margin:0 0 8px">${esc(show.title || 'Untitled Show')}</h1>
             ${show.organisation_name
               ? `<p style="font-size:13px;color:rgba(255,255,255,0.55);margin:0 0 6px">Hosted by <strong style="color:rgba(255,255,255,0.85);font-weight:600">${esc(show.organisation_name)}</strong> ✓</p>`
               : ''}
@@ -442,23 +442,25 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     }
   }
 
-  function state1Body() {
+  // Shared mobile/desktop placement for the 3-column body layout: on mobile the
+  // cards stack in `order-N` sequence (Key Dates above Entry Categories, Goal
+  // card glued directly under Key Dates); from md up each card is pinned back
+  // to its original column/row via col-start/row-start so desktop is unchanged.
+  function threeColBody(firstCard) {
     return `
-      <div style="display:grid;grid-template-columns:1fr 1.6fr 1fr;gap:20px;align-items:start">
-        <div style="display:flex;flex-direction:column;gap:16px">
-          ${enterCard()}
-          ${entryClassesCard(false)}
-        </div>
-        <div style="display:flex;flex-direction:column;gap:16px">
-          ${fundraisingCard()}
-          ${aboutCard()}
-          ${meetEntrantsCard()}
-        </div>
-        <div style="display:flex;flex-direction:column;gap:16px">
-          ${sponsorsCard()}
-          ${keyDatesCard()}
-        </div>
+      <div class="grid grid-cols-1 md:grid-cols-[1fr_1.6fr_1fr] gap-x-5 gap-y-4 items-start">
+        <div class="order-1 md:order-none md:col-start-1 md:row-start-1">${firstCard}</div>
+        <div class="order-4 md:order-none md:col-start-1 md:row-start-2">${entryClassesCard(false)}</div>
+        <div class="order-5 md:order-none md:col-start-2 md:row-start-2">${aboutCard()}</div>
+        <div class="order-6 md:order-none md:col-start-2 md:row-start-3">${meetEntrantsCard()}</div>
+        <div class="order-7 md:order-none md:col-start-3 md:row-start-1">${sponsorsCard()}</div>
+        <div class="order-2 md:order-none md:col-start-3 md:row-start-2">${keyDatesCard()}</div>
+        <div class="order-3 md:order-none md:col-start-2 md:row-start-1">${fundraisingCard()}</div>
       </div>`;
+  }
+
+  function state1Body() {
+    return threeColBody(enterCard());
   }
 
   function interimBody() {
@@ -467,25 +469,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const statusMsg = isVoteClosed
       ? 'Voting has closed. Results are being finalised and will be published soon.'
       : 'Entries are closed and judging is underway. Results coming soon.';
-    return `
-      <div style="display:grid;grid-template-columns:1fr 1.6fr 1fr;gap:20px;align-items:start">
-        <div style="display:flex;flex-direction:column;gap:16px">
-          ${card(`
-            <h3 style="font-size:15px;font-weight:700;color:#143A37;margin:0 0 8px">${title}</h3>
-            <p style="font-size:13px;color:#6B7C79;margin:0">${statusMsg}</p>
-          `)}
-          ${entryClassesCard(false)}
-        </div>
-        <div style="display:flex;flex-direction:column;gap:16px">
-          ${fundraisingCard()}
-          ${aboutCard()}
-          ${meetEntrantsCard()}
-        </div>
-        <div style="display:flex;flex-direction:column;gap:16px">
-          ${sponsorsCard()}
-          ${keyDatesCard()}
-        </div>
-      </div>`;
+    return threeColBody(card(`
+      <h3 style="font-size:15px;font-weight:700;color:#143A37;margin:0 0 8px">${title}</h3>
+      <p style="font-size:13px;color:#6B7C79;margin:0">${statusMsg}</p>
+    `));
   }
 
   function archivedBody() {
@@ -508,7 +495,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   function resultsBody() {
     return `
       ${datesStrip()}
-      <div style="display:grid;grid-template-columns:1fr 2fr 1fr;gap:20px;align-items:start;margin-top:20px">
+      <div class="grid grid-cols-1 md:grid-cols-[1fr_2fr_1fr] gap-5 items-start mt-5">
         <div>${entryClassesCard(true)}</div>
         <div>${winnersCard()}</div>
         <div style="display:flex;flex-direction:column;gap:16px">
@@ -892,7 +879,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <h3 style="font-size:15px;font-weight:700;color:#143A37;margin:0">Winners</h3>
         <button id="open-results-modal" style="background:none;border:none;cursor:pointer;font-size:12px;color:#1E8E7E;font-weight:600;padding:0;font-family:inherit">View All Results →</button>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px">${winnerCols}</div>`);
+      <div class="grid grid-cols-2 md:[grid-template-columns:repeat(auto-fill,minmax(140px,1fr))]" style="gap:10px">${winnerCols}</div>`);
   }
 
   function buildResultsModal() {
