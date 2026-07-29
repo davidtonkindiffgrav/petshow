@@ -923,7 +923,17 @@ async function runHealthCheck(supabase: any, stripe: Stripe) {
       if (!resendKey) throw new Error('RESEND_API_KEY not set');
       const res = await fetch('https://api.resend.com/domains', { headers: { Authorization: `Bearer ${resendKey}` } });
       if (res.ok) return { status: 'green', latency_ms: Date.now() - start };
-      return { status: 'amber', latency_ms: Date.now() - start, error: `HTTP ${res.status}` };
+      // Our key is intentionally scoped to "Sending access" only (least
+      // privilege), so GET /domains always 401s with this exact message even
+      // though sending works fine. That's Resend confirming the key is
+      // valid, not an outage. A genuinely invalid/revoked key comes back as
+      // 403 "API key is invalid" instead, which still falls through to amber.
+      let body: any = null;
+      try { body = await res.json(); } catch { /* non-JSON body, fall through */ }
+      if (res.status === 401 && /restricted to only send emails/i.test(body?.message || '')) {
+        return { status: 'green', latency_ms: Date.now() - start };
+      }
+      return { status: 'amber', latency_ms: Date.now() - start, error: body?.message ? `HTTP ${res.status}: ${body.message}` : `HTTP ${res.status}` };
     } catch (err: any) {
       return { status: 'red', latency_ms: Date.now() - start, error: err.message };
     }

@@ -86,6 +86,12 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     } else {
       tiles.push(capacityTile('Daily Email Quota', `${base}admin/email`, `<p class="text-[11px] text-[#9b94a8]">Not reported</p>`));
     }
+    if (emailRes.status === 'fulfilled' && emailRes.value.monthly_quota_used != null) {
+      const e = emailRes.value;
+      tiles.push(capacityTile('Monthly Email Quota', `${base}admin/email`, usageBar(e.monthly_quota_used, e.monthly_quota_limit)));
+    } else {
+      tiles.push(capacityTile('Monthly Email Quota', `${base}admin/email`, `<p class="text-[11px] text-[#9b94a8]">Not reported</p>`));
+    }
     el.innerHTML = tiles.join('');
   }
 
