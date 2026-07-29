@@ -14,6 +14,7 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
   import { getEntriesCloseInfo } from '../../lib/voteWindow.js';
   import { organiserNet } from '../../lib/fees.js';
   import { searchBreeds } from '../../lib/dog-breeds.js';
+  import { resizeImageToLimit } from '../../lib/imageResize.js';
 
   const { session, profile, base } = await getAuth();
   if (!session) {
@@ -54,6 +55,79 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
     modal.style.display = 'flex';
   }
   function hideModal() { modal.style.display = 'none'; }
+
+  // ── Oversize photo modal (choose different photo, or auto-resize) ────────────
+  const oversizeModal = document.createElement('div');
+  oversizeModal.id = 'oversize-modal';
+  oversizeModal.style.cssText = 'display:none;position:fixed;inset:0;z-index:9999;background:rgba(10,31,68,0.72);align-items:center;justify-content:center;padding:20px;';
+  oversizeModal.innerHTML = `
+    <div style="background:#fff;border-radius:20px;padding:32px 28px;text-align:center;max-width:360px;width:100%;box-shadow:0 24px 60px rgba(10,31,68,0.25);">
+      <p id="oversize-title" style="font-size:18px;font-weight:800;color:#1c1626;margin:0 0 10px;"></p>
+      <p id="oversize-sub" style="font-size:13.5px;color:#6b7c89;line-height:1.5;margin:0 0 22px;"></p>
+      <div style="display:flex;gap:10px;">
+        <button type="button" id="oversize-reselect" style="flex:1;background:#f5f3fa;color:#4a4357;font-weight:700;font-size:13.5px;padding:12px;border-radius:11px;border:none;cursor:pointer;font-family:inherit;">Choose a different photo</button>
+        <button type="button" id="oversize-resize" style="flex:1;background:#1ba89a;color:white;font-weight:800;font-size:13.5px;padding:12px;border-radius:11px;border:none;cursor:pointer;font-family:inherit;">Resize it for me</button>
+      </div>
+    </div>`;
+  document.body.appendChild(oversizeModal);
+
+  function showOversizeModal() {
+    (document.getElementById('oversize-title') as HTMLElement).textContent = "That photo's a bit too big";
+    (document.getElementById('oversize-sub')   as HTMLElement).textContent =
+      `This photo is over ${maxUploadMb} MB. You can choose a different one, or we'll resize this one for you. It only reduces the image's dimensions slightly, not its sharpness.`;
+    oversizeModal.style.display = 'flex';
+  }
+  function hideOversizeModal() { oversizeModal.style.display = 'none'; }
+
+  // Shared by the normal file-select path and the post-resize path. Defined
+  // here (not inside renderStep3's handlers) because the oversize-modal
+  // buttons live outside #enter-root and are wired up once, not on every render.
+  function acceptPhotoFile(file: File) {
+    photoRejected = false;
+    photoFile = file;
+    photoUrl  = null; // reset uploaded URL; will re-upload on Next
+    const reader = new FileReader();
+    reader.onload = ev => { photoPreview = ev.target?.result as string; render(); };
+    reader.readAsDataURL(file);
+  }
+
+  // These buttons are created once above (outside #enter-root, so render()
+  // never touches them) — wire them up once here rather than inside render(),
+  // which would stack duplicate listeners on every re-render of step 3.
+  document.getElementById('oversize-reselect')?.addEventListener('click', () => {
+    hideOversizeModal();
+    pendingOversizeFile = null;
+    photoRejected = true;
+    const input = document.getElementById('photo-input') as HTMLInputElement | null;
+    if (input) input.value = '';
+    render();
+  });
+
+  document.getElementById('oversize-resize')?.addEventListener('click', async () => {
+    const file = pendingOversizeFile;
+    if (!file) return;
+    hideOversizeModal();
+    showModal('Resizing photo…', 'This will just take a moment.');
+    await new Promise(r => setTimeout(r, 80));
+    let resizedBlob: Blob | null = null;
+    try {
+      resizedBlob = await resizeImageToLimit(file, maxUploadMb * 1024 * 1024);
+    } catch {
+      resizedBlob = null;
+    }
+    hideModal();
+    pendingOversizeFile = null;
+    if (!resizedBlob) {
+      photoRejected = true;
+      const input = document.getElementById('photo-input') as HTMLInputElement | null;
+      if (input) input.value = '';
+      render();
+      showErr("We couldn't shrink that photo enough automatically. Please choose a different photo.");
+      return;
+    }
+    const resizedName = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+    acceptPhotoFile(new File([resizedBlob], resizedName, { type: 'image/jpeg' }));
+  });
 
   const params    = new URLSearchParams(window.location.search);
   const showId    = params.get('show');
@@ -159,6 +233,7 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
   let photoPreview: string | null = null;
   let photoUrl: string | null   = null;
   let photoRejected             = false;
+  let pendingOversizeFile: File | null = null;
   const DOG_GROUPS = ['Toy Dogs','Terriers','Gundogs','Hounds','Working Dogs','Utility Dogs','Non-Sporting'];
 
   interface EntryDraft { animalName: string; breed: string; categoryId: string | null; photoPreview: string | null; photoUrl: string | null; exhibitorName: string; }
@@ -212,6 +287,11 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
 
   function errorEl() {
     return `<p id="step-error" style="display:none;font-size:13px;color:#ef4444;margin-bottom:12px;"></p>`;
+  }
+
+  function showErr(msg: string) {
+    const el = document.getElementById('step-error');
+    if (el) { el.textContent = msg; el.style.display = 'block'; }
   }
 
   // ── Breed input ───────────────────────────────────────────────────────────────
@@ -389,9 +469,9 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
 
         <div style="margin-bottom:20px;">
           <label style="display:block;font-size:13px;font-weight:700;color:#4a4357;margin-bottom:8px;">Pet Photo <span style="color:#9b94a8;font-weight:400;">(required)</span></label>
-          <div id="photo-drop" style="border:2px dashed ${hasPhoto ? '#1ba89a' : photoRejected ? '#ef4444' : '#b8e4e0'};border-radius:14px;padding:24px;text-align:center;cursor:pointer;background:${hasPhoto ? '#f0faf9' : photoRejected ? '#fef2f2' : '#fafafa'};position:relative;overflow:hidden;">
+          <div id="photo-drop" style="border:2px dashed ${hasPhoto ? '#1ba89a' : photoRejected ? '#ef4444' : '#b8e4e0'};border-radius:14px;padding:${hasPhoto ? '10px' : '24px'};text-align:center;cursor:pointer;background:${hasPhoto ? '#f0faf9' : photoRejected ? '#fef2f2' : '#fafafa'};position:relative;overflow:hidden;">
             ${hasPhoto
-              ? `<img src="${esc(photoPreview!)}" style="width:80px;height:80px;border-radius:10px;object-fit:cover;margin:0 auto 8px;display:block;" alt="Pet photo preview" />
+              ? `<img src="${esc(photoPreview!)}" style="width:100%;height:280px;border-radius:11px;object-fit:cover;margin:0 0 10px;display:block;" alt="Pet photo preview" />
                  <p style="font-size:13px;color:#1ba89a;font-weight:600;margin:0;">Photo selected ✓</p>
                  <p style="font-size:11px;color:#9b94a8;margin:4px 0 0;">Click to change</p>`
               : photoRejected
@@ -510,11 +590,6 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
       ${step === 4 ? renderStep4() : ''}
     `;
 
-    function showErr(msg: string) {
-      const el = document.getElementById('step-error');
-      if (el) { el.textContent = msg; el.style.display = 'block'; }
-    }
-
     if (step === 1 && (!show.breed_scope || show.breed_scope === 'all')) initBreedCombobox();
 
     // Back button
@@ -549,16 +624,16 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
     // Step 3: photo + exhibitor name
     if (step === 3) {
       const photoInput = document.getElementById('photo-input') as HTMLInputElement;
+
       photoInput?.addEventListener('change', () => {
         const file = photoInput.files?.[0];
         if (!file) return;
-        if (file.size > maxUploadMb * 1024 * 1024) { photoRejected = true; showErr(`That photo is over ${maxUploadMb} MB and was not attached. Please choose a smaller photo.`); photoInput.value = ''; return; }
-        photoRejected = false;
-        photoFile = file;
-        photoUrl  = null; // reset uploaded URL; will re-upload on Next
-        const reader = new FileReader();
-        reader.onload = ev => { photoPreview = ev.target?.result as string; render(); };
-        reader.readAsDataURL(file);
+        if (file.size > maxUploadMb * 1024 * 1024) {
+          pendingOversizeFile = file;
+          showOversizeModal();
+          return;
+        }
+        acceptPhotoFile(file);
       });
 
       document.getElementById('photo-remove')?.addEventListener('click', () => {
