@@ -71,7 +71,9 @@ Run via `supabase db query --linked` (not `db push` — see project convention).
 
 ## Verification checklist after a cutover
 
-- [ ] `admin-api` `health-check` action returns green for `stripe`.
+- [x] `admin-api` `health-check` action returns green for `stripe`. (confirmed 28 Jul 2026)
 - [ ] A real organiser completes Connect onboarding end-to-end; `stripe_charges_ready` flips true.
 - [ ] One real, small-value entry purchase: entry flips to `confirmed`, `stripe-webhook` fires, net amount backfills (either immediately or via the `backfill-entry-net-amount` cron).
 - [ ] Admin Financial Centre (`/admin/financial`) shows a non-blank Stripe status for that payment, and the connected account's dispute/refund panel reflects reality (not just "always empty" from looking at the wrong account).
+
+Note: the live `STRIPE_SECRET_KEY` had to be rolled once during this cutover after a corrupted paste — if `health-check` ever regresses to "invalid API key" after a secrets update, verify the key directly first with `curl https://api.stripe.com/v1/balance -u sk_live_YOURKEY:` (key before the colon, nothing after) before assuming the Supabase side is broken.
