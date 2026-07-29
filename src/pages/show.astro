@@ -442,20 +442,29 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     }
   }
 
-  // Shared mobile/desktop placement for the 3-column body layout: on mobile the
-  // cards stack in `order-N` sequence (Key Dates above Entry Categories, Goal
-  // card glued directly under Key Dates); from md up each card is pinned back
-  // to its original column/row via col-start/row-start so desktop is unchanged.
+  // Shared mobile/desktop layout for the 3-column body. Each column is its own
+  // independent flex-column box on desktop (`md:flex md:flex-col`) so one
+  // column's height never affects another's — matches the original design.
+  // On mobile the wrapper collapses via `contents`, so its cards fall through
+  // into the single outer grid and re-sequence via `order-N` (Key Dates above
+  // Entry Categories, Goal card glued directly under Key Dates); `md:order-none`
+  // restores each card to its natural (original) position within its column.
   function threeColBody(firstCard) {
     return `
       <div class="grid grid-cols-1 md:grid-cols-[1fr_1.6fr_1fr] gap-x-5 gap-y-4 items-start">
-        <div class="order-1 md:order-none md:col-start-1 md:row-start-1">${firstCard}</div>
-        <div class="order-4 md:order-none md:col-start-1 md:row-start-2">${entryClassesCard(false)}</div>
-        <div class="order-5 md:order-none md:col-start-2 md:row-start-2">${aboutCard()}</div>
-        <div class="order-6 md:order-none md:col-start-2 md:row-start-3">${meetEntrantsCard()}</div>
-        <div class="order-7 md:order-none md:col-start-3 md:row-start-1">${sponsorsCard()}</div>
-        <div class="order-2 md:order-none md:col-start-3 md:row-start-2">${keyDatesCard()}</div>
-        <div class="order-3 md:order-none md:col-start-2 md:row-start-1">${fundraisingCard()}</div>
+        <div class="contents md:flex md:flex-col md:gap-4">
+          <div class="order-1 md:order-none">${firstCard}</div>
+          <div class="order-4 md:order-none">${entryClassesCard(false)}</div>
+        </div>
+        <div class="contents md:flex md:flex-col md:gap-4">
+          <div class="order-3 md:order-none">${fundraisingCard()}</div>
+          <div class="order-5 md:order-none">${aboutCard()}</div>
+          <div class="order-6 md:order-none">${meetEntrantsCard()}</div>
+        </div>
+        <div class="contents md:flex md:flex-col md:gap-4">
+          <div class="order-7 md:order-none">${sponsorsCard()}</div>
+          <div class="order-2 md:order-none">${keyDatesCard()}</div>
+        </div>
       </div>`;
   }
 
