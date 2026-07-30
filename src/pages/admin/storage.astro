@@ -41,6 +41,42 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 
     <p id="checked-at" class="text-[11px] text-[#9b94a8] mt-4"></p>
 
+    <div class="mt-6">
+      <div class="mb-[14px]">
+        <h2 class="text-[16px] font-extrabold text-[#1c1626] m-0 mb-[3px]">Files</h2>
+        <p class="text-[12.5px] text-[#6f6880] m-0">Browse, filter, and delete individual files in storage.</p>
+      </div>
+
+      <div class="bg-white rounded-card border border-[#b8e4e0] p-4 flex flex-wrap gap-3 items-end mb-4">
+        <div class="flex-1 min-w-[180px]">
+          <label class="block text-[11px] font-semibold text-[#9b94a8] mb-1">Search</label>
+          <input id="f-file-search" type="text" placeholder="Filename…" class="text-[13px] border border-[#e6eaee] rounded-[10px] px-2.5 py-2 bg-white w-full" />
+        </div>
+        <div>
+          <label class="block text-[11px] font-semibold text-[#9b94a8] mb-1">Type</label>
+          <select id="f-file-type" class="text-[13px] border border-[#e6eaee] rounded-[10px] px-2.5 py-2 bg-white min-w-[170px]">
+            <option value="">All types</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="bulk-bar" style="display:none" class="bg-[#fff4f2] border border-[#ffcfc5] rounded-card px-4 py-2.5 mb-3 flex items-center justify-between">
+        <span id="bulk-count" class="text-[13px] font-semibold text-[#1c1626]"></span>
+        <button id="btn-delete-selected" class="text-[13px] font-bold text-white bg-coral px-3.5 py-1.5 rounded-btn-sm hover:opacity-90 transition-opacity">Delete selected</button>
+      </div>
+
+      <div class="bg-white rounded-card border border-[#b8e4e0] overflow-hidden">
+        <div class="overflow-x-auto">
+          <div class="min-w-[820px] grid grid-cols-[32px_2fr_1.2fr_1.4fr_0.8fr_1fr] px-[18px] py-[11px] bg-[#f7f9fa] text-[11px] font-bold text-[#8492a3] uppercase tracking-wide items-center">
+            <div><input type="checkbox" id="f-select-all" title="Select all on this page" /></div>
+            <div>Name</div><div>Type</div><div>Show / User</div><div>Size</div><div>Modified</div>
+          </div>
+          <div id="files-tbody" class="min-w-[820px]"></div>
+        </div>
+        <div id="files-pagination" class="flex items-center justify-between px-[18px] py-3 text-[12.5px] text-[#5b6b7c] border-t border-[#f1f3f5]"></div>
+      </div>
+    </div>
+
   </div>
 
 </AdminLayout>
@@ -51,10 +87,106 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   import { esc, usageBar, formatBytes } from '../../lib/format.js';
   import { donutSvg } from '../../lib/charts.js';
 
+  const raw = import.meta.env.BASE_URL;
+  const base = raw.endsWith('/') ? raw : raw + '/';
+
   const PREFIX_LABELS = {
     shows: 'Show logos/banners', sponsors: 'Sponsor logos', judges: 'Judge photos',
-    profiles: 'Profile avatars', entries: 'Entry photos', certs: 'Certificates', settlements: 'Settlement statements',
+    profiles: 'Profile avatars', entries: 'Entry photos', certs: 'Certificates', awards: 'Award images', settlements: 'Settlement statements',
   };
+
+  // Mirrors TYPE_LABELS in supabase/functions/admin-api/index.ts — keep in sync.
+  const TYPE_LABELS = {
+    entry_photo: 'Entry photo', club_logo: 'Club logo', banner: 'Banner', org_logo: 'Organisation logo',
+    sponsor_logo: 'Sponsor logo', judge_photo: 'Judge photo', judge_profile_photo: 'Judge profile photo',
+    saved_judge_photo: 'Saved judge photo', avatar: 'Avatar', cert: 'Certificate', award_image: 'Award image', other: 'Other',
+  };
+
+  let allFiles = [];
+  let filePage = 1;
+  const FILE_PAGE_SIZE = 25;
+  const selected = new Set();
+
+  function filteredFiles() {
+    const search = document.getElementById('f-file-search').value.trim().toLowerCase();
+    const type = document.getElementById('f-file-type').value;
+    return allFiles.filter(f => {
+      if (type && f.type !== type) return false;
+      if (search && !f.name.toLowerCase().includes(search)) return false;
+      return true;
+    });
+  }
+
+  function updateBulkBar() {
+    const bar = document.getElementById('bulk-bar');
+    if (selected.size > 0) {
+      bar.style.display = 'flex';
+      document.getElementById('bulk-count').textContent = `${selected.size} file${selected.size === 1 ? '' : 's'} selected`;
+    } else {
+      bar.style.display = 'none';
+    }
+  }
+
+  function renderFiles() {
+    const filtered = filteredFiles();
+    const totalPages = Math.max(1, Math.ceil(filtered.length / FILE_PAGE_SIZE));
+    if (filePage > totalPages) filePage = totalPages;
+    const start = (filePage - 1) * FILE_PAGE_SIZE;
+    const pageRows = filtered.slice(start, start + FILE_PAGE_SIZE);
+
+    const tbody = document.getElementById('files-tbody');
+    if (!pageRows.length) {
+      tbody.innerHTML = `<div class="py-8 text-center text-[13px] text-[#9b94a8]">No files match these filters.</div>`;
+    } else {
+      tbody.innerHTML = pageRows.map(f => {
+        const attribution = f.show_title
+          ? `<a href="${base}admin/show?id=${f.show_id}" class="text-[#1ba89a] hover:underline">${esc(f.show_title)}</a>`
+          : esc(f.user_name || f.show_id || f.user_id || '—');
+        const isImage = f.mimetype?.startsWith('image/');
+        const thumb = isImage
+          ? `<img src="${f.url}" alt="" style="width:32px;height:32px;object-fit:cover;border-radius:6px;flex-shrink:0;">`
+          : `<div style="width:32px;height:32px;border-radius:6px;background:#f0fafa;flex-shrink:0;"></div>`;
+        return `<div class="grid grid-cols-[32px_2fr_1.2fr_1.4fr_0.8fr_1fr] px-[18px] py-[10px] border-t border-[#f1f3f5] text-[13px] items-center">
+          <div><input type="checkbox" class="f-row-check" data-path="${esc(f.path)}" ${selected.has(f.path) ? 'checked' : ''}></div>
+          <div class="flex items-center gap-2.5 min-w-0">
+            ${thumb}
+            <a href="${f.url}" target="_blank" rel="noopener" class="truncate text-[#1c1626] hover:underline" title="${esc(f.name)}">${esc(f.name)}</a>
+          </div>
+          <div class="text-[#6f6880]">${esc(f.type_label)}</div>
+          <div class="truncate">${attribution}</div>
+          <div>${formatBytes(f.size)}</div>
+          <div class="text-[#9b94a8]">${f.created_at ? new Date(f.created_at).toLocaleDateString() : '—'}</div>
+        </div>`;
+      }).join('');
+      tbody.querySelectorAll('.f-row-check').forEach(cb => {
+        cb.addEventListener('change', () => {
+          if (cb.checked) selected.add(cb.dataset.path); else selected.delete(cb.dataset.path);
+          updateBulkBar();
+          const selectAll = document.getElementById('f-select-all');
+          selectAll.checked = pageRows.length > 0 && pageRows.every(f => selected.has(f.path));
+        });
+      });
+    }
+
+    document.getElementById('files-pagination').innerHTML = `
+      <span>Page ${filePage} of ${totalPages} · ${filtered.length} file${filtered.length === 1 ? '' : 's'}</span>
+      <div class="flex gap-2">
+        <button id="btn-files-prev" ${filePage <= 1 ? 'disabled' : ''} class="px-3 py-1.5 border border-[#e6eaee] rounded-[10px] text-[12px] font-semibold ${filePage <= 1 ? 'opacity-40' : 'hover:bg-[#f7f9fa]'}">Prev</button>
+        <button id="btn-files-next" ${filePage >= totalPages ? 'disabled' : ''} class="px-3 py-1.5 border border-[#e6eaee] rounded-[10px] text-[12px] font-semibold ${filePage >= totalPages ? 'opacity-40' : 'hover:bg-[#f7f9fa]'}">Next</button>
+      </div>`;
+    document.getElementById('btn-files-prev')?.addEventListener('click', () => { if (filePage > 1) { filePage--; renderFiles(); } });
+    document.getElementById('btn-files-next')?.addEventListener('click', () => { if (filePage < totalPages) { filePage++; renderFiles(); } });
+
+    const selectAll = document.getElementById('f-select-all');
+    selectAll.checked = pageRows.length > 0 && pageRows.every(f => selected.has(f.path));
+    updateBulkBar();
+  }
+
+  async function loadFiles() {
+    const result = await callAdminApi('storage-list');
+    allFiles = result.files;
+    renderFiles();
+  }
 
   function usageCard(label, used, limit) {
     return `<div class="bg-white rounded-card border border-[#b8e4e0] px-4 py-3.5">
@@ -139,7 +271,37 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       window.location.href = auth.base + 'login';
     });
 
-    document.getElementById('btn-recheck')?.addEventListener('click', loadStorage);
+    const typeSelect = document.getElementById('f-file-type');
+    for (const [value, label] of Object.entries(TYPE_LABELS)) {
+      typeSelect.insertAdjacentHTML('beforeend', `<option value="${value}">${esc(label)}</option>`);
+    }
+
+    document.getElementById('f-file-search')?.addEventListener('input', () => { filePage = 1; renderFiles(); });
+    document.getElementById('f-file-type')?.addEventListener('change', () => { filePage = 1; renderFiles(); });
+    document.getElementById('f-select-all')?.addEventListener('change', (e) => {
+      const start = (filePage - 1) * FILE_PAGE_SIZE;
+      const pageRows = filteredFiles().slice(start, start + FILE_PAGE_SIZE);
+      if (e.target.checked) pageRows.forEach(f => selected.add(f.path));
+      else pageRows.forEach(f => selected.delete(f.path));
+      renderFiles();
+    });
+    document.getElementById('btn-delete-selected')?.addEventListener('click', async (e) => {
+      if (!confirm(`Delete ${selected.size} file(s)? This cannot be undone.`)) return;
+      e.target.disabled = true; e.target.textContent = 'Deleting…';
+      try {
+        await callAdminApi('storage-delete', { paths: [...selected] });
+        selected.clear();
+        await loadStorage();
+        await loadFiles();
+      } catch (err) {
+        alert('Failed to delete files: ' + err.message);
+      } finally {
+        e.target.disabled = false; e.target.textContent = 'Delete selected';
+      }
+    });
+
+    document.getElementById('btn-recheck')?.addEventListener('click', async () => { await loadStorage(); await loadFiles(); });
     await loadStorage();
+    await loadFiles();
   }
 </script>

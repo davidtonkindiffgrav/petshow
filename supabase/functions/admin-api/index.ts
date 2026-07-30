@@ -995,7 +995,7 @@ async function runHealthCheck(supabase: any, stripe: Stripe) {
 }
 
 // ── Storage Monitoring ───────────────────────────────────────────────────────────
-const KNOWN_PREFIXES = ['shows', 'sponsors', 'judges', 'profiles', 'entries', 'certs', 'settlements'];
+const KNOWN_PREFIXES = ['shows', 'sponsors', 'judges', 'profiles', 'entries', 'certs', 'awards', 'settlements'];
 const IMAGE_EXT = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']);
 const VIDEO_EXT = new Set(['mp4', 'mov', 'webm', 'avi', 'mkv']);
 
@@ -1014,8 +1014,8 @@ function classifyFile(name: string, mimetype?: string): 'images' | 'videos' | 'o
 // O(number of files) — fine at current scale, but revisit (e.g. caching, or
 // only re-walking prefixes that changed) if file counts grow into the tens
 // of thousands and this starts approaching the Edge Function's time budget.
-async function walkBucket(supabase: any, prefix: string): Promise<{ name: string; size: number; mimetype?: string }[]> {
-  const out: { name: string; size: number; mimetype?: string }[] = [];
+async function walkBucket(supabase: any, prefix: string): Promise<{ path: string; name: string; size: number; mimetype?: string; created_at?: string }[]> {
+  const out: { path: string; name: string; size: number; mimetype?: string; created_at?: string }[] = [];
   let offset = 0;
   const limit = 100;
   while (true) {
@@ -1027,7 +1027,7 @@ async function walkBucket(supabase: any, prefix: string): Promise<{ name: string
       if (item.id === null) {
         out.push(...await walkBucket(supabase, path));
       } else {
-        out.push({ name: item.name, size: item.metadata?.size || 0, mimetype: item.metadata?.mimetype });
+        out.push({ path, name: item.name, size: item.metadata?.size || 0, mimetype: item.metadata?.mimetype, created_at: item.created_at });
       }
     }
     if (data.length < limit) break;
@@ -1089,6 +1089,206 @@ async function getStorageUsage(supabase: any) {
     auth_users: { count: profilesCount.count || 0, limit: 50000 },
     computed_at: new Date().toISOString(),
   };
+}
+
+// ── Storage File Manager ─────────────────────────────────────────────────────────
+const TYPE_LABELS: Record<string, string> = {
+  entry_photo: 'Entry photo', club_logo: 'Club logo', banner: 'Banner', org_logo: 'Organisation logo',
+  sponsor_logo: 'Sponsor logo', judge_photo: 'Judge photo', judge_profile_photo: 'Judge profile photo',
+  saved_judge_photo: 'Saved judge photo', avatar: 'Avatar', cert: 'Certificate', award_image: 'Award image', other: 'Other',
+};
+
+function stripExt(name: string): string {
+  return name.replace(/\.[^.]+$/, '');
+}
+
+// Storage public URLs all end in /show-assets/<path> — same extraction
+// copyStorageImage() uses (line ~39) to turn a stored URL back into a bare
+// storage path for suffix matching.
+function urlPath(url: string | null | undefined): string | null {
+  return url ? url.match(/\/show-assets\/(.+)/)?.[1] || null : null;
+}
+
+type ClassifiedPath = { type: string; showId?: string; userId?: string; entryId?: string; awardId?: string; savedJudgeId?: string };
+
+// Classifies a storage path into a file type + owning show/user id, purely
+// from the path convention documented at each upload call site (organiser/
+// show.astro, participant/enter.astro, judge.astro, etc) — no DB lookup
+// needed to determine type. judges/profile and judges/book must be checked
+// before the positional judges/{showId}/judge-N fallback.
+function classifyStoragePath(path: string): ClassifiedPath {
+  const [prefix, seg1, seg2, seg3] = path.split('/');
+
+  if (prefix === 'shows' && seg1 && seg2) {
+    const field = stripExt(seg2);
+    const type = field === 'banner' ? 'banner' : field === 'org-logo' ? 'org_logo' : 'club_logo';
+    return { type, showId: seg1 };
+  }
+  if (prefix === 'sponsors' && seg1 && seg2) {
+    return { type: 'sponsor_logo', showId: seg1 };
+  }
+  if (prefix === 'judges' && seg1 === 'profile' && seg2) {
+    return { type: 'judge_profile_photo', userId: stripExt(seg2) };
+  }
+  if (prefix === 'judges' && seg1 === 'book' && seg2 && seg3) {
+    return { type: 'saved_judge_photo', userId: seg2, savedJudgeId: stripExt(seg3) };
+  }
+  if (prefix === 'judges' && seg1 && seg2) {
+    return { type: 'judge_photo', showId: seg1 };
+  }
+  if (prefix === 'profiles' && seg1 && seg2) {
+    return { type: 'avatar', userId: seg1 };
+  }
+  if (prefix === 'entries' && seg1 && seg2) {
+    return { type: 'entry_photo', showId: seg1 };
+  }
+  if (prefix === 'certs' && seg1 && seg2) {
+    return { type: 'cert', showId: seg1, entryId: stripExt(seg2) };
+  }
+  if (prefix === 'awards' && seg1 && seg2) {
+    return { type: 'award_image', showId: seg1, awardId: stripExt(seg2) };
+  }
+  return { type: 'other' };
+}
+
+async function getStorageList(supabase: any) {
+  const filesPerPrefix = await Promise.all(KNOWN_PREFIXES.map(p => walkBucket(supabase, p)));
+  const classified = filesPerPrefix.flat().map(f => ({ ...f, ...classifyStoragePath(f.path) }));
+
+  const showIds = new Set<string>();
+  const userIds = new Set<string>();
+  const judgeShowIds = new Set<string>();
+  const entryShowIds = new Set<string>();
+  for (const f of classified) {
+    if (f.showId) showIds.add(f.showId);
+    if (f.userId) userIds.add(f.userId);
+    if (f.type === 'judge_photo' && f.showId) judgeShowIds.add(f.showId);
+    if (f.type === 'entry_photo' && f.showId) entryShowIds.add(f.showId);
+  }
+
+  const [showsRes, profilesRes, judgesRes, entriesRes] = await Promise.all([
+    showIds.size ? supabase.from('shows').select('id, title').in('id', [...showIds]) : Promise.resolve({ data: [] }),
+    userIds.size ? supabase.from('profiles').select('id, display_name, first_name, last_name').in('id', [...userIds]) : Promise.resolve({ data: [] }),
+    judgeShowIds.size ? supabase.from('show_judges').select('id, show_id, email, first_name, last_name, photo_url').in('show_id', [...judgeShowIds]) : Promise.resolve({ data: [] }),
+    entryShowIds.size ? supabase.from('show_entries').select('id, show_id, user_id, animal_name, photo_url').in('show_id', [...entryShowIds]) : Promise.resolve({ data: [] }),
+  ]);
+
+  const showTitleById = new Map((showsRes.data || []).map((s: any) => [s.id, s.title]));
+  const profileById = new Map((profilesRes.data || []).map((p: any) => [p.id, p]));
+  const judgeByPath = new Map((judgesRes.data || []).filter((j: any) => j.photo_url).map((j: any) => [urlPath(j.photo_url), j]));
+  const entryByPath = new Map((entriesRes.data || []).filter((e: any) => e.photo_url).map((e: any) => [urlPath(e.photo_url), e]));
+
+  const files = classified.map(f => {
+    let userId = f.userId;
+    let userName: string | undefined;
+
+    if (f.type === 'judge_photo') {
+      const j = judgeByPath.get(f.path);
+      if (j) userName = [j.first_name, j.last_name].filter(Boolean).join(' ') || j.email;
+    } else if (f.type === 'entry_photo') {
+      const e = entryByPath.get(f.path);
+      if (e) { userId = e.user_id; userName = e.animal_name; }
+    }
+    if (!userName && userId) {
+      const p = profileById.get(userId);
+      if (p) userName = p.display_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || undefined;
+    }
+
+    return {
+      path: f.path,
+      name: f.name,
+      size: f.size,
+      mimetype: f.mimetype,
+      created_at: f.created_at,
+      type: f.type,
+      type_label: TYPE_LABELS[f.type] || f.type,
+      show_id: f.showId || null,
+      show_title: (f.showId && showTitleById.get(f.showId)) || null,
+      user_id: userId || null,
+      user_name: userName || null,
+      url: supabase.storage.from('show-assets').getPublicUrl(f.path).data.publicUrl,
+    };
+  });
+
+  return { files, total: files.length, computed_at: new Date().toISOString() };
+}
+
+async function deleteStorageFiles(supabase: any, payload: { paths?: string[] }, actorId: string) {
+  const paths = payload?.paths || [];
+  if (!paths.length) return { deleted: 0, db_references_cleared: 0, errors: [] };
+
+  const classified = paths.map(p => ({ path: p, ...classifyStoragePath(p) }));
+
+  const { error: removeError } = await supabase.storage.from('show-assets').remove(paths);
+  if (removeError) throw new Error('Failed to delete files: ' + removeError.message);
+
+  const judgeShowIds = new Set(classified.filter(f => f.type === 'judge_photo' && f.showId).map(f => f.showId as string));
+  const entryShowIds = new Set(classified.filter(f => f.type === 'entry_photo' && f.showId).map(f => f.showId as string));
+  const [judgesRes, entriesRes] = await Promise.all([
+    judgeShowIds.size ? supabase.from('show_judges').select('id, show_id, photo_url').in('show_id', [...judgeShowIds]) : Promise.resolve({ data: [] }),
+    entryShowIds.size ? supabase.from('show_entries').select('id, show_id, photo_url').in('show_id', [...entryShowIds]) : Promise.resolve({ data: [] }),
+  ]);
+  const judgeByPath = new Map((judgesRes.data || []).filter((j: any) => j.photo_url).map((j: any) => [urlPath(j.photo_url), j]));
+  const entryByPath = new Map((entriesRes.data || []).filter((e: any) => e.photo_url).map((e: any) => [urlPath(e.photo_url), e]));
+
+  const errors: { path: string; message: string }[] = [];
+  let cleared = 0;
+
+  for (const f of classified) {
+    try {
+      switch (f.type) {
+        case 'club_logo':
+          await supabase.from('shows').update({ logo_url: null }).eq('id', f.showId); cleared++; break;
+        case 'banner':
+          await supabase.from('shows').update({ banner_url: null }).eq('id', f.showId); cleared++; break;
+        case 'org_logo':
+          await supabase.from('shows').update({ org_logo_url: null }).eq('id', f.showId); cleared++; break;
+        case 'sponsor_logo':
+          await supabase.from('show_sponsors').update({ logo_url: null }).eq('show_id', f.showId); cleared++; break;
+        case 'award_image':
+          await supabase.from('awards').update({ image_url: null }).eq('id', f.awardId); cleared++; break;
+        case 'saved_judge_photo':
+          await supabase.from('saved_judges').update({ photo_url: null }).eq('id', f.savedJudgeId); cleared++; break;
+        case 'avatar':
+          await supabase.from('profiles').update({ avatar_url: null }).eq('id', f.userId); cleared++; break;
+        case 'cert': {
+          const col = f.path.endsWith('.pdf') ? 'cert_pdf_url' : 'cert_jpg_url';
+          await supabase.from('show_entries').update({ [col]: null }).eq('id', f.entryId);
+          cleared++; break;
+        }
+        case 'judge_photo': {
+          const j = judgeByPath.get(f.path);
+          if (j) { await supabase.from('show_judges').update({ photo_url: null }).eq('id', j.id); cleared++; }
+          break;
+        }
+        case 'entry_photo': {
+          const e = entryByPath.get(f.path);
+          if (e) { await supabase.from('show_entries').update({ photo_url: null }).eq('id', e.id); cleared++; }
+          break;
+        }
+        case 'judge_profile_photo': {
+          const { data: authUser } = await supabase.auth.admin.getUserById(f.userId);
+          const email = authUser?.user?.email;
+          if (email) {
+            const { data: matches } = await supabase.from('show_judges').select('id, photo_url').ilike('email', email);
+            for (const m of (matches || []).filter((m: any) => urlPath(m.photo_url) === f.path)) {
+              await supabase.from('show_judges').update({ photo_url: null }).eq('id', m.id);
+              cleared++;
+            }
+          }
+          break;
+        }
+        default:
+          break; // 'other' (e.g. settlements/*) — nothing to clean up
+      }
+    } catch (err: any) {
+      errors.push({ path: f.path, message: err.message });
+    }
+  }
+
+  await writeAudit(supabase, actorId, 'storage.files_deleted', 'storage', null, { paths, count: paths.length });
+
+  return { deleted: paths.length, db_references_cleared: cleared, errors };
 }
 
 // ── Email Monitoring ─────────────────────────────────────────────────────────────
@@ -1380,6 +1580,12 @@ serve(async (req: Request) => {
         break;
       case 'storage-usage':
         result = await getStorageUsage(supabase);
+        break;
+      case 'storage-list':
+        result = await getStorageList(supabase);
+        break;
+      case 'storage-delete':
+        result = await deleteStorageFiles(supabase, payload, user.id);
         break;
       case 'email-usage':
         result = await getEmailUsage(supabase);
