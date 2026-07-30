@@ -301,22 +301,50 @@ async function getPayments(supabase: any, stripe: Stripe, payload: any) {
   const { data, count, error } = await query;
   if (error) throw new Error('Failed to load payments: ' + error.message);
 
-  // Enrich only the current page with a light Stripe status lookup —
-  // avoids bulk-listing/reconciling all Stripe sessions for every request.
+  // Enrich only the current page with a light Stripe lookup — avoids
+  // bulk-listing/reconciling all Stripe sessions for every request.
   // Direct-charge sessions (the normal case once an organiser has Connect
   // set up) live on the connected account, not the platform account — must
   // pass stripeAccount or retrieve() 404s and silently leaves this blank.
   const enriched = await Promise.all((data || []).map(async (row: any) => {
     let stripe_status: string | null = null;
+    let organiser_received: { amount: number; currency: string } | null = null;
+    let platform_received: { amount: number; currency: string } | null = null;
     if (row.stripe_session_id) {
       try {
-        const session = row.stripe_account_id
-          ? await stripe.checkout.sessions.retrieve(row.stripe_session_id, {}, { stripeAccount: row.stripe_account_id })
-          : await stripe.checkout.sessions.retrieve(row.stripe_session_id);
+        const opts = row.stripe_account_id ? { stripeAccount: row.stripe_account_id } : undefined;
+        // Pull the charge's own balance transaction rather than computing an
+        // estimate locally — its `net` is the actual amount Stripe credited
+        // to the organiser's connected-account balance for this payment,
+        // after Stripe's processing fee and the application fee are both
+        // already deducted.
+        const session: any = await stripe.checkout.sessions.retrieve(row.stripe_session_id, {
+          expand: ['payment_intent.latest_charge.balance_transaction'],
+        }, opts);
         stripe_status = session.payment_status;
-      } catch { /* session may not exist (test cleanup, mode mismatch) */ }
+
+        const charge = session.payment_intent?.latest_charge;
+        const chargeBt = charge?.balance_transaction;
+        if (chargeBt && typeof chargeBt === 'object') {
+          organiser_received = { amount: chargeBt.net / 100, currency: chargeBt.currency.toUpperCase() };
+        }
+
+        // Application fees are transferred to the platform's own Stripe
+        // account, so they're only visible from a platform-account request
+        // (no stripeAccount header) — and Stripe converts them to the
+        // platform account's own settlement currency using its real-time
+        // rate if the charge was in a foreign currency, so this is the real
+        // AUD amount received, not an FX estimate we'd have to maintain.
+        if (row.stripe_account_id && charge?.id) {
+          const fees = await stripe.applicationFees.list({ charge: charge.id, limit: 1, expand: ['data.balance_transaction'] });
+          const feeBt: any = fees.data[0]?.balance_transaction;
+          if (feeBt && typeof feeBt === 'object') {
+            platform_received = { amount: feeBt.net / 100, currency: feeBt.currency.toUpperCase() };
+          }
+        }
+      } catch { /* session/charge may not exist yet, or fee not settled */ }
     }
-    return { ...row, stripe_status };
+    return { ...row, stripe_status, organiser_received, platform_received };
   }));
 
   return { rows: enriched, total: count || 0, page, page_size };
@@ -455,11 +483,27 @@ async function getFilterOptions(supabase: any) {
 }
 
 // ── User Management ───────────────────────────────────────────────────────────
+
+// A club organiser's Connect account lives on their shared organisations row,
+// not their own profile (same resolution as _shared/connect.ts) — reading
+// only the profile's own stripe_account_id would wrongly show every
+// club-affiliated organiser as "not connected" even once the club is fully
+// verified. Reads whatever status was last synced to the DB — no live
+// Stripe call, this is just a list view.
+function connectStatus(row: any): string | null {
+  if (!row.roles?.includes('organiser')) return null;
+  const source = row.organisation_id ? row.organisations : row;
+  if (!source?.stripe_account_id) return 'not_connected';
+  if (source.stripe_charges_ready && source.stripe_payouts_ready) return 'fully_verified';
+  if (source.stripe_charges_ready) return 'charges_only';
+  return 'onboarding';
+}
+
 async function getUsersList(supabase: any, payload: any) {
   const { search, role, suspended, page = 1, page_size = 25 } = payload || {};
   let query = supabase
     .from('profiles')
-    .select('id, display_name, first_name, last_name, roles, organisation_id, suspended_at, created_at', { count: 'exact' })
+    .select('id, display_name, first_name, last_name, roles, organisation_id, suspended_at, created_at, stripe_account_id, stripe_charges_ready, stripe_payouts_ready, organisations(stripe_account_id, stripe_charges_ready, stripe_payouts_ready)', { count: 'exact' })
     .order('created_at', { ascending: false });
 
   if (search) {
@@ -486,7 +530,8 @@ async function getUsersList(supabase: any, payload: any) {
       const { data: userRes } = await supabase.auth.admin.getUserById(row.id);
       email = userRes?.user?.email || null;
     } catch { /* auth user may be missing */ }
-    return { ...row, email };
+    const { organisations, ...rest } = row;
+    return { ...rest, email, connect_status: connectStatus(row) };
   }));
 
   return { rows: enriched, total: count || 0, page, page_size };

@@ -56,7 +56,8 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       <div class="overflow-x-auto"><table class="w-full text-[13px]"><thead>
         <tr class="text-left text-[11px] text-[#9b94a8] uppercase tracking-wide border-b border-[#f5f3fa]">
           <th class="pb-2 pr-3">Date</th><th class="pb-2 pr-3">Show</th><th class="pb-2 pr-3">Entrant</th>
-          <th class="pb-2 pr-3">Amount</th><th class="pb-2 pr-3">Status</th><th class="pb-2 pr-3">Stripe</th>
+          <th class="pb-2 pr-3">Amount</th><th class="pb-2 pr-3">You Received</th><th class="pb-2 pr-3">Organiser Received</th>
+          <th class="pb-2 pr-3">Status</th><th class="pb-2 pr-3">Stripe</th>
         </tr>
       </thead><tbody id="payments-tbody"></tbody></table></div>
       <div id="payments-pagination" class="flex items-center justify-between mt-4 text-[12.5px] text-[#6f6880]"></div>
@@ -165,7 +166,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     const result = await callAdminApi('payments-list', filters);
     const tbody = document.getElementById('payments-tbody');
     if (!result.rows.length) {
-      tbody.innerHTML = `<tr><td colspan="6" class="py-4 text-center text-[#9b94a8]">No payments match these filters.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" class="py-4 text-center text-[#9b94a8]">No payments match these filters.</td></tr>`;
     } else {
       tbody.innerHTML = result.rows.map(r => `
         <tr class="border-b border-[#f5f3fa]">
@@ -173,6 +174,8 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           <td class="py-2 pr-3">${esc(r.shows?.title || '—')}</td>
           <td class="py-2 pr-3">${esc(r.exhibitor_name || r.animal_name || '—')}</td>
           <td class="py-2 pr-3 font-semibold">${esc(r.shows?.currency || '')} ${Number(r.entry_fee_paid || 0).toFixed(2)}</td>
+          <td class="py-2 pr-3">${r.platform_received ? esc(r.platform_received.currency) + ' ' + r.platform_received.amount.toFixed(2) : '—'}</td>
+          <td class="py-2 pr-3">${r.organiser_received ? esc(r.organiser_received.currency) + ' ' + r.organiser_received.amount.toFixed(2) : '—'}</td>
           <td class="py-2 pr-3">${statusPill(r.status)}</td>
           <td class="py-2 pr-3 text-[#9b94a8]">${esc(r.stripe_status || '—')}</td>
         </tr>
@@ -277,6 +280,8 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           { label: 'Entrant', value: r => r.exhibitor_name || r.animal_name || '' },
           { label: 'Currency', value: r => r.shows?.currency || '' },
           { label: 'Amount', value: r => r.entry_fee_paid },
+          { label: 'You Received', value: r => r.platform_received ? `${r.platform_received.currency} ${r.platform_received.amount.toFixed(2)}` : '' },
+          { label: 'Organiser Received', value: r => r.organiser_received ? `${r.organiser_received.currency} ${r.organiser_received.amount.toFixed(2)}` : '' },
           { label: 'Status', value: r => r.status },
           { label: 'Stripe Status', value: r => r.stripe_status || '' },
         ]);

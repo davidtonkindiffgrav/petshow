@@ -83,6 +83,10 @@ const STATUS_PILL_COLORS = {
   overdue:          'background:#fee2e2;color:#ef4444;',
   active:           'background:#dcf6e3;color:#16a34a;',
   suspended:        'background:#fee2e2;color:#ef4444;',
+  fully_verified:   'background:#dcf6e3;color:#16a34a;',
+  charges_only:     'background:#fef1d6;color:#e89b1c;',
+  onboarding:       'background:#fef1d6;color:#e89b1c;',
+  not_connected:    'background:#f5f3fa;color:#6f6880;',
 };
 
 export function statusPill(status) {
