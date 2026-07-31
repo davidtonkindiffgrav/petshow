@@ -28,6 +28,9 @@ export const PROMO_DEFAULTS = {
   headlineSize: 48, // px — organiser-set exact size, not a percentage
   headlineColor: '#ffffff',
   headlineBg: 'fill', // 'fill' = colored rounded panel behind the text, 'none' = transparent
+  headlineBold: true,
+  headlineItalic: false,
+  headlineUnderline: false,
   bg_color: null, // null = follow show.banner_color / DEFAULT_ACCENT
   showLogo: { ...ELEMENT_DEFAULTS, pos: 'tl' },
   clubLogo: { ...ELEMENT_DEFAULTS, pos: 'tr' },
@@ -112,14 +115,15 @@ function fitTitleLines(ctx, text, maxW, maxPx, minPx) {
 // Greedy word-wrap at a fixed font size (no auto-shrink) — used for the
 // headline, where the organiser picks the exact size and expects the text
 // to wrap around it rather than be shrunk to fit. Explicit line breaks in
-// the input are preserved as forced line breaks; each resulting line is
-// then wrapped independently.
-function wrapAtSize(ctx, text, maxW, px, maxLines = 10) {
-  ctx.font = `800 ${px}px ${FONT}`;
+// the input are preserved as forced line breaks (including blank lines,
+// which come out as an empty line rather than being collapsed away); each
+// non-blank line is then wrapped independently.
+function wrapAtSize(ctx, text, maxW, font, maxLines = 10) {
+  ctx.font = font;
   const lines = [];
-  for (const paragraph of text.split(/\n+/)) {
+  for (const paragraph of text.split('\n')) {
     const words = paragraph.split(/\s+/).filter(Boolean);
-    if (!words.length) continue;
+    if (!words.length) { lines.push(''); continue; }
     let cur = '';
     for (const word of words) {
       const test = cur ? `${cur} ${word}` : word;
@@ -162,7 +166,7 @@ function resolveStacks(items) {
   return { positions, brWidth };
 }
 
-export async function renderPromoImage(canvas, { show, sponsors = [], headline, headlineSize = 48, headlineColor = '#ffffff', headlineBg = 'fill', bgColor, elements, publicUrl }) {
+export async function renderPromoImage(canvas, { show, sponsors = [], headline, headlineSize = 48, headlineColor = '#ffffff', headlineBg = 'fill', headlineBold = true, headlineItalic = false, headlineUnderline = false, bgColor, elements, publicUrl }) {
   canvas.width  = W;
   canvas.height = H;
   const ctx = canvas.getContext('2d');
@@ -255,13 +259,14 @@ export async function renderPromoImage(canvas, { show, sponsors = [], headline, 
   // size with a long headline can grow to fill most of the image.
   const headlineText = (headline ?? PROMO_DEFAULTS.headline).trim().toUpperCase();
   if (headlineText) {
+    const headlineFont = `${headlineItalic ? 'italic ' : ''}${headlineBold ? 800 : 400} ${headlineSize}px ${FONT}`;
     const hMaxW = W - PAD * 2 - 80;
-    const hLines = wrapAtSize(ctx, headlineText, hMaxW, headlineSize);
+    const hLines = wrapAtSize(ctx, headlineText, hMaxW, headlineFont);
     const hLineH = headlineSize * 1.2;
     const padX = 32, padY = Math.max(16, headlineSize * 0.28);
 
     const panelW = Math.min(
-      Math.max(...hLines.map(l => { ctx.font = `800 ${headlineSize}px ${FONT}`; return ctx.measureText(l).width; })) + padX * 2,
+      Math.max(...hLines.map(l => { ctx.font = headlineFont; return ctx.measureText(l).width; })) + padX * 2,
       hMaxW + padX * 2,
     );
     const panelH = hLines.length * hLineH + padY * 2;
@@ -275,9 +280,17 @@ export async function renderPromoImage(canvas, { show, sponsors = [], headline, 
     }
 
     ctx.fillStyle = headlineColor;
-    ctx.font      = `800 ${headlineSize}px ${FONT}`;
+    ctx.font      = headlineFont;
     ctx.textAlign = 'center';
-    hLines.forEach((line, i) => ctx.fillText(line, W / 2, panelY + padY + headlineSize * 0.82 + i * hLineH));
+    hLines.forEach((line, i) => {
+      const baseline = panelY + padY + headlineSize * 0.82 + i * hLineH;
+      ctx.fillText(line, W / 2, baseline);
+      if (headlineUnderline) {
+        const lineW = ctx.measureText(line).width;
+        const underlineH = Math.max(2, headlineSize * 0.05);
+        ctx.fillRect(W / 2 - lineW / 2, baseline + headlineSize * 0.12, lineW, underlineH);
+      }
+    });
   }
 
   // ── Bottom-left text block (title + date) ────────────────────────────────

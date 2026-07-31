@@ -53,8 +53,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           <!-- Headline -->
           <div class="bg-white rounded-card border border-[#b8e4e0] p-4">
             <p class="text-[11px] font-bold text-[#9b94a8] uppercase tracking-wider mb-3">Headline</p>
-            <textarea id="inp-headline" maxlength="120" rows="2" placeholder="Entries Open"
-              class="w-full text-[13px] border border-[#e8e4f0] rounded-[8px] px-3 py-2 focus:outline-none focus:border-brand resize-none"></textarea>
+            <textarea id="inp-headline" maxlength="120" rows="4" placeholder="Entries Open"
+              class="w-full text-[13px] border border-[#e8e4f0] rounded-[8px] px-3 py-2 focus:outline-none focus:border-brand resize-y"></textarea>
             <p class="text-[11px] text-[#9b94a8] mt-2 mb-3">Centered under the banner. Wraps automatically — a large size can fill most of the image.</p>
             <div class="flex items-center justify-between mb-3">
               <span class="text-[12px] font-semibold text-[#1c1626]">Font Size</span>
@@ -68,11 +68,19 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
               <span class="text-[12px] font-semibold text-[#1c1626]">Text Color</span>
               <input type="color" id="inp-headline-color" class="w-9 h-9 rounded-lg border border-[#b8e4e0] cursor-pointer p-0.5" />
             </div>
-            <div>
+            <div class="mb-3">
               <p class="text-[12px] font-semibold text-[#1c1626] mb-1.5">Background</p>
               <div class="grid grid-cols-2 gap-1.5" id="headline-bg-opts">
                 <button type="button" data-val="fill" class="headline-bg-opt text-[12px] font-semibold py-1.5 rounded-[7px] border transition-colors">Filled</button>
                 <button type="button" data-val="none" class="headline-bg-opt text-[12px] font-semibold py-1.5 rounded-[7px] border transition-colors">Transparent</button>
+              </div>
+            </div>
+            <div>
+              <p class="text-[12px] font-semibold text-[#1c1626] mb-1.5">Style</p>
+              <div class="grid grid-cols-3 gap-1.5" id="headline-style-opts">
+                <button type="button" data-style="bold" class="headline-style-opt font-bold text-[13px] py-1.5 rounded-[7px] border transition-colors">B</button>
+                <button type="button" data-style="italic" class="headline-style-opt italic text-[13px] py-1.5 rounded-[7px] border transition-colors">I</button>
+                <button type="button" data-style="underline" class="headline-style-opt underline text-[13px] py-1.5 rounded-[7px] border transition-colors">U</button>
               </div>
             </div>
           </div>
@@ -269,6 +277,18 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     });
   }
 
+  const HEADLINE_STYLE_KEY   = { bold: 'headlineBold', italic: 'headlineItalic', underline: 'headlineUnderline' };
+  const HEADLINE_STYLE_CLASS = { bold: 'font-bold', italic: 'italic', underline: 'underline' };
+
+  function syncHeadlineStyleUI() {
+    document.querySelectorAll('.headline-style-opt').forEach(btn => {
+      const active = design[HEADLINE_STYLE_KEY[btn.dataset.style]];
+      btn.className = `headline-style-opt ${HEADLINE_STYLE_CLASS[btn.dataset.style]} text-[13px] py-1.5 rounded-[7px] border transition-colors ${
+        active ? 'border-brand bg-brand/10 text-brand' : 'border-[#efebf5] text-[#6f6880] hover:border-brand/40'
+      }`;
+    });
+  }
+
   async function redraw() {
     if (renderPending) { renderQueued = true; return; }
     renderPending = true;
@@ -280,6 +300,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       headlineSize: design.headlineSize,
       headlineColor: design.headlineColor,
       headlineBg: design.headlineBg,
+      headlineBold: design.headlineBold,
+      headlineItalic: design.headlineItalic,
+      headlineUnderline: design.headlineUnderline,
       bgColor:  design.bg_color || bgColorAuto,
       elements: { showLogo: design.showLogo, clubLogo: design.clubLogo, sponsors: design.sponsors, qr: design.qr },
       publicUrl,
@@ -372,6 +395,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           headlineSize: saved.headlineSize ?? design.headlineSize,
           headlineColor: saved.headlineColor ?? design.headlineColor,
           headlineBg: saved.headlineBg ?? design.headlineBg,
+          headlineBold: saved.headlineBold ?? design.headlineBold,
+          headlineItalic: saved.headlineItalic ?? design.headlineItalic,
+          headlineUnderline: saved.headlineUnderline ?? design.headlineUnderline,
           bg_color: saved.bg_color ?? null,
           showLogo: { ...design.showLogo, ...saved.showLogo },
           clubLogo: { ...design.clubLogo, ...saved.clubLogo },
@@ -385,6 +411,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.getElementById('inp-headline-size').value = design.headlineSize;
     document.getElementById('inp-headline-color').value = design.headlineColor;
     syncHeadlineBgUI();
+    syncHeadlineStyleUI();
     buildElementControls();
     syncElementUI();
     syncBgColorUI();
@@ -415,6 +442,14 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       if (!btn) return;
       design.headlineBg = btn.dataset.val;
       syncHeadlineBgUI();
+      redraw();
+    });
+    document.getElementById('headline-style-opts').addEventListener('click', e => {
+      const btn = e.target.closest('.headline-style-opt');
+      if (!btn) return;
+      const key = HEADLINE_STYLE_KEY[btn.dataset.style];
+      design[key] = !design[key];
+      syncHeadlineStyleUI();
       redraw();
     });
     document.getElementById('inp-bg-color').addEventListener('input', e => {
