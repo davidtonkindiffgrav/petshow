@@ -127,14 +127,16 @@ function dayKey(iso: string): string {
 }
 
 // Build one bucket per day between start and today (inclusive), pre-seeded at 0.
-function buildDayBuckets(start: Date): Record<string, { date: string; new_users: number; new_shows: number; new_entries: number; revenue_aud: number }> {
+// revenue is keyed by currency rather than a single fixed field — shows can run
+// in any of 8 currencies, and which ones are actually active shifts over time.
+function buildDayBuckets(start: Date): Record<string, { date: string; new_users: number; new_shows: number; new_entries: number; revenue: Record<string, number> }> {
   const buckets: Record<string, any> = {};
   const startDay = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
   const today = new Date();
   const todayDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
   for (let d = new Date(startDay); d <= todayDay; d.setUTCDate(d.getUTCDate() + 1)) {
     const key = d.toISOString().slice(0, 10);
-    buckets[key] = { date: key, new_users: 0, new_shows: 0, new_entries: 0, revenue_aud: 0 };
+    buckets[key] = { date: key, new_users: 0, new_shows: 0, new_entries: 0, revenue: {} };
   }
   return buckets;
 }
@@ -156,10 +158,8 @@ async function getTrends(supabase: any, range: string) {
     const k = dayKey(e.created_at);
     if (!buckets[k]) continue;
     buckets[k].new_entries++;
-    // Revenue chart shows the platform's primary currency (AUD) only —
-    // a small early platform mixing AUD/NZD in one line chart would be
-    // misleading; NZD is still fully represented in the KPI tiles above.
-    if ((e.shows?.currency || 'AUD') === 'AUD') buckets[k].revenue_aud += Number(e.entry_fee_paid) || 0;
+    const cur = e.shows?.currency || 'AUD';
+    buckets[k].revenue[cur] = (buckets[k].revenue[cur] || 0) + (Number(e.entry_fee_paid) || 0);
   }
 
   return Object.values(buckets);

@@ -163,8 +163,26 @@ const base = rawBase.endsWith('/') ? rawBase : rawBase + '/';
 
   function renderCharts(trends) {
     const mk = (field) => trends.map((d) => ({ value: d[field] }));
+
+    // One sparkline per currency that actually had revenue in this range —
+    // shows can run in any of 8 currencies, and a single hardcoded-currency
+    // chart would silently show zero for every other currency's activity.
+    // Ordered by total so the busiest currency leads.
+    const currencyTotals = {};
+    for (const d of trends) {
+      for (const [cur, amt] of Object.entries(d.revenue || {})) {
+        currencyTotals[cur] = (currencyTotals[cur] || 0) + amt;
+      }
+    }
+    const activeCurrencies = Object.keys(currencyTotals)
+      .filter((cur) => currencyTotals[cur] > 0)
+      .sort((a, b) => currencyTotals[b] - currencyTotals[a]);
+    const revenueTiles = activeCurrencies.map((cur) =>
+      trendTile(`Revenue (${cur})`, trends.map((d) => ({ value: d.revenue?.[cur] || 0 })), (v) => `${cur} ${v.toFixed(2)}`)
+    );
+
     document.getElementById('chart-grid').innerHTML = [
-      trendTile('Revenue (AUD)', mk('revenue_aud'), (v) => `AUD ${v.toFixed(2)}`),
+      ...revenueTiles,
       trendTile('New Users', mk('new_users'), (v) => String(Math.round(v))),
       trendTile('Shows Created', mk('new_shows'), (v) => String(Math.round(v))),
       trendTile('Entries Received', mk('new_entries'), (v) => String(Math.round(v))),
