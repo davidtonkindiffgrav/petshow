@@ -165,6 +165,29 @@ async function getTrends(supabase: any, range: string) {
   return Object.values(buckets);
 }
 
+// Real, not estimated — the platform's true lifetime earnings are whatever
+// Stripe actually holds in its balance right now, plus whatever has already
+// been paid out to the bank (money that left the balance but was still
+// earned). No formula, no per-entry/per-session guessing: this is ground
+// truth pulled straight from Stripe.
+async function sumPayoutsByCurrency(stripe: Stripe): Promise<Record<string, number>> {
+  const totals: Record<string, number> = {};
+  let startingAfter: string | undefined;
+  for (;;) {
+    const page: any = await stripe.payouts.list({ limit: 100, ...(startingAfter ? { starting_after: startingAfter } : {}) });
+    for (const p of page.data) {
+      // Failed/canceled payouts get credited straight back to the Stripe
+      // balance, so counting them here too would double-count that money.
+      if (p.status === 'failed' || p.status === 'canceled') continue;
+      const cur = p.currency.toUpperCase();
+      totals[cur] = (totals[cur] || 0) + p.amount / 100;
+    }
+    if (!page.has_more || !page.data.length) break;
+    startingAfter = page.data[page.data.length - 1].id;
+  }
+  return totals;
+}
+
 async function getStats(supabase: any, payload: any) {
   const now = new Date();
   const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
@@ -204,12 +227,18 @@ async function getStats(supabase: any, payload: any) {
   }
 
   let stripe_balance: any = null;
+  let lifetime_earnings: Record<string, number> = {};
   try {
-    const bal = await stripeClient().balance.retrieve();
+    const stripe = stripeClient();
+    const [bal, payoutTotals] = await Promise.all([stripe.balance.retrieve(), sumPayoutsByCurrency(stripe)]);
     stripe_balance = {
       available: bal.available.map((b: any) => ({ amount: b.amount / 100, currency: b.currency.toUpperCase() })),
       pending: bal.pending.map((b: any) => ({ amount: b.amount / 100, currency: b.currency.toUpperCase() })),
     };
+    lifetime_earnings = { ...payoutTotals };
+    for (const b of [...stripe_balance.available, ...stripe_balance.pending]) {
+      lifetime_earnings[b.currency] = (lifetime_earnings[b.currency] || 0) + b.amount;
+    }
   } catch { /* surfaced via System Health instead of failing the whole dashboard */ }
 
   // Recent activity — merge a few small queries, each independently safe to fail.
@@ -239,6 +268,7 @@ async function getStats(supabase: any, payload: any) {
     total_entrants: entrantsRes.count || 0,
     total_accounts: accountsRes.count || 0,
     stripe_balance,
+    lifetime_earnings,
     activity: activity.slice(0, 15),
     trends,
   };

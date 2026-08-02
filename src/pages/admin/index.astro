@@ -28,7 +28,7 @@ const base = rawBase.endsWith('/') ? rawBase : rawBase + '/';
       <!-- LEFT column -->
       <div class="flex flex-col gap-[18px] min-w-0">
 
-        <div id="hero-kpi-grid" class="grid grid-cols-4 gap-3"></div>
+        <div id="hero-kpi-grid" class="grid gap-3" style="grid-template-columns:repeat(auto-fill,minmax(190px,1fr));"></div>
 
         <div id="secondary-kpi-grid" class="grid grid-cols-6 gap-3"></div>
 
@@ -125,6 +125,23 @@ const base = rawBase.endsWith('/') ? rawBase : rawBase + '/';
     </div>`;
   }
 
+  // Your 3 main currencies always show, even at $0.00, so this card never
+  // looks incomplete — any other currency only appears once it has real
+  // money in it. Real figures only (Stripe balance + payouts), no formula.
+  const LIFETIME_BASE_CURRENCIES = ['AUD', 'USD', 'NZD'];
+  function lifetimeEarningsRows(byCurrency) {
+    const map = { ...(byCurrency || {}) };
+    const extras = Object.keys(map)
+      .filter((cur) => !LIFETIME_BASE_CURRENCIES.includes(cur) && map[cur])
+      .sort((a, b) => map[b] - map[a]);
+    const order = [...LIFETIME_BASE_CURRENCIES, ...extras];
+    return order.map((cur) => `
+      <div class="flex items-center justify-between py-0.5">
+        <span class="text-[12px] font-semibold" style="color:#8492a3;">${esc(cur)}</span>
+        <span class="text-[14px] font-extrabold" style="color:#10233f;">${Number(map[cur] || 0).toFixed(2)}</span>
+      </div>`).join('');
+  }
+
   function renderHeroKpis(stats) {
     const el = document.getElementById('hero-kpi-grid');
     el.innerHTML = [
@@ -132,6 +149,7 @@ const base = rawBase.endsWith('/') ? rawBase : rawBase + '/';
       heroTile('Entry Payments This Month', heroCurrencyValue(stats.revenue_month, {}) + `<p class="text-[11.5px] mt-0.5" style="color:#8492a3;">Not platform income</p>`),
       heroTile('Stripe Balance', heroCurrencyValue(stats.stripe_balance?.available || [], {}) + `<p class="text-[11.5px] mt-0.5" style="color:#8492a3;">Available now, live</p>`),
       heroTile('Platform Fees Earned', heroCurrencyValue(stats.platform_fees_month, {}) + `<p class="text-[11.5px] mt-0.5" style="color:#8492a3;">This month, estimated</p>`),
+      heroTile('Lifetime Earnings', lifetimeEarningsRows(stats.lifetime_earnings) + `<p class="text-[11px] mt-1" style="color:#8492a3;">All-time, real — balance + payouts</p>`),
     ].join('');
   }
 
