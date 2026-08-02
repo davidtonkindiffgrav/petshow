@@ -249,7 +249,7 @@ async function getFinancialSummary(supabase: any, payload: any) {
 
   let query = supabase
     .from('show_entries')
-    .select('entry_fee_paid, created_at, shows!inner(currency, organisation_id)')
+    .select('entry_fee_paid, entry_net_amount, created_at, shows!inner(currency, organisation_id)')
     .eq('status', 'confirmed');
   if (show_id) query = query.eq('show_id', show_id);
   if (organisation_id) query = query.eq('shows.organisation_id', organisation_id);
@@ -267,10 +267,27 @@ async function getFinancialSummary(supabase: any, payload: any) {
     const cur = e.shows?.currency || 'AUD';
     const total = Number(e.entry_fee_paid) || 0;
     gross_revenue[cur] = (gross_revenue[cur] || 0) + total;
-    const pf = platformFee(total, cur, settings);
-    const sf = stripeFeeEstimate(total, cur, settings);
-    platform_revenue[cur] = (platform_revenue[cur] || 0) + (pf ?? 0);
-    stripe_processing_fees[cur] = (stripe_processing_fees[cur] || 0) + (sf ?? 0);
+    const pf = platformFee(total, cur, settings) ?? 0;
+    const sf = stripeFeeEstimate(total, cur, settings) ?? 0;
+
+    // entry_net_amount is the entry's real share of its checkout session's
+    // actual Stripe net (set by stripe-webhook/backfill-entry-net-amount) —
+    // it already reflects fees charged once per session, not once per entry.
+    // pf/sf above are single-entry estimates and badly overstate fees for any
+    // entry that shared a checkout with others (e.g. the NZD floor fee gets
+    // counted on every entry in the session instead of once for the whole
+    // session), so prefer the real figure and only fall back to the estimate
+    // split for entries that haven't settled yet.
+    if (e.entry_net_amount != null) {
+      const realFees = total - Number(e.entry_net_amount);
+      const estTotal = pf + sf;
+      const platformShare = estTotal > 0 ? realFees * (pf / estTotal) : realFees / 2;
+      platform_revenue[cur] = (platform_revenue[cur] || 0) + platformShare;
+      stripe_processing_fees[cur] = (stripe_processing_fees[cur] || 0) + (realFees - platformShare);
+    } else {
+      platform_revenue[cur] = (platform_revenue[cur] || 0) + pf;
+      stripe_processing_fees[cur] = (stripe_processing_fees[cur] || 0) + sf;
+    }
   }
   const net_paid_to_organisers: Record<string, number> = {};
   for (const cur of Object.keys(gross_revenue)) {
