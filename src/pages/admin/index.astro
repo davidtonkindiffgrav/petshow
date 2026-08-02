@@ -128,8 +128,8 @@ const base = rawBase.endsWith('/') ? rawBase : rawBase + '/';
   function renderHeroKpis(stats) {
     const el = document.getElementById('hero-kpi-grid');
     el.innerHTML = [
-      heroTile('Revenue Today', heroCurrencyValue(stats.revenue_today, { bigColor: '#fff', capColor: '#7fa0cc' }), true),
-      heroTile('Revenue This Month', heroCurrencyValue(stats.revenue_month, {})),
+      heroTile('Entry Payments Today', heroCurrencyValue(stats.revenue_today, { bigColor: '#fff', capColor: '#7fa0cc' }) + `<p class="text-[11.5px] mt-0.5" style="color:#7fa0cc;">Not platform income</p>`, true),
+      heroTile('Entry Payments This Month', heroCurrencyValue(stats.revenue_month, {}) + `<p class="text-[11.5px] mt-0.5" style="color:#8492a3;">Not platform income</p>`),
       heroTile('Stripe Balance', heroCurrencyValue(stats.stripe_balance?.available || [], {}) + `<p class="text-[11.5px] mt-0.5" style="color:#8492a3;">Available now, live</p>`),
       heroTile('Platform Fees Earned', heroCurrencyValue(stats.platform_fees_month, {}) + `<p class="text-[11.5px] mt-0.5" style="color:#8492a3;">This month, estimated</p>`),
     ].join('');
@@ -204,7 +204,7 @@ const base = rawBase.endsWith('/') ? rawBase : rawBase + '/';
 
   function renderSectionSummaries(stats, financial, stripeEvents, health, storage, email) {
     const financialCard = summaryCard('Financial Centre', `${base}admin/financial`,
-      statBlock('Gross revenue', primaryAmount(financial.gross_revenue) || '—') +
+      statBlock('Total entry payments', primaryAmount(financial.gross_revenue) || '—') +
       statBlock('Net to organisers', primaryAmount(financial.net_paid_to_organisers) || '—') +
       statBlock('Failed payments', String(stripeEvents.failed_payments.length), stripeEvents.failed_payments.length ? '#c53d3d' : null) +
       statBlock('Open disputes', String(stripeEvents.disputes.length), stripeEvents.disputes.length ? '#c53d3d' : null)
