@@ -139,7 +139,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     const el = document.getElementById('summary-grid');
     el.innerHTML = [
       balanceCard(summary.stripe_balance),
-      kpiCard('Gross Revenue', currencyTable(summary.gross_revenue, MONEY_TABLE)),
+      kpiCard('Total Entry Payments', currencyTable(summary.gross_revenue, MONEY_TABLE), 'Passes through to organisers, not platform income'),
       kpiCard('Platform Revenue', currencyTable(summary.platform_revenue, MONEY_TABLE), 'Estimated'),
       kpiCard('Processing Fees', currencyTable(summary.stripe_processing_fees, MONEY_TABLE), 'Estimated'),
       kpiCard('Net Paid to Organisers', currencyTable(summary.net_paid_to_organisers, MONEY_TABLE), 'Estimated'),
