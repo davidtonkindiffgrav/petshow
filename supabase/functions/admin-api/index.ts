@@ -285,7 +285,7 @@ async function getPayments(supabase: any, stripe: Stripe, payload: any) {
 
   let query = supabase
     .from('show_entries')
-    .select('id, animal_name, exhibitor_name, exhibitor_email, entry_fee_paid, status, stripe_session_id, stripe_account_id, created_at, shows!inner(id, title, currency, organisation_id)', { count: 'exact' })
+    .select('id, animal_name, exhibitor_name, exhibitor_email, entry_fee_paid, entry_net_amount, status, stripe_session_id, stripe_account_id, created_at, shows!inner(id, title, currency, organisation_id)', { count: 'exact' })
     .order('created_at', { ascending: false });
 
   if (show_id) query = query.eq('show_id', show_id);
@@ -301,6 +301,22 @@ async function getPayments(supabase: any, stripe: Stripe, payload: any) {
   const { data, count, error } = await query;
   if (error) throw new Error('Failed to load payments: ' + error.message);
 
+  // One checkout session can cover several entries (an entrant paying for
+  // multiple categories in one go) — the session/charge only exists once,
+  // so its net amount must be split across however many entries share it,
+  // never shown in full on every one of those rows.
+  const sessionIds = [...new Set((data || []).map((r: any) => r.stripe_session_id).filter(Boolean))];
+  const sessionEntryCounts: Record<string, number> = {};
+  if (sessionIds.length) {
+    const { data: sessionRows } = await supabase
+      .from('show_entries')
+      .select('stripe_session_id')
+      .in('stripe_session_id', sessionIds);
+    for (const r of (sessionRows || [])) {
+      sessionEntryCounts[r.stripe_session_id] = (sessionEntryCounts[r.stripe_session_id] || 0) + 1;
+    }
+  }
+
   // Enrich only the current page with a light Stripe lookup — avoids
   // bulk-listing/reconciling all Stripe sessions for every request.
   // Direct-charge sessions (the normal case once an organiser has Connect
@@ -310,6 +326,15 @@ async function getPayments(supabase: any, stripe: Stripe, payload: any) {
     let stripe_status: string | null = null;
     let organiser_received: { amount: number; currency: string } | null = null;
     let platform_received: { amount: number; currency: string } | null = null;
+    const entryCount = (row.stripe_session_id && sessionEntryCounts[row.stripe_session_id]) || 1;
+
+    // entry_net_amount is this entry's own share of its session's net, set by
+    // stripe-webhook/backfill-entry-net-amount at confirmation time — prefer
+    // it over a fresh Stripe lookup so we don't have to re-derive the split.
+    if (row.entry_net_amount != null) {
+      organiser_received = { amount: Number(row.entry_net_amount), currency: row.shows?.currency || 'AUD' };
+    }
+
     if (row.stripe_session_id) {
       try {
         const opts = row.stripe_account_id ? { stripeAccount: row.stripe_account_id } : undefined;
@@ -325,8 +350,10 @@ async function getPayments(supabase: any, stripe: Stripe, payload: any) {
 
         const charge = session.payment_intent?.latest_charge;
         const chargeBt = charge?.balance_transaction;
-        if (chargeBt && typeof chargeBt === 'object') {
-          organiser_received = { amount: chargeBt.net / 100, currency: chargeBt.currency.toUpperCase() };
+        if (!organiser_received && chargeBt && typeof chargeBt === 'object') {
+          // This entry's own net amount hasn't been backfilled yet — divide
+          // the whole session's net across the entries that share it.
+          organiser_received = { amount: (chargeBt.net / 100) / entryCount, currency: chargeBt.currency.toUpperCase() };
         }
 
         // Application fees are transferred to the platform's own Stripe
@@ -335,11 +362,13 @@ async function getPayments(supabase: any, stripe: Stripe, payload: any) {
         // platform account's own settlement currency using its real-time
         // rate if the charge was in a foreign currency, so this is the real
         // AUD amount received, not an FX estimate we'd have to maintain.
+        // Same split-per-entry reasoning as organiser_received above — one
+        // application fee per session, not per entry.
         if (row.stripe_account_id && charge?.id) {
           const fees = await stripe.applicationFees.list({ charge: charge.id, limit: 1, expand: ['data.balance_transaction'] });
           const feeBt: any = fees.data[0]?.balance_transaction;
           if (feeBt && typeof feeBt === 'object') {
-            platform_received = { amount: feeBt.net / 100, currency: feeBt.currency.toUpperCase() };
+            platform_received = { amount: (feeBt.net / 100) / entryCount, currency: feeBt.currency.toUpperCase() };
           }
         }
       } catch { /* session/charge may not exist yet, or fee not settled */ }
