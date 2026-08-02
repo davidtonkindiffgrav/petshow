@@ -174,7 +174,7 @@ async function getStats(supabase: any, payload: any) {
 
   const [entriesTodayRes, entriesMonthRes, showsRes, orgsRes, entrantsRes, accountsRes] = await Promise.all([
     supabase.from('show_entries').select('entry_fee_paid, created_at, shows(currency)').eq('status', 'confirmed').gte('created_at', todayStart),
-    supabase.from('show_entries').select('entry_fee_paid, created_at, shows(currency)').eq('status', 'confirmed').gte('created_at', monthStart),
+    supabase.from('show_entries').select('id, entry_fee_paid, created_at, stripe_session_id, shows(currency)').eq('status', 'confirmed').gte('created_at', monthStart),
     supabase.from('shows').select('id', { count: 'exact', head: true }).eq('status', 'published'),
     supabase.from('organisations').select('id', { count: 'exact', head: true }),
     supabase.from('show_entries').select('id', { count: 'exact', head: true }).eq('status', 'confirmed'),
@@ -184,11 +184,23 @@ async function getStats(supabase: any, payload: any) {
   const revenue_today = sumByCurrency(entriesTodayRes.data || [], 'entry_fee_paid', (r) => r.shows?.currency);
   const revenue_month = sumByCurrency(entriesMonthRes.data || [], 'entry_fee_paid', (r) => r.shows?.currency);
 
-  const platform_fees_month: Record<string, number> = {};
+  // The application fee is charged once per checkout session, not once per
+  // entry — summing platformFee(entry) independently per entry counts a
+  // multi-entry checkout's floor fee (e.g. $1.10 NZD) once for every entry it
+  // covers instead of once for the whole session, wildly overstating this
+  // KPI whenever entrants bundle several categories into one payment. Group
+  // by session first so the fee formula sees the real per-checkout total.
+  const sessionTotals: Record<string, { total: number; currency: string }> = {};
   for (const r of entriesMonthRes.data || []) {
     const cur = r.shows?.currency || 'AUD';
-    const fee = platformFee(Number(r.entry_fee_paid) || 0, cur, settings);
-    if (fee != null) platform_fees_month[cur] = (platform_fees_month[cur] || 0) + fee;
+    const key = r.stripe_session_id || `entry-${r.id}`;
+    if (!sessionTotals[key]) sessionTotals[key] = { total: 0, currency: cur };
+    sessionTotals[key].total += Number(r.entry_fee_paid) || 0;
+  }
+  const platform_fees_month: Record<string, number> = {};
+  for (const { total, currency } of Object.values(sessionTotals)) {
+    const fee = platformFee(total, currency, settings);
+    if (fee != null) platform_fees_month[currency] = (platform_fees_month[currency] || 0) + fee;
   }
 
   let stripe_balance: any = null;
