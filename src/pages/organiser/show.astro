@@ -367,18 +367,26 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         <div>
           <p class="text-[13px] font-semibold text-[#4a4357] mb-2">Animal Type <span class="text-red-400">*</span></p>
           <div class="grid grid-cols-4 gap-2" id="mgmt-animal-type-cards">
+            <button type="button" data-value="open" class="sel-card flex flex-col items-center gap-1 rounded-[11px] border-2 border-[#b8e4e0] bg-white px-2 py-2.5 text-center transition-all cursor-pointer">
+              <span class="text-[20px]">🐾</span>
+              <span class="text-[11px] font-bold text-[#1c1626]">Open</span>
+            </button>
             <button type="button" data-value="dog" class="sel-card flex flex-col items-center gap-1 rounded-[11px] border-2 border-[#b8e4e0] bg-white px-2 py-2.5 text-center transition-all cursor-pointer">
               <span class="text-[20px]">🐕</span>
               <span class="text-[11px] font-bold text-[#1c1626]">Dog</span>
             </button>
-            {['Cat 🐱','Rabbit 🐰','Guinea Pig 🐹','Bird 🐦'].map(a => (
+            <button type="button" data-value="cat" class="sel-card flex flex-col items-center gap-1 rounded-[11px] border-2 border-[#b8e4e0] bg-white px-2 py-2.5 text-center transition-all cursor-pointer">
+              <span class="text-[20px]">🐱</span>
+              <span class="text-[11px] font-bold text-[#1c1626]">Cat</span>
+            </button>
+            {['Rabbit 🐰','Guinea Pig 🐹','Bird 🐦'].map(a => (
               <button type="button" disabled class="flex flex-col items-center gap-1 rounded-[11px] border-2 border-[#efebf5] bg-[#fafafa] px-2 py-2.5 text-center opacity-40 cursor-not-allowed">
                 <span class="text-[20px]">{a.split(' ').at(-1)}</span>
                 <span class="text-[11px] font-bold text-[#9b94a8]">{a.split(' ')[0]}</span>
               </button>
             ))}
           </div>
-          <p class="text-[11px] text-[#9b94a8] mt-1.5">More animal types coming soon.</p>
+          <p class="text-[11px] text-[#9b94a8] mt-1.5">More restricted animal types coming soon.</p>
         </div>
         <p class="panel-error text-[12px] text-red-500" style="display:none"></p>
         <div class="drawer-actions flex justify-end gap-3 pt-2 pb-2">
@@ -389,6 +397,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
       <!-- Panel: Breed & Eligibility -->
       <div id="panel-breed" style="display:none" class="p-6 space-y-4">
+        <div id="mgmt-open-notice" style="display:none" class="bg-[#f0fafa] border border-[#b8e4e0] rounded-[12px] px-5 py-4 text-[13px] text-[#4a4357] leading-relaxed">
+          Open shows welcome every kind of pet — entrants choose their own pet type when they enter. No breed restrictions apply.
+        </div>
+        <div id="mgmt-scope-fields">
         <div>
           <p class="text-[13px] font-semibold text-[#4a4357] mb-2.5">Breed Scope <span class="text-red-400">*</span></p>
           <div class="grid grid-cols-3 gap-2" id="mgmt-breed-scope-cards">
@@ -400,7 +412,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
               <span class="text-[11px] font-bold text-[#1c1626]">Breed Specific</span>
             </button>
-            <button type="button" data-value="group_specific" class="sel-card flex flex-col items-center gap-1.5 rounded-[12px] border-2 border-[#b8e4e0] bg-white p-3 text-center transition-all cursor-pointer">
+            <button type="button" id="mgmt-bs-group-card" data-value="group_specific" class="sel-card flex flex-col items-center gap-1.5 rounded-[12px] border-2 border-[#b8e4e0] bg-white p-3 text-center transition-all cursor-pointer">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               <span class="text-[11px] font-bold text-[#1c1626]">Group Specific</span>
             </button>
@@ -429,6 +441,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
             <option value="Utility Dogs">Utility Dogs</option>
             <option value="Non-Sporting">Non-Sporting</option>
           </select>
+        </div>
         </div>
         <p class="panel-error text-[12px] text-red-500" style="display:none"></p>
         <div class="drawer-actions flex justify-end gap-3 pt-2 pb-2">
@@ -771,7 +784,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   import { showUploadOverlay, hideUploadOverlay } from '../../lib/uploadOverlay.js';
   import { FUN_STAKES } from '../../lib/show-categories.js';
   import { minEntryFee, platformFee, stripeFeeEstimate, organiserNet, clampFee } from '../../lib/fees.js';
-  import { searchBreeds } from '../../lib/dog-breeds.js';
+  import { searchBreeds } from '../../lib/breed-search.js';
+  import { DOG_BREEDS, DOG_BREED_SYNONYMS } from '../../lib/dog-breeds.js';
+  import { CAT_BREEDS, CAT_BREED_SYNONYMS } from '../../lib/cat-breeds.js';
 
   // Referenced by populateAllForms()/wireAllHandlers(), which the top-level
   // init IIFE below calls immediately — must be declared before that, not
@@ -1234,7 +1249,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (!(show.title && show.show_date)) {
       required.push({ label: 'Show Basics', detail: 'Show name and show date must be set.', panelId: 'basics' });
     }
-    if (!show.breed_scope) {
+    if (show.animal_type !== 'open' && !show.breed_scope) {
       required.push({ label: 'Breed & Eligibility', detail: 'Choose which breeds or animals are eligible to enter.', panelId: 'breed' });
     }
     if (categories.length === 0) {
@@ -1485,7 +1500,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       ['Animal', show.animal_type ? show.animal_type.charAt(0).toUpperCase() + show.animal_type.slice(1) : 'Dog'],
     ], 'Edit');
 
-    if (show.breed_scope) {
+    if (show.animal_type === 'open') {
+      setHeader('breed', '#22c55e', 'Configured', 'Breed & Eligibility', [
+        ['Scope', 'Open — any pet welcome'],
+      ], 'Edit');
+    } else if (show.breed_scope) {
       const filter = show.breed_scope === 'breed_specific' ? show.breed_filter
                    : show.breed_scope === 'group_specific'  ? show.group_filter : null;
       setHeader('breed', '#22c55e', 'Configured', 'Breed & Eligibility', [
@@ -1719,6 +1738,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     }
 
     selectCard(document.getElementById('mgmt-animal-type-cards'), show.animal_type || 'dog');
+    updateMgmtBreedMode();
 
     if (show.breed_scope) selectCard(document.getElementById('mgmt-breed-scope-cards'), show.breed_scope);
     setField('mgmt-breed', show.breed_filter || '');
@@ -1888,7 +1908,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     // Animal type
     document.getElementById('mgmt-animal-type-cards').querySelectorAll('[data-value]').forEach(btn => {
-      btn.addEventListener('click', () => selectCard(document.getElementById('mgmt-animal-type-cards'), btn.dataset.value));
+      btn.addEventListener('click', () => {
+        selectCard(document.getElementById('mgmt-animal-type-cards'), btn.dataset.value);
+        updateMgmtBreedMode();
+      });
     });
 
     // Breed scope
@@ -2223,6 +2246,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   }
 
   async function saveBreed() {
+    if (getSelectedCard('mgmt-animal-type-cards') === 'open') {
+      await saveSection('breed', { breed_scope: null, breed_filter: null, group_filter: null });
+      return;
+    }
     const scope = getSelectedCard('mgmt-breed-scope-cards');
     if (!scope) return showPanelError('breed', 'Please select a breed scope.');
     await saveSection('breed', {
@@ -2436,7 +2463,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     let activeIdx = -1;
 
     function getMatches(q) {
-      return searchBreeds(q);
+      return getSelectedCard('mgmt-animal-type-cards') === 'cat'
+        ? searchBreeds(CAT_BREEDS, q, CAT_BREED_SYNONYMS)
+        : searchBreeds(DOG_BREEDS, q, DOG_BREED_SYNONYMS);
     }
 
     function renderList(matches) {
@@ -2492,6 +2521,22 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const scope = getSelectedCard('mgmt-breed-scope-cards');
     document.getElementById('mgmt-breed-field').style.display = scope === 'breed_specific' ? 'block' : 'none';
     document.getElementById('mgmt-group-field').style.display = scope === 'group_specific'  ? 'block' : 'none';
+  }
+
+  function updateMgmtBreedMode() {
+    const animalType = getSelectedCard('mgmt-animal-type-cards');
+    const isOpen = animalType === 'open';
+    const isCat  = animalType === 'cat';
+    document.getElementById('mgmt-open-notice').style.display = isOpen ? 'block' : 'none';
+    document.getElementById('mgmt-scope-fields').style.display = isOpen ? 'none'  : 'block';
+    document.getElementById('mgmt-breed-listbox').setAttribute('aria-label', isCat ? 'Cat breeds' : 'Dog breeds');
+
+    const groupCard = document.getElementById('mgmt-bs-group-card');
+    groupCard.style.display = isCat ? 'none' : '';
+    if (isCat && getSelectedCard('mgmt-breed-scope-cards') === 'group_specific') {
+      selectCard(document.getElementById('mgmt-breed-scope-cards'), 'all');
+      updateBreedFields();
+    }
   }
 
   // ─── Category tooltip ────────────────────────────────────────────────────────

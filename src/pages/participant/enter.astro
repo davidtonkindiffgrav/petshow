@@ -13,7 +13,9 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
   import { supabase } from '../../lib/supabase.js';
   import { getEntriesCloseInfo } from '../../lib/voteWindow.js';
   import { organiserNet } from '../../lib/fees.js';
-  import { searchBreeds } from '../../lib/dog-breeds.js';
+  import { searchBreeds } from '../../lib/breed-search.js';
+  import { DOG_BREEDS, DOG_BREED_SYNONYMS } from '../../lib/dog-breeds.js';
+  import { CAT_BREEDS, CAT_BREED_SYNONYMS } from '../../lib/cat-breeds.js';
   import { resizeImageToLimit } from '../../lib/imageResize.js';
 
   const { session, profile, base } = await getAuth();
@@ -235,6 +237,7 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
   let photoRejected             = false;
   let pendingOversizeFile: File | null = null;
   const DOG_GROUPS = ['Toy Dogs','Terriers','Gundogs','Hounds','Working Dogs','Utility Dogs','Non-Sporting'];
+  const PET_TYPES  = ['Dog','Cat','Bird','Rabbit','Guinea Pig','Horse','Reptile','Fish','Other'];
 
   interface EntryDraft { animalName: string; breed: string; categoryId: string | null; photoPreview: string | null; photoUrl: string | null; exhibitorName: string; }
   let pendingEntries: EntryDraft[] = [];
@@ -294,8 +297,33 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
     if (el) { el.textContent = msg; el.style.display = 'block'; }
   }
 
+  // ── Pet type input (open shows — no species restriction) ────────────────────────
+  function renderPetTypeInput() {
+    const selectVal = PET_TYPES.includes(breed) ? breed : (breed ? 'Other' : '');
+    const otherVal  = selectVal === 'Other' ? breed : '';
+    return `
+      <div style="margin-bottom:24px;">
+        <label style="display:block;font-size:13px;font-weight:700;color:#4a4357;margin-bottom:6px;">Pet Type <span style="color:#f87171;">*</span></label>
+        <select id="f-pet-type" style="${inputStyle}background:white;appearance:none;">
+          <option value="" ${selectVal === '' ? 'selected' : ''}>— Select —</option>
+          ${PET_TYPES.map(t => `<option value="${esc(t)}" ${t === selectVal ? 'selected' : ''}>${esc(t)}</option>`).join('')}
+        </select>
+        <div id="f-pet-type-other-wrap" style="display:${selectVal === 'Other' ? 'block' : 'none'};margin-top:10px;">
+          <input id="f-pet-type-other" type="text" value="${esc(otherVal)}" placeholder="What kind of pet? (e.g. Ferret)" style="${inputStyle}" />
+        </div>
+      </div>`;
+  }
+
+  function initPetTypeSelect() {
+    const sel  = document.getElementById('f-pet-type') as HTMLSelectElement | null;
+    const wrap = document.getElementById('f-pet-type-other-wrap');
+    if (!sel || !wrap) return;
+    sel.addEventListener('change', () => { wrap.style.display = sel.value === 'Other' ? 'block' : 'none'; });
+  }
+
   // ── Breed input ───────────────────────────────────────────────────────────────
   function renderBreedInput() {
+    if (show.animal_type === 'open') return renderPetTypeInput();
     const scope = show.breed_scope;
     const isOptional = !scope || scope === 'all' || scope === 'group_specific';
     const labelSuffix = isOptional
@@ -345,7 +373,9 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
     let activeIdx = -1;
 
     function getMatches(q: string) {
-      return searchBreeds(q);
+      return show.animal_type === 'cat'
+        ? searchBreeds(CAT_BREEDS, q, CAT_BREED_SYNONYMS)
+        : searchBreeds(DOG_BREEDS, q, DOG_BREED_SYNONYMS);
     }
 
     function renderList(matches: string[]) {
@@ -590,7 +620,10 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
       ${step === 4 ? renderStep4() : ''}
     `;
 
-    if (step === 1 && (!show.breed_scope || show.breed_scope === 'all')) initBreedCombobox();
+    if (step === 1) {
+      if (show.animal_type === 'open') initPetTypeSelect();
+      else if (!show.breed_scope || show.breed_scope === 'all') initBreedCombobox();
+    }
 
     // Back button
     document.getElementById('btn-back')?.addEventListener('click', () => { step--; render(); });
@@ -599,8 +632,19 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
     if (step === 1) {
       document.getElementById('btn-next')?.addEventListener('click', () => {
         animalName = (document.getElementById('f-animal') as HTMLInputElement).value.trim();
-        breed      = (document.getElementById('f-breed')  as HTMLInputElement)?.value.trim() ?? breed;
         if (!animalName) return showErr("Please enter your pet's name.");
+
+        if (show.animal_type === 'open') {
+          const sel   = (document.getElementById('f-pet-type') as HTMLSelectElement)?.value ?? '';
+          const other = (document.getElementById('f-pet-type-other') as HTMLInputElement)?.value.trim() ?? '';
+          if (!sel) return showErr('Please select a pet type.');
+          if (sel === 'Other' && !other) return showErr('Please tell us what kind of pet it is.');
+          breed = sel === 'Other' ? other : sel;
+          step = 2; render();
+          return;
+        }
+
+        breed = (document.getElementById('f-breed')  as HTMLInputElement)?.value.trim() ?? breed;
         if (show.breed_scope === 'breed_specific' && !breed) return showErr("Please enter your pet's breed.");
         step = 2; render();
       });

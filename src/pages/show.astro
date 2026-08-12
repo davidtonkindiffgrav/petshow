@@ -522,15 +522,19 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   function buildEnterBullets() {
     const bullets = [];
 
-    const animal = show.animal_type || 'dog';
-    const plural  = animal + 's';
-
-    if (show.breed_scope === 'breed_specific' && show.breed_filter) {
-      bullets.push(`Open to ${show.breed_filter} ${plural}`);
-    } else if (show.breed_scope === 'group_specific' && show.group_filter) {
-      bullets.push(`Open to the ${show.group_filter} group`);
+    if (show.animal_type === 'open') {
+      bullets.push('Open to every kind of pet');
     } else {
-      bullets.push(`Open to all ${plural}`);
+      const animal = show.animal_type || 'dog';
+      const plural  = animal + 's';
+
+      if (show.breed_scope === 'breed_specific' && show.breed_filter) {
+        bullets.push(`Open to ${show.breed_filter} ${plural}`);
+      } else if (show.breed_scope === 'group_specific' && show.group_filter) {
+        bullets.push(`Open to the ${show.group_filter} group`);
+      } else {
+        bullets.push(`Open to all ${plural}`);
+      }
     }
 
     bullets.push('Fun, friendly & open to everyone');

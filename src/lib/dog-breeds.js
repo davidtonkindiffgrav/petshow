@@ -74,15 +74,7 @@ export const DOG_BREEDS = [
 
 // Alternate words people search for when their dog isn't a single recognised
 // breed, so "mutt" or "moggy" still surfaces the "Mixed Breed" suggestion.
-const BREED_SYNONYMS = {
+export const DOG_BREED_SYNONYMS = {
   'Mixed Breed': ['mutt', 'mongrel', 'moggy', 'moggie', 'cross', 'crossbreed', 'cross breed', 'cross-breed'],
   'Multiple Breeds': ['multiple dogs', 'two dogs', 'several dogs', 'group photo', 'more than one dog'],
 };
-
-export function searchBreeds(query, limit = 60) {
-  const q = (query || '').trim().toLowerCase();
-  if (!q) return DOG_BREEDS.slice(0, 8);
-  return DOG_BREEDS
-    .filter(b => b.toLowerCase().includes(q) || (BREED_SYNONYMS[b] || []).some(s => s.includes(q)))
-    .slice(0, limit);
-}

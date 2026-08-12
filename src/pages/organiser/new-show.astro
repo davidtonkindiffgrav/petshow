@@ -169,25 +169,38 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
       <p class="text-[13px] font-semibold text-[#4a4357] mb-2.5">Animal Type <span class="text-red-400">*</span></p>
       <div class="grid grid-cols-4 gap-2" id="animal-type-cards">
+        <button type="button" data-value="open" class="sel-card flex flex-col items-center gap-1.5 rounded-[12px] border-2 border-[#b8e4e0] bg-white px-2 py-3 text-center transition-all cursor-pointer">
+          <span class="text-[22px]">🐾</span>
+          <span class="text-[12px] font-bold text-[#1c1626]">Open (All Pets)</span>
+        </button>
         <button type="button" data-value="dog" class="sel-card flex flex-col items-center gap-1.5 rounded-[12px] border-2 border-[#b8e4e0] bg-white px-2 py-3 text-center transition-all cursor-pointer">
           <span class="text-[22px]">🐕</span>
           <span class="text-[12px] font-bold text-[#1c1626]">Dog</span>
         </button>
-        {['Cat 🐱','Rabbit 🐰','Guinea Pig 🐹','Horse 🐴','Bird 🐦','Other'].map(a => (
+        <button type="button" data-value="cat" class="sel-card flex flex-col items-center gap-1.5 rounded-[12px] border-2 border-[#b8e4e0] bg-white px-2 py-3 text-center transition-all cursor-pointer">
+          <span class="text-[22px]">🐱</span>
+          <span class="text-[12px] font-bold text-[#1c1626]">Cat</span>
+        </button>
+        {['Rabbit 🐰','Guinea Pig 🐹','Horse 🐴','Bird 🐦'].map(a => (
           <button type="button" disabled class="flex flex-col items-center gap-1.5 rounded-[12px] border-2 border-[#efebf5] bg-[#fafafa] px-2 py-3 text-center opacity-40 cursor-not-allowed relative">
             <span class="text-[22px]">{a.split(' ')[1] || '🐾'}</span>
             <span class="text-[12px] font-bold text-[#9b94a8]">{a.split(' ')[0]}</span>
           </button>
         ))}
       </div>
-      <p class="text-[11.5px] text-[#9b94a8] mt-2">More animal types coming soon.</p>
+      <p class="text-[11.5px] text-[#9b94a8] mt-2">More restricted (breed-specific) animal types coming soon. Choose "Open" now for a show that welcomes every kind of pet.</p>
     </div>
 
     <!-- ─── Step 3: Breed & Eligibility ───────────────────────────────────── -->
     <div id="step-3" style="display:none" class="bg-white rounded-card shadow-winner-card p-8">
       <h2 class="text-[21px] font-extrabold text-[#1c1626] tracking-[-0.02em] mb-1">Breed & Eligibility</h2>
-      <p class="text-[14px] text-[#6f6880] mb-7">Which dogs can enter this show?</p>
+      <p id="s3-desc" class="text-[14px] text-[#6f6880] mb-7">Which dogs can enter this show?</p>
 
+      <div id="s3-open-notice" style="display:none" class="bg-[#f0fafa] border border-[#b8e4e0] rounded-[12px] px-5 py-4 text-[13.5px] text-[#4a4357] leading-relaxed">
+        Open shows welcome every kind of pet — entrants choose their own pet type (dog, cat, bird, and more) when they enter. No breed restrictions apply.
+      </div>
+
+      <div id="s3-scope-fields">
       <p class="text-[13px] font-semibold text-[#4a4357] mb-2.5">Breed Scope <span class="text-red-400">*</span></p>
       <div class="grid grid-cols-3 gap-3 mb-5" id="breed-scope-cards">
         <button type="button" data-value="all" class="sel-card flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#b8e4e0] bg-white p-4 text-center transition-all cursor-pointer">
@@ -198,7 +211,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
           <span class="text-[12px] font-bold text-[#1c1626]">Breed Specific</span>
         </button>
-        <button type="button" data-value="group_specific" class="sel-card flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#b8e4e0] bg-white p-4 text-center transition-all cursor-pointer">
+        <button type="button" id="bs-group-card" data-value="group_specific" class="sel-card flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#b8e4e0] bg-white p-4 text-center transition-all cursor-pointer">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1ba89a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           <span class="text-[12px] font-bold text-[#1c1626]">Group Specific</span>
         </button>
@@ -227,6 +240,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           <option value="Utility Dogs">Utility Dogs</option>
           <option value="Non-Sporting">Non-Sporting</option>
         </select>
+      </div>
       </div>
     </div>
 
@@ -691,7 +705,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   import { showUploadOverlay, hideUploadOverlay } from '../../lib/uploadOverlay.js';
   import { FUN_STAKES } from '../../lib/show-categories.js';
   import { minEntryFee, platformFee, stripeFeeEstimate, organiserNet, clampFee } from '../../lib/fees.js';
-  import { searchBreeds } from '../../lib/dog-breeds.js';
+  import { searchBreeds } from '../../lib/breed-search.js';
+  import { DOG_BREEDS, DOG_BREED_SYNONYMS } from '../../lib/dog-breeds.js';
+  import { CAT_BREEDS, CAT_BREED_SYNONYMS } from '../../lib/cat-breeds.js';
   import { getDateOrderError } from '../../lib/voteWindow.js';
 
   // ─── Constants ──────────────────────────────────────────────────────────────
@@ -1040,6 +1056,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       return true;
     }
     if (n === 3) {
+      if (show.animal_type === 'open') return true;
       const scope = getSelectedCard('breed-scope-cards');
       if (!scope) return showError('Please select a breed scope.'), false;
       if (scope === 'breed_specific' && !document.getElementById('s3-breed').value.trim()) return showError('Please enter a breed name.'), false;
@@ -1121,9 +1138,15 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       show.animal_type = getSelectedCard('animal-type-cards') || 'dog';
     }
     if (n === 3) {
-      show.breed_scope  = getSelectedCard('breed-scope-cards') || 'all';
-      show.breed_filter = document.getElementById('s3-breed').value.trim();
-      show.group_filter = document.getElementById('s3-group').value.trim();
+      if (show.animal_type === 'open') {
+        show.breed_scope  = null;
+        show.breed_filter = null;
+        show.group_filter = null;
+      } else {
+        show.breed_scope  = getSelectedCard('breed-scope-cards') || 'all';
+        show.breed_filter = document.getElementById('s3-breed').value.trim();
+        show.group_filter = document.getElementById('s3-group').value.trim();
+      }
     }
     if (n === 4) {
       // classes already updated in real-time via toggle handlers
@@ -1744,6 +1767,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
   function buildReview() {
     const ORG_TYPE_LABELS  = { non_profit: 'Non-Profit Fundraiser', registered_charity: 'Registered Charity', commercial: 'Commercial Organisation' };
+    const ANIMAL_TYPE_LABELS = { dog: 'Dog', cat: 'Cat', open: 'Open (All Pets)' };
     const SCOPE_LABELS     = { all: 'All Breeds', breed_specific: `Breed Specific: ${show.breed_filter || '—'}`, group_specific: `Group Specific: ${show.group_filter || '—'}` };
     const classes = show.classes.filter(c => c.enabled).map(c => c.name).join(', ') || '—';
     const judgeName = show.judges[0]?.first_name ? `${show.judges[0].first_name}${show.judges[0].last_name ? ' ' + show.judges[0].last_name : ''}` : null;
@@ -1770,8 +1794,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           <p class="text-[12px] font-bold text-brand uppercase tracking-wide">Animal Type & Categories</p>
         </div>
         <div class="px-5">
-          ${reviewRow('Animal Type', show.animal_type || 'Dog', 2)}
-          ${reviewRow('Breed Scope', SCOPE_LABELS[show.breed_scope] || '—', 3)}
+          ${reviewRow('Animal Type', ANIMAL_TYPE_LABELS[show.animal_type] || 'Dog', 2)}
+          ${reviewRow('Breed Scope', show.animal_type === 'open' ? 'Open — any pet welcome' : (SCOPE_LABELS[show.breed_scope] || '—'), 3)}
           ${reviewRow('Categories', classes, 4)}
         </div>
       </div>
@@ -1914,6 +1938,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
     // Step 2
     if (show.animal_type) selectCard(document.getElementById('animal-type-cards'), show.animal_type);
+    updateStep3Mode();
 
     // Step 3
     selectCard(document.getElementById('breed-scope-cards'), show.breed_scope);
@@ -2055,6 +2080,26 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     document.getElementById('s3-group-field').style.display = show.breed_scope === 'group_specific' ? 'block' : 'none';
   }
 
+  function updateStep3Mode() {
+    const isOpen = show.animal_type === 'open';
+    const isCat  = show.animal_type === 'cat';
+    document.getElementById('s3-open-notice').style.display  = isOpen ? 'block' : 'none';
+    document.getElementById('s3-scope-fields').style.display  = isOpen ? 'none'  : 'block';
+    document.getElementById('s3-desc').textContent = isOpen
+      ? 'Open shows have no species restriction.'
+      : isCat ? 'Which cats can enter this show?' : 'Which dogs can enter this show?';
+    document.getElementById('s3-breed-listbox').setAttribute('aria-label', isCat ? 'Cat breeds' : 'Dog breeds');
+
+    const groupCard = document.getElementById('bs-group-card');
+    groupCard.style.display = isCat ? 'none' : '';
+    if (isCat && getSelectedCard('breed-scope-cards') === 'group_specific') {
+      selectCard(document.getElementById('breed-scope-cards'), 'all');
+      show.breed_scope = 'all';
+      show.group_filter = '';
+      updateBreedFields();
+    }
+  }
+
   // ─── Timezone select ─────────────────────────────────────────────────────────
   function initTimezoneSelect() {
     const sel = document.getElementById('s1-timezone');
@@ -2112,10 +2157,15 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     });
     // Step 2: animal type
     document.getElementById('animal-type-cards').querySelectorAll('[data-value]').forEach(btn => {
-      btn.addEventListener('click', () => { selectCard(document.getElementById('animal-type-cards'), btn.dataset.value); });
+      btn.addEventListener('click', () => {
+        selectCard(document.getElementById('animal-type-cards'), btn.dataset.value);
+        show.animal_type = btn.dataset.value;
+        updateStep3Mode();
+      });
     });
     // Default animal: dog
     selectCard(document.getElementById('animal-type-cards'), 'dog');
+    updateStep3Mode();
     // Step 3: breed scope
     document.getElementById('breed-scope-cards').querySelectorAll('[data-value]').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -2425,7 +2475,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     let activeIdx = -1;
 
     function getMatches(q) {
-      return searchBreeds(q);
+      return show.animal_type === 'cat'
+        ? searchBreeds(CAT_BREEDS, q, CAT_BREED_SYNONYMS)
+        : searchBreeds(DOG_BREEDS, q, DOG_BREED_SYNONYMS);
     }
 
     function renderList(matches) {

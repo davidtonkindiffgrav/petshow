@@ -338,13 +338,15 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       </div>`;
     }
 
-    const breedSummary = show.breed_scope
+    const breedSummary = show.animal_type === 'open'
+      ? 'Open — any pet welcome'
+      : show.breed_scope
       ? (BREED_SCOPE_LABELS[show.breed_scope] + (show.breed_filter ? ` — ${show.breed_filter}` : show.group_filter ? ` — ${show.group_filter}` : ''))
       : null;
 
     return [
       tile('Show Type',   show.show_type ? 'ok' : 'pending',    show.show_type ? SHOW_TYPE_LABELS[show.show_type] : null),
-      tile('Breed',       show.breed_scope ? 'ok' : 'pending',  breedSummary),
+      tile('Breed',       (show.animal_type === 'open' || show.breed_scope) ? 'ok' : 'pending',  breedSummary),
       tile('Categories',  catCount > 0 ? 'ok' : 'pending',      catCount > 0 ? `${catCount} categor${catCount !== 1 ? 'ies' : 'y'}` : null),
       tile('Sponsor',     show.has_sponsor === true ? 'ok' : show.has_sponsor === false ? 'off' : 'pending',
                           show.has_sponsor === true ? 'Sponsor added' : show.has_sponsor === false ? 'No sponsor' : null),
