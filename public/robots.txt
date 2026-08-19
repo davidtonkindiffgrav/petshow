@@ -1,0 +1,7 @@
+User-agent: *
+Disallow: /admin/
+Disallow: /auth/
+Disallow: /organiser/
+Disallow: /participant/
+
+Sitemap: https://www.furtofeathers.com/sitemap-index.xml
