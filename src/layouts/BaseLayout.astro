@@ -1,6 +1,7 @@
 ---
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import Analytics from '../components/Analytics.astro';
 import '../styles/global.css';
 
 interface Props {
@@ -35,6 +36,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500;1,600&family=Caveat:wght@600;700&display=swap"
       rel="stylesheet"
     />
+    <Analytics />
     <script is:inline define:vars={{ base }}>
       // Password recovery links without an explicit redirect (e.g. sent from the
       // Supabase dashboard) land on the Site URL with the token in the hash.
