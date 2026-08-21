@@ -713,7 +713,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         clone.is_judged = null;
         clone.judge_count = null;
         clone.judge_setup = null;
+        clone.peoples_choice_fee = null;
       }
+      // The source's People's Choice prize is a row on the SOURCE show —
+      // remapped to the cloned award after the awards clone below, or left
+      // unset for the organiser to pick again.
+      clone.peoples_choice_award_id = null;
       if (!sections.has('fundraising')) {
         clone.entry_fee = null;
         clone.fundraising_goal = null;
@@ -765,7 +770,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       // disables the Awards checkbox whenever Classes is unticked). Awards
       // clone first so category rows can resolve their new award_id.
       if (sections.has('classes')) {
-        const { data: cats } = await supabase.from('show_categories').select('id, name, criteria, award_id, has_certificate').eq('show_id', show.id);
+        const { data: cats } = await supabase.from('show_categories').select('id, name, criteria, award_id, has_certificate, has_peoples_choice').eq('show_id', show.id);
         if (cats?.length) {
           let awardIdMap = new Map();
           if (sections.has('awards')) {
@@ -783,11 +788,17 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
               }));
               awardIdMap = new Map(pairs.filter(Boolean));
             }
+            // Point the clone's People's Choice prize at the cloned award row.
+            const newPcAward = source.peoples_choice_award_id ? awardIdMap.get(source.peoples_choice_award_id) : null;
+            if (newPcAward) {
+              await supabase.from('shows').update({ peoples_choice_award_id: newPcAward }).eq('id', newId);
+            }
           }
           await supabase.from('show_categories').insert(cats.map(c => ({
             show_id: newId, name: c.name, criteria: c.criteria,
             award_id: c.award_id ? (awardIdMap.get(c.award_id) || null) : null,
             has_certificate: sections.has('awards') ? !!c.has_certificate : true,
+            has_peoples_choice: sections.has('judging') ? !!c.has_peoples_choice : false,
           })));
         }
       }

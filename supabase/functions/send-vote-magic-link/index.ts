@@ -75,15 +75,19 @@ serve(async (req: Request) => {
     const resendKey = Deno.env.get('RESEND_API_KEY');
     const fromAddr  = Deno.env.get('RESEND_FROM') || 'Fur to Feathers <noreply@furtofeathers.com>';
 
-    // Verify show exists, is public vote, and voting is inside its window
+    // Verify show exists, accepts public votes, and voting is inside its
+    // window. Two kinds of show do: vote shows (is_judged false, every
+    // category), and judged shows offering the paid People's Choice add-on
+    // (votes restricted to opted-in entries in enabled categories).
     const { data: show, error: showErr } = await adminClient
       .from('shows')
-      .select('id, title, is_judged, vote_open_mode, entry_open_date, entry_open_time, entry_close_date, entry_close_time, show_date, show_time, timezone, results_published_at')
+      .select('id, title, is_judged, peoples_choice_fee, vote_open_mode, entry_open_date, entry_open_time, entry_close_date, entry_close_time, show_date, show_time, timezone, results_published_at')
       .eq('id', show_id)
       .single();
 
     if (showErr || !show) throw new Error('Show not found');
-    if (show.is_judged !== false) throw new Error('This show does not use public voting');
+    const isPcShow = show.is_judged === true && show.peoples_choice_fee != null;
+    if (show.is_judged !== false && !isPcShow) throw new Error('This show does not use public voting');
     if (show.results_published_at) throw new Error('Voting has closed — results are published');
 
     const now = new Date();
@@ -102,6 +106,32 @@ serve(async (req: Request) => {
       throw new Error(show.vote_open_mode === 'on_entries_open'
         ? 'Voting has not opened yet'
         : 'Voting has not opened yet — entries are still open');
+    }
+
+    // On a People's Choice show, every pick must target an enabled category
+    // and a confirmed, opted-in entry — reject crafted requests for anything
+    // else. (Vote shows accept picks across all confirmed entries, as before.)
+    if (isPcShow) {
+      const pickCatIds   = [...new Set(picks.map((p: any) => p.category_id))];
+      const pickEntryIds = [...new Set(picks.map((p: any) => p.entry_id))];
+      const [{ data: pcCats }, { data: pcEntries }] = await Promise.all([
+        adminClient.from('show_categories').select('id, has_peoples_choice').in('id', pickCatIds),
+        adminClient.from('show_entries')
+          .select('id, category_id, status, peoples_choice_fee_amount')
+          .eq('show_id', show_id).in('id', pickEntryIds),
+      ]);
+      const allowedCats = new Set((pcCats || []).filter((c: any) => c.has_peoples_choice).map((c: any) => c.id));
+      const entryById = new Map((pcEntries || []).map((e: any) => [e.id, e]));
+      for (const p of picks) {
+        const entry: any = entryById.get(p.entry_id);
+        if (!allowedCats.has(p.category_id)
+          || !entry
+          || entry.category_id !== p.category_id
+          || entry.status !== 'confirmed'
+          || entry.peoples_choice_fee_amount == null) {
+          throw new Error("One of your picks isn't part of the People's Choice award");
+        }
+      }
     }
 
     // Check for existing vote for this email in this show
@@ -168,6 +198,7 @@ serve(async (req: Request) => {
     const confirmUrl = `${siteUrl}/vote/confirm?token=${token}`;
     const pickCount  = picks.length;
     const catLabel   = pickCount === 1 ? 'category' : 'categories';
+    const voteNoun   = isPcShow ? "People's Choice vote" : 'vote';
 
     const emailRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -175,12 +206,12 @@ serve(async (req: Request) => {
       body: JSON.stringify({
         from: fromAddr,
         to:   [email],
-        subject: `Confirm your votes — ${show.title}`,
+        subject: `Confirm your ${voteNoun}s — ${show.title}`,
         html: `
           <div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;color:#1c1626;padding:20px 0">
             <p style="font-size:16px;margin:0 0 16px">Hi there,</p>
             <p style="font-size:15px;margin:0 0 16px">
-              You've voted in <strong>${pickCount} ${catLabel}</strong> at
+              You've cast a ${voteNoun} in <strong>${pickCount} ${catLabel}</strong> at
               <strong>${show.title}</strong>. Click the button below to confirm your votes.
             </p>
             <p style="margin:28px 0">

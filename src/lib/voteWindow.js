@@ -1,4 +1,6 @@
-// Shared voting-window logic for public vote shows (is_judged === false).
+// Shared voting-window logic for public voting: vote shows (is_judged === false)
+// and judged shows offering the paid People's Choice add-on
+// (is_judged === true with peoples_choice_fee set).
 //
 // The window is:
 //   opens  — entries open  (vote_open_mode 'on_entries_open')
@@ -44,10 +46,13 @@ export function getVoteWindow(show) {
   return { opensAt, closesAt };
 }
 
-// Requires show fields: is_judged, results_published_at, vote_open_mode,
-// entry_open_date/_time, entry_close_date/_time, show_date, show_time, timezone.
+// Requires show fields: is_judged, peoples_choice_fee, results_published_at,
+// vote_open_mode, entry_open_date/_time, entry_close_date/_time, show_date,
+// show_time, timezone.
 export function isVotingOpen(show, now = new Date()) {
-  if (show.is_judged !== false || show.results_published_at) return false;
+  const votable = show.is_judged === false
+    || (show.is_judged === true && show.peoples_choice_fee != null);
+  if (!votable || show.results_published_at) return false;
   const { opensAt, closesAt } = getVoteWindow(show);
   if (opensAt && now < opensAt) return false;
   if (closesAt && now >= closesAt) return false;

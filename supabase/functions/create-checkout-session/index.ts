@@ -66,7 +66,7 @@ serve(async (req: Request) => {
     // 3. Verify show is open
     const { data: show, error: showErr } = await supabase
       .from('shows')
-      .select('id, title, entry_fee, currency, status, entry_close_date, entry_close_time, timezone, suspended_at, created_by, organisation_id')
+      .select('id, title, entry_fee, currency, status, entry_close_date, entry_close_time, timezone, suspended_at, created_by, organisation_id, is_judged, peoples_choice_fee')
       .eq('id', show_id)
       .single();
     if (showErr || !show) throw new Error('Show not found');
@@ -101,6 +101,24 @@ serve(async (req: Request) => {
     }
     const entryCount = entries.length;
 
+    // People's Choice add-on: opt-in only valid on a judged show with a
+    // configured fee, and only for categories the organiser has enabled.
+    const pcFee = show.is_judged === true && Number(show.peoples_choice_fee) >= 1
+      ? Number(show.peoples_choice_fee) : null;
+    const pcCount = entries.filter((e: any) => e.peoples_choice).length;
+    if (pcCount > 0) {
+      if (pcFee == null) throw new Error("This show doesn't offer the People's Choice add-on");
+      const optedCatIds = entries.filter((e: any) => e.peoples_choice).map((e: any) => e.category_id).filter(Boolean);
+      const { data: pcCats } = await supabase
+        .from('show_categories').select('id, has_peoples_choice').in('id', optedCatIds.length ? optedCatIds : ['00000000-0000-0000-0000-000000000000']);
+      const pcAllowed = new Set((pcCats || []).filter((c: any) => c.has_peoples_choice).map((c: any) => c.id));
+      for (const e of entries) {
+        if (e.peoples_choice && !pcAllowed.has(e.category_id)) {
+          throw new Error("The People's Choice add-on isn't available for one of your selected categories");
+        }
+      }
+    }
+
     // 5. Clean up any previous pending entries for this user/show (abandoned checkouts)
     await supabase
       .from('show_entries')
@@ -131,6 +149,12 @@ serve(async (req: Request) => {
       exhibitor_email: user.email       || null,
       status:          'pending',
       entry_number:    startNumber + i,
+      // Expected gross for this row's share of the session. The webhook and
+      // net backfill prorate by this instead of dividing equally, so entries
+      // in one session may cost different amounts.
+      entry_gross_amount: perEntryFee + (pcFee != null && e.peoples_choice ? pcFee : 0),
+      // Price snapshot; NULL = not entered in People's Choice.
+      peoples_choice_fee_amount: pcFee != null && e.peoples_choice ? pcFee : null,
     }));
 
     const { data: inserted, error: insertErr } = await supabase
@@ -153,21 +177,32 @@ serve(async (req: Request) => {
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2024-04-10' });
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: 'payment',
-      line_items: entries.map((e: any) => {
+      line_items: entries.flatMap((e: any) => {
         const cat  = e.category_id ? catMap[e.category_id] : null;
         const desc = [show.title, cat].filter(Boolean).join(' · ');
-        return {
+        const items: Stripe.Checkout.SessionCreateParams.LineItem[] = [{
           price_data: {
             currency:     show.currency.toLowerCase(),
             unit_amount:  Math.round(perEntryFee * 100),
             product_data: { name: e.animal_name, description: desc },
           },
           quantity: 1,
-        };
+        }];
+        if (pcFee != null && e.peoples_choice) {
+          items.push({
+            price_data: {
+              currency:     show.currency.toLowerCase(),
+              unit_amount:  Math.round(pcFee * 100),
+              product_data: { name: "People's Choice add-on", description: [e.animal_name, desc].filter(Boolean).join(' · ') },
+            },
+            quantity: 1,
+          });
+        }
+        return items;
       }),
       success_url: `${siteUrl}/participant`,
       cancel_url:  `${siteUrl}/participant/enter?show=${show_id}&cancelled=1`,
-      metadata:    { show_id, entry_count: String(entryCount) },
+      metadata:    { show_id, entry_count: String(entryCount), pc_count: String(pcCount) },
     };
 
     // Direct charge on the organiser's own connected Stripe account when
@@ -181,7 +216,8 @@ serve(async (req: Request) => {
 
     let session: Stripe.Checkout.Session;
     if (connectReady) {
-      const totalAmount = Math.round(perEntryFee * 100) * entryCount;
+      const totalAmount = Math.round(perEntryFee * 100) * entryCount
+        + (pcFee != null ? Math.round(pcFee * 100) * pcCount : 0);
       const settingsMap: Record<string, number> = {};
       const { data: feeRows } = await supabase.from('platform_settings').select('key, value')
         .or('key.like.service_fee_%');

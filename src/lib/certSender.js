@@ -3,18 +3,24 @@
 // automatic send-on-publish flow (organiser/judging).
 import { renderCertificate } from './cert-renderer.js';
 
-export async function sendCertificateToEntry({ supabase, show, entry, category, sponsors = [], design = {} }) {
+// peoplesChoice: renders a "People's Choice Winner" certificate to its own
+// storage path and pc_cert_* columns, so an entry that also wins its judged
+// category keeps both certificates.
+export async function sendCertificateToEntry({ supabase, show, entry, category, sponsors = [], design = {}, peoplesChoice = false }) {
   if (!entry.exhibitor_email || !String(entry.exhibitor_email).trim()) {
     return { ok: false, reason: 'no_email' };
   }
   try {
     const canvas = document.createElement('canvas');
-    await renderCertificate(canvas, { show, entry, category, sponsors, design });
+    await renderCertificate(canvas, {
+      show, entry, category, sponsors, design,
+      placeLabel: peoplesChoice ? "People's Choice Winner" : null,
+    });
 
     const jpgDataUrl = canvas.toDataURL('image/jpeg', 0.92);
     const blob = await (await fetch(jpgDataUrl)).blob();
 
-    const jpgPath = `certs/${show.id}/${entry.id}.jpg`;
+    const jpgPath = `certs/${show.id}/${entry.id}${peoplesChoice ? '_pc' : ''}.jpg`;
     const { error: uploadErr } = await supabase.storage
       .from('show-assets')
       .upload(jpgPath, blob, { contentType: 'image/jpeg', upsert: true });
@@ -29,7 +35,7 @@ export async function sendCertificateToEntry({ supabase, show, entry, category, 
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ show_id: show.id, entry_id: entry.id, cert_jpg_url }),
+        body: JSON.stringify({ show_id: show.id, entry_id: entry.id, cert_jpg_url, peoples_choice: peoplesChoice }),
       },
     );
     const result = await fnRes.json();

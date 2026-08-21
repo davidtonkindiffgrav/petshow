@@ -196,7 +196,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 <script>
   import { getAuth } from '../lib/auth.js';
   import { supabase } from '../lib/supabase.js';
-  import { zonedDateTime, getEntriesCloseInfo, getGoalProgress } from '../lib/voteWindow.js';
+  import { zonedDateTime, getEntriesCloseInfo, getGoalProgress, isVotingOpen } from '../lib/voteWindow.js';
   import { organiserNet } from '../lib/fees.js';
   import { hexToRgbString, deriveBarColor } from '../lib/dominantColor.js';
 
@@ -210,6 +210,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   let accentBar    = deriveBarColor(DEFAULT_ACCENT);
   let earlyVoting = false;   // vote show accepting votes while entries are still open
   let votingActive = false;  // any state where the ballot UI is live
+  let pcMode = false;        // judged show offering the paid People's Choice add-on
+  let pcVotingActive = false; // People's Choice ballot open on a judged show
   let enterBtnVisible = false;
   let voteSelections = {}; // { [category_id]: entry_id }
   let focusCategoryId = null;
@@ -234,9 +236,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     const [showRes, catsRes, entriesRes, sponsorsRes, awardsRes, feesRes] = await Promise.all([
       showQ.single(),
-      supabase.from('show_categories').select('id, name, criteria, award_id, has_certificate').eq('show_id', showId),
+      supabase.from('show_categories').select('id, name, criteria, award_id, has_certificate, has_peoples_choice').eq('show_id', showId),
       supabase.from('show_entries')
-        .select('id, animal_name, breed, photo_url, category_id, entry_number, exhibitor_name, result_place, entry_net_amount')
+        .select('id, animal_name, breed, photo_url, category_id, entry_number, exhibitor_name, result_place, entry_net_amount, peoples_choice_fee_amount, peoples_choice_result_place')
         .eq('show_id', showId).eq('status', 'confirmed').order('entry_number'),
       supabase.from('show_sponsors').select('id, name, website, logo_url').eq('show_id', showId),
       supabase.from('awards').select('*').eq('show_id', showId),
@@ -297,7 +299,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     totalRaised += missingNet * netPerEntry;
     showState   = getShowState(show);
     earlyVoting  = showState === 'entries_open' && show.is_judged === false && show.vote_open_mode === 'on_entries_open';
-    votingActive = showState === 'voting' || earlyVoting;
+    // People's Choice: a judged show with the paid add-on runs a public vote
+    // over opted-in entries alongside normal judging.
+    pcMode = show.is_judged === true && show.peoples_choice_fee != null;
+    pcVotingActive = pcMode && showState !== 'results' && showState !== 'archived' && isVotingOpen(show);
+    votingActive = showState === 'voting' || earlyVoting || pcVotingActive;
 
     // All-in pricing: entry_fee is the total the entrant pays.
     displayFee = show.entry_fee > 0 ? Number(show.entry_fee) : null;
@@ -350,6 +356,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       archived:     { label: '📦 ARCHIVED',             bg: '#92400e' },
     }[showState];
     if (earlyVoting) statusPills.label = 'ENTRIES & VOTING OPEN';
+    if (pcVotingActive) {
+      statusPills.label = showState === 'entries_open'
+        ? "ENTRIES & PEOPLE'S CHOICE VOTING OPEN"
+        : "🏅 PEOPLE'S CHOICE VOTING OPEN";
+      statusPills.bg = '#5B43C4';
+    }
 
     const voteCloseLabel = show.show_date
       ? `🗳️ Voting closes ${fmt(show.show_date)}${show.show_time ? ' at ' + show.show_time : ''}`
@@ -357,6 +369,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     const datePill = showState === 'results'
       ? `<span style="color:rgba(255,255,255,0.6);font-size:13px;margin-left:4px">Thank you to everyone who entered!</span>`
+      : pcVotingActive && showState !== 'entries_open' && voteCloseLabel
+      ? pill(voteCloseLabel)
       : showState === 'upcoming' && show.entry_open_date
         ? pill(`📅 Expected Open: ${fmt(show.entry_open_date)}`)
         : showState === 'voting' && voteCloseLabel
@@ -431,6 +445,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       el.innerHTML = archivedBody();
     } else if (showState === 'results') {
       el.innerHTML = resultsBody();
+    } else if (pcVotingActive && showState === 'entries_open') {
+      el.innerHTML = state1Body() + `<div style="margin-top:28px">${votingBody()}</div>`;
+    } else if (pcVotingActive) {
+      el.innerHTML = interimBody() + `<div style="margin-top:28px">${votingBody()}</div>`;
     } else if (showState === 'judging' || showState === 'show_day' || showState === 'vote_closed') {
       el.innerHTML = interimBody();
     } else if (showState === 'voting') {
@@ -547,6 +565,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       bullets.push('Digital certificates for winners');
     } else if (anyPhysical) {
       bullets.push('Physical prizes for winners');
+    }
+
+    if (pcMode && categories.some(c => c.has_peoples_choice)) {
+      bullets.push(`Optional People's Choice award, decided by free public vote (+${sym}${Number(show.peoples_choice_fee).toFixed(2)})`);
     }
 
     return bullets;
@@ -675,7 +697,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E8E7E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
             Judging
           </span>
-          <span style="font-size:13px;color:#6B7C79">${show.is_judged ? 'By Guest Judges' : 'Public Vote'}</span>
+          <span style="font-size:13px;color:#6B7C79">${show.is_judged ? (pcMode ? "Guest Judges + People's Choice vote" : 'By Guest Judges') : 'Public Vote'}</span>
         </div>` : '';
 
     return card(`<h3 style="font-size:15px;font-weight:700;color:#143A37;margin:0 0 4px">Key Dates</h3>${rows}${judgeRow}`);
@@ -859,25 +881,28 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   // ── Results: Winners card ─────────────────────────────────────────────────────
 
   function winnersCard() {
-    const cols = categories.map(cat => {
+    const cols = categories.flatMap(cat => {
+      const out = [];
       const first = entries.find(e => e.category_id === cat.id && e.result_place === 1);
-      if (!first) return null;
-      return { cat, first };
-    }).filter(Boolean);
+      if (first) out.push({ cat, first, pc: false });
+      const pcWinner = entries.find(e => e.category_id === cat.id && e.peoples_choice_result_place === 1);
+      if (pcWinner) out.push({ cat, first: pcWinner, pc: true });
+      return out;
+    });
 
     if (!cols.length) return card(`
       <h3 style="font-size:15px;font-weight:700;color:#143A37;margin:0 0 10px">Winners</h3>
       <p style="font-size:13px;color:#6B7C79">No results published yet.</p>`);
 
-    const winnerCols = cols.map(({ cat, first }) => `
+    const winnerCols = cols.map(({ cat, first, pc }) => `
       <div>
-        <div style="background:#1E8E7E;color:white;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:5px 8px;border-radius:8px 8px 0 0;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(cat.name)}</div>
+        <div style="background:${pc ? '#5B43C4' : '#1E8E7E'};color:white;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:5px 8px;border-radius:8px 8px 0 0;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${pc ? "🏅 People's Choice · " : ''}${esc(cat.name)}</div>
         <div style="border:1.5px solid #E6EEEC;border-top:none;border-radius:0 0 12px 12px;overflow:hidden">
           <div style="position:relative;aspect-ratio:4/3;overflow:hidden">
             ${first.photo_url
               ? `<img src="${esc(first.photo_url)}" alt="${esc(first.animal_name||'')} — ${esc(first.breed||'')}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center">`
               : `<div style="position:absolute;inset:0;background:#F0F7F5;display:flex;align-items:center;justify-content:center;font-size:36px">🐾</div>`}
-            <div style="position:absolute;bottom:6px;right:6px;background:#F0A92B;color:white;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.2)">1</div>
+            <div style="position:absolute;bottom:6px;right:6px;background:${pc ? '#5B43C4' : '#F0A92B'};color:white;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.2)">${pc ? '🏅' : '1'}</div>
           </div>
           <div style="padding:8px">
             <p style="font-size:12px;font-weight:800;color:#143A37;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(first.animal_name||'Unnamed')}</p>
@@ -901,10 +926,15 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       const placed = entries
         .filter(e => e.category_id === cat.id && e.result_place >= 1 && e.result_place <= 3)
         .sort((a, b) => a.result_place - b.result_place);
-      if (!placed.length) return '';
-      const rows = placed.map(e => `
+      const pcWinner = entries.find(e => e.category_id === cat.id && e.peoples_choice_result_place === 1);
+      if (!placed.length && !pcWinner) return '';
+      const rowsSource = [
+        ...placed.map(e => ({ e, label: PLACE[e.result_place] || `#${e.result_place}` })),
+        ...(pcWinner ? [{ e: pcWinner, label: "🏅 People's Choice" }] : []),
+      ];
+      const rows = rowsSource.map(({ e, label }) => `
         <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #F0F4F3">
-          <span style="font-size:13px;font-weight:700;color:#143A37;min-width:52px">${PLACE[e.result_place] || `#${e.result_place}`}</span>
+          <span style="font-size:13px;font-weight:700;color:#143A37;min-width:52px">${label}</span>
           ${e.photo_url
             ? `<img src="${esc(e.photo_url)}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;flex-shrink:0">`
             : `<div style="width:40px;height:40px;border-radius:8px;background:#F0F7F5;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🐾</div>`}
@@ -1225,10 +1255,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
          </div>`
       : '';
 
-    const catSections = categories.map(cat => {
+    const catSections = votableCategories().map(cat => {
       // Shuffled per page load so late entrants get seen too, not buried
       // under the pets that entered first
-      const catEntries = shuffle(entries.filter(e => e.category_id === cat.id));
+      const catEntries = shuffle(votableEntries(cat.id));
       if (catEntries.length === 0) return '';
       const cards = catEntries.map(e => `
         <div class="vote-card" data-entry-id="${esc(e.id)}" data-cat-id="${esc(e.category_id)}"
@@ -1275,13 +1305,24 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     return `
       ${banner}
-      <div style="max-width:min(640px,92vw);margin:0 0 20px">${aboutCard()}</div>
+      ${pcMode ? '' : `<div style="max-width:min(640px,92vw);margin:0 0 20px">${aboutCard()}</div>`}
       <div style="margin-bottom:20px">
-        <h2 style="font-size:18px;font-weight:800;color:#143A37;margin:0 0 4px">Vote for Your Favourites</h2>
-        <p style="font-size:13px;color:#6B7C79;margin:0">Pick your favourite pet in each category, then submit your votes to receive a confirmation email.${show.show_date ? ` Voting closes ${fmt(show.show_date)}${show.show_time ? ' at ' + show.show_time : ''}.` : ''}</p>
+        <h2 style="font-size:18px;font-weight:800;color:#143A37;margin:0 0 4px">${pcMode ? "🏅 People's Choice: Vote for Your Favourites" : 'Vote for Your Favourites'}</h2>
+        <p style="font-size:13px;color:#6B7C79;margin:0">${pcMode ? "These entrants are competing for the People's Choice award, decided by public vote. Voting is free. " : ''}Pick your favourite pet in each category, then submit your votes to receive a confirmation email.${show.show_date ? ` Voting closes ${fmt(show.show_date)}${show.show_time ? ' at ' + show.show_time : ''}.` : ''}</p>
       </div>
-      ${catSections || `<p style="font-size:14px;color:#6B7C79">No entries yet.</p>`}
+      ${catSections || `<p style="font-size:14px;color:#6B7C79">${pcMode ? "No People's Choice entries yet." : 'No entries yet.'}</p>`}
       <div style="height:72px"></div>`;
+  }
+
+  // Which categories/entries the public can vote on. Vote shows: everything
+  // confirmed. People's Choice shows: only enabled categories and entries
+  // whose exhibitor paid the add-on.
+  function votableCategories() {
+    return pcMode ? categories.filter(c => c.has_peoples_choice) : categories;
+  }
+  function votableEntries(catId) {
+    return entries.filter(e => e.category_id === catId
+      && (!pcMode || e.peoples_choice_fee_amount != null));
   }
 
   function postRenderVoting() {
@@ -1380,7 +1421,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
   function updateVoteBasket() {
     const count   = Object.keys(voteSelections).length;
-    const total   = categories.filter(c => entries.some(e => e.category_id === c.id)).length;
+    const total   = votableCategories().filter(c => votableEntries(c.id).length > 0).length;
     const textEl  = document.getElementById('basket-text');
     const btn     = document.getElementById('basket-submit-btn');
     if (!textEl || !btn) return;

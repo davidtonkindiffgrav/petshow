@@ -170,7 +170,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   async function loadShows() {
     const { data, error } = await supabase
       .from('shows')
-      .select('id, title, host_org, logo_url, banner_url, show_date, show_time, timezone, entry_open_date, entry_open_time, entry_close_date, entry_close_time, entry_fee, currency, status, description, is_judged, vote_open_mode, results_published_at')
+      .select('id, title, host_org, logo_url, banner_url, show_date, show_time, timezone, entry_open_date, entry_open_time, entry_close_date, entry_close_time, entry_fee, currency, status, description, is_judged, vote_open_mode, results_published_at, peoples_choice_fee')
       .order('show_date', { ascending: true });
     if (error) { console.error('[Events panel]', error); eventsList!.innerHTML = `<p style="padding:20px;color:red;">Error: ${error.message}</p>`; return; }
     const now2 = Date.now();

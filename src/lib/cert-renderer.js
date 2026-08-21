@@ -186,7 +186,9 @@ function fitImage(ctx, img, dx, dy, dw, dh, radius = 0) {
   ctx.restore();
 }
 
-export async function renderCertificate(canvas, { show, entry, category, sponsors = [], design = {} }) {
+// placeLabel overrides the ordinal place banner text (e.g. "People's Choice
+// Winner"); the ribbon icon then always uses the 1st-place artwork.
+export async function renderCertificate(canvas, { show, entry, category, sponsors = [], design = {}, placeLabel = null }) {
   const d = { ...CERT_DEFAULTS, ...design };
   const [W, H] = PAGE_SIZES[d.page_size] || PAGE_SIZES.a4;
 
@@ -220,7 +222,7 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
   drawBorder(ctx, d.border_style, W, H);
 
   // ── Load images in parallel ───────────────────────────────────────────────
-  const place       = entry?.result_place ?? 1;
+  const place       = placeLabel ? 1 : (entry?.result_place ?? 1);
   const logoUrl     = d.show_logo ? (show?.logo_url || show?.org_logo_url) : null;
   const photoUrl    = d.image_mode === 'photo' ? entry?.photo_url : null;
   const ribbonMap   = show?.currency === 'NZD' ? RIBBON_URLS_NZ : RIBBON_URLS;
@@ -305,7 +307,7 @@ export async function renderCertificate(canvas, { show, entry, category, sponsor
   y += 14;
 
   // ── Place banner ──────────────────────────────────────────────────────────
-  const placeStr = PLACE_LABEL[place] ?? `#${place}`;
+  const placeStr = placeLabel || (PLACE_LABEL[place] ?? `#${place}`);
   const catName  = category?.name     ?? 'Best in Show';
 
   ctx.textAlign = 'center';

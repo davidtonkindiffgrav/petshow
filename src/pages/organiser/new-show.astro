@@ -403,6 +403,62 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         <p class="text-[13px] font-semibold text-[#4a4357] mb-2">Which categories get which prize?</p>
         <div id="s7-assign-list" class="border border-[#efebf5] rounded-[13px] px-4"></div>
       </div>
+
+      <!-- People's Choice add-on: judged shows only -->
+      <div id="s7-pc-section" style="display:none" class="mt-8 pt-7 border-t border-[#efebf5]">
+        <div class="flex items-center justify-between mb-1">
+          <h3 class="text-[16px] font-extrabold text-[#1c1626]">🏅 People's Choice Award</h3>
+          <button type="button" id="s7-pc-toggle" data-on="false"
+            class="w-11 h-6 rounded-full bg-[#c4bed0] transition-colors relative flex items-center px-0.5">
+            <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
+          </button>
+        </div>
+        <p class="text-[13px] text-[#6f6880] mb-5">Offer entrants an optional paid add-on. Their entry also competes for a People's Choice award in the same category, decided by free public vote, with your judge breaking any tie. You keep the extra entry revenue.</p>
+
+        <div id="s7-pc-form" style="display:none">
+          <div class="mb-6">
+            <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Add-on Fee <span class="text-[#9b94a8] font-normal">, on top of the entry fee</span></label>
+            <div class="flex items-center gap-2">
+              <button type="button" id="s7-pc-fee-minus" aria-label="Decrease add-on fee"
+                class="w-11 h-11 rounded-[11px] border border-[#b8e4e0] bg-white text-[22px] font-bold text-brand hover:bg-[#f0fafa] transition-colors leading-none disabled:opacity-40 disabled:cursor-not-allowed">−</button>
+              <div class="relative w-[120px]">
+                <span id="s7-pc-symbol" class="absolute left-3 top-1/2 -translate-y-1/2 text-[15px] text-[#9b94a8] font-semibold">A$</span>
+                <input type="text" id="s7-pc-fee" readonly inputmode="numeric" value="5"
+                  class="w-full border border-[#b8e4e0] rounded-[11px] pl-10 pr-3 py-3 text-[16px] font-extrabold text-[#1c1626] text-center bg-white cursor-default" />
+              </div>
+              <button type="button" id="s7-pc-fee-plus" aria-label="Increase add-on fee"
+                class="w-11 h-11 rounded-[11px] border border-[#b8e4e0] bg-white text-[22px] font-bold text-brand hover:bg-[#f0fafa] transition-colors leading-none">+</button>
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">People's Choice Prize</label>
+            <p class="text-[12px] text-[#9b94a8] mb-2">One prize for the whole show, awarded to each People's Choice winner. Add prizes above, then pick one here.</p>
+            <select id="s7-pc-award"
+              class="w-full max-w-[340px] border border-[#b8e4e0] rounded-[11px] px-3 py-2.5 text-[13px] text-[#1c1626] bg-white focus:outline-none focus:ring-2 focus:ring-brand transition-colors"></select>
+          </div>
+
+          <div class="mb-6">
+            <p class="text-[13px] font-semibold text-[#4a4357] mb-2.5">When does People's Choice voting open?</p>
+            <div class="grid grid-cols-2 gap-3 mb-2" id="s7-pc-timing-cards">
+              <button type="button" data-value="after_entries_close" class="sel-card flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#b8e4e0] bg-white p-4 transition-all cursor-pointer">
+                <span class="text-[12.5px] font-bold text-[#1c1626]">Once entries close</span>
+                <span class="text-[11px] text-[#9b94a8] leading-snug text-center">Everyone votes on the final field of entrants</span>
+              </button>
+              <button type="button" data-value="on_entries_open" class="sel-card flex flex-col items-center gap-2 rounded-[14px] border-2 border-[#b8e4e0] bg-white p-4 transition-all cursor-pointer">
+                <span class="text-[12.5px] font-bold text-[#1c1626]">As soon as entries open</span>
+                <span class="text-[11px] text-[#9b94a8] leading-snug text-center">Voting runs alongside entries for maximum buzz</span>
+              </button>
+            </div>
+            <p class="text-[12px] text-[#9b94a8]">Voting closes when the show starts (your show date &amp; start time). Voting itself is always free.</p>
+          </div>
+
+          <div>
+            <p class="text-[13px] font-semibold text-[#4a4357] mb-2">Which categories offer the People's Choice add-on?</p>
+            <div id="s7-pc-cats" class="border border-[#efebf5] rounded-[13px] px-4"></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ─── Step 8: Entry Fees ────────────────────────────────────────────── -->
@@ -737,6 +793,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     is_judged: null, judge_count: 1, judge_setup: 'later',
     judges: [],
     awards: [], awards_choice: null,
+    pc_enabled: false, peoples_choice_fee: null, peoples_choice_award_id: null,
     is_fundraising: true,
     fundraising_goal: null,
     show_fundraising_publicly: null,
@@ -1214,6 +1271,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       logo_url: show.logo_url || null, banner_url: show.banner_url || null, banner_color: show.banner_color || null, org_logo_url: show.org_logo_url || null,
       logo_source: show.logo_source || 'show',
       currency: show.currency, entry_fee: show.entry_fee, status: 'draft',
+      // People's Choice only exists on judged shows; switching to public
+      // voting (or disabling the toggle) clears it.
+      peoples_choice_fee: (show.is_judged === true && show.pc_enabled) ? (show.peoples_choice_fee || null) : null,
+      peoples_choice_award_id: (show.is_judged === true && show.pc_enabled) ? (show.peoples_choice_award_id || null) : null,
       timezone: show.timezone || null,
       entry_open_time: show.entry_open_time || null,
       entry_close_time: show.entry_close_time || null,
@@ -1323,7 +1384,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (removedIds.length) await supabase.from('show_categories').delete().in('id', removedIds);
     if (rows.length) {
       await supabase.from('show_categories').upsert(
-        rows.map(c => ({ id: c.id, show_id: show.id, name: c.name, criteria: c.criteria || null, award_id: c.award_id || null, has_certificate: !!c.has_certificate })),
+        rows.map(c => ({
+          id: c.id, show_id: show.id, name: c.name, criteria: c.criteria || null,
+          award_id: c.award_id || null, has_certificate: !!c.has_certificate,
+          has_peoples_choice: !!(show.is_judged === true && show.pc_enabled && c.has_peoples_choice),
+        })),
         { onConflict: 'id' }
       );
     }
@@ -1333,7 +1398,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   // ─── Step 4 init ─────────────────────────────────────────────────────────────
   function initStep4() {
     if (show.classes.length === 0) {
-      show.classes.push({ id: crypto.randomUUID(), name: '', criteria: '', award_id: null, has_certificate: true, enabled: true, custom: true });
+      show.classes.push({ id: crypto.randomUUID(), name: '', criteria: '', award_id: null, has_certificate: true, has_peoples_choice: true, enabled: true, custom: true });
     }
     renderFunStakesCategories();
   }
@@ -1405,7 +1470,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           show.classes[blankIdx].name = cat.name;
           show.classes[blankIdx].criteria = cat.criteria;
         } else {
-          show.classes.push({ id: crypto.randomUUID(), name: cat.name, criteria: cat.criteria, award_id: null, has_certificate: true, enabled: true, custom: true });
+          show.classes.push({ id: crypto.randomUUID(), name: cat.name, criteria: cat.criteria, award_id: null, has_certificate: true, has_peoples_choice: true, enabled: true, custom: true });
         }
         renderFunStakesCategories();
       });
@@ -1633,6 +1698,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   // ─── Step 7: Awards ──────────────────────────────────────────────────────────
   function initStep7() {
     renderAwardRows();
+    renderPcSection();
   }
 
   function renderAwardRows() {
@@ -1699,11 +1765,14 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         show.classes.forEach(c => { if (!c.award_id) c.award_id = award.id; });
       }
       renderAwardAssignments();
+      renderPcSection();
     });
     row.querySelector('.award-remove').addEventListener('click', () => {
       show.classes.forEach(c => { if (c.award_id === award.id) c.award_id = null; });
+      if (show.peoples_choice_award_id === award.id) show.peoples_choice_award_id = null;
       show.awards.splice(idx, 1);
       renderAwardRows();
+      renderPcSection();
     });
     row.querySelector('.award-desc-input').addEventListener('input', e => { award.physical_description = e.target.value; });
     const sponsorSelect = row.querySelector('.award-sponsor-select');
@@ -1748,6 +1817,65 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         show.classes[i].award_id = e.target.value || null;
       });
     });
+  }
+
+  // ─── People's Choice section (Step 7, judged shows only) ────────────────────
+  function renderPcSection() {
+    const section = document.getElementById('s7-pc-section');
+    if (!section) return;
+    if (show.is_judged !== true) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+
+    setToggle('s7-pc-toggle', !!show.pc_enabled);
+    document.getElementById('s7-pc-form').style.display = show.pc_enabled ? 'block' : 'none';
+    if (!show.pc_enabled) return;
+
+    if (!show.peoples_choice_fee || show.peoples_choice_fee < 1) show.peoples_choice_fee = 5;
+    setPcFeeValue(show.peoples_choice_fee);
+    document.getElementById('s7-pc-symbol').textContent = CURRENCY_SYMBOLS[show.currency] || show.currency;
+
+    // Prize select from the show's physical prizes
+    const sel = document.getElementById('s7-pc-award');
+    const validAwards = show.awards.filter(a => a.name.trim());
+    sel.innerHTML = ['<option value="">No prize selected yet</option>']
+      .concat(validAwards.map(a => `<option value="${a.id}" ${show.peoples_choice_award_id === a.id ? 'selected' : ''}>${esc(a.name)}</option>`))
+      .join('');
+    if (show.peoples_choice_award_id && !validAwards.some(a => a.id === show.peoples_choice_award_id)) {
+      show.peoples_choice_award_id = null;
+    }
+
+    selectCard(document.getElementById('s7-pc-timing-cards'), show.vote_open_mode || 'after_entries_close');
+
+    // Category tick list
+    const wrap = document.getElementById('s7-pc-cats');
+    const validClasses = show.classes.filter(c => c.name.trim());
+    if (!validClasses.length) {
+      wrap.innerHTML = `<p class="text-[12.5px] text-[#9b94a8] py-3">Add categories in Step 4 first.</p>`;
+      return;
+    }
+    wrap.innerHTML = validClasses.map(cls => {
+      const i = show.classes.indexOf(cls);
+      return `
+        <label class="flex items-center justify-between gap-3 py-2.5 border-b border-[#f5f3f8] last:border-0 cursor-pointer select-none">
+          <span class="text-[13px] text-[#1c1626] font-medium">${esc(cls.name)}</span>
+          <input type="checkbox" data-class-idx="${i}" class="pc-cat-checkbox w-4 h-4 accent-brand" ${cls.has_peoples_choice ? 'checked' : ''} />
+        </label>`;
+    }).join('');
+    wrap.querySelectorAll('.pc-cat-checkbox').forEach(cb => {
+      cb.addEventListener('change', e => {
+        const i = parseInt(e.target.dataset.classIdx, 10);
+        show.classes[i].has_peoples_choice = e.target.checked;
+      });
+    });
+  }
+
+  function setPcFeeValue(v) {
+    const val = Math.max(1, Math.round(v) || 1);
+    show.peoples_choice_fee = val;
+    const input = document.getElementById('s7-pc-fee');
+    if (input) input.value = String(val);
+    const minus = document.getElementById('s7-pc-fee-minus');
+    if (minus) minus.disabled = val <= 1;
   }
 
   // ─── Review ─────────────────────────────────────────────────────────────────
@@ -1810,6 +1938,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           ${reviewRow('Physical Prizes', show.awards.filter(a => a.name.trim()).length > 0
             ? `${show.awards.filter(a => a.name.trim()).length} prize(s) defined`
             : show.awards_choice === 'no' ? 'No physical prizes' : null, 7)}
+          ${show.is_judged === true ? reviewRow('People\'s Choice', show.pc_enabled
+            ? `${CURRENCY_SYMBOLS[show.currency] || show.currency}${Number(show.peoples_choice_fee || 0).toFixed(2)} add-on · ${show.classes.filter(c => c.enabled && c.name.trim() && c.has_peoples_choice).length} categories`
+            : 'Not offered', 7) : ''}
         </div>
       </div>
       <div class="border border-[#efebf5] rounded-[14px] overflow-hidden">
@@ -1831,6 +1962,20 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   // ─── Publish / Save draft ───────────────────────────────────────────────────
   async function finalSave(status) {
     if (!show.id) return;
+    if (status === 'published' && show.is_judged === true && show.pc_enabled) {
+      const tickedCats = show.classes.filter(c => c.enabled && c.name.trim() && c.has_peoples_choice).length;
+      const problem = !show.peoples_choice_award_id
+        ? "People's Choice is enabled but has no prize selected. Pick one in Awards & Prizes, or turn People's Choice off."
+        : !tickedCats
+          ? "People's Choice is enabled but no categories offer it. Tick at least one in Awards & Prizes, or turn People's Choice off."
+          : null;
+      if (problem) {
+        showError(problem);
+        document.getElementById('btn-publish').innerHTML =
+          '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Publish Now';
+        return;
+      }
+    }
     const update = { status, wizard_step: 10 };
     if (status === 'published') update.organiser_declaration_accepted_at = new Date().toISOString();
     await supabase.from('shows').update(update).eq('id', show.id);
@@ -1846,7 +1991,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       supabase.from('show_sponsors').select('*').eq('show_id', id),
       supabase.from('show_judges').select('*').eq('show_id', id),
       supabase.from('awards').select('*').eq('show_id', id),
-      supabase.from('show_categories').select('id, name, criteria, award_id, has_certificate').eq('show_id', id),
+      supabase.from('show_categories').select('id, name, criteria, award_id, has_certificate, has_peoples_choice').eq('show_id', id),
     ]);
     if (!data) return;
 
@@ -1879,7 +2024,17 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         ? judgesData.map(j => ({ first_name: j.first_name || '', last_name: j.last_name || '', email: j.email || '', phone: j.phone || '', photo_url: j.photo_url || '' }))
         : [],
       awards: awardsData || [],
-      classes: cats?.length > 0 ? cats.map(c => ({ id: c.id, name: c.name, criteria: c.criteria || '', award_id: c.award_id || null, has_certificate: !!c.has_certificate, enabled: true, custom: false })) : [],
+      classes: cats?.length > 0 ? cats.map(c => ({
+        id: c.id, name: c.name, criteria: c.criteria || '', award_id: c.award_id || null,
+        has_certificate: !!c.has_certificate,
+        // When PC was never configured (all flags false), default the ticks on
+        // so enabling the toggle starts with every category offered.
+        has_peoples_choice: data.peoples_choice_fee != null ? !!c.has_peoples_choice : true,
+        enabled: true, custom: false,
+      })) : [],
+      pc_enabled: data.peoples_choice_fee != null,
+      peoples_choice_fee: data.peoples_choice_fee != null ? Number(data.peoples_choice_fee) : null,
+      peoples_choice_award_id: data.peoples_choice_award_id || null,
       is_fundraising: data.is_fundraising ?? true,
       fundraising_goal: data.fundraising_goal,
       fundraising_goal_type: data.fundraising_goal_type || 'amount',
@@ -2177,7 +2332,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     selectCard(document.getElementById('breed-scope-cards'), 'all');
     // Step 4: add category
     document.getElementById('s4-add-funstakes').addEventListener('click', () => {
-      show.classes.push({ id: crypto.randomUUID(), name: '', criteria: '', award_id: null, has_certificate: true, enabled: true, custom: true });
+      show.classes.push({ id: crypto.randomUUID(), name: '', criteria: '', award_id: null, has_certificate: true, has_peoples_choice: true, enabled: true, custom: true });
       renderFunStakesCategories();
     });
     // Step 5: sponsorship YNA
@@ -2215,6 +2370,23 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         id: crypto.randomUUID(), name: '', physical_description: '', image_url: null, sponsor_id: null,
       });
       renderAwardRows();
+      renderPcSection();
+    });
+    // Step 7: People's Choice add-on
+    setupToggle('s7-pc-toggle', on => {
+      show.pc_enabled = on;
+      renderPcSection();
+    });
+    document.getElementById('s7-pc-fee-minus').addEventListener('click', () => setPcFeeValue((show.peoples_choice_fee || 1) - 1));
+    document.getElementById('s7-pc-fee-plus').addEventListener('click', () => setPcFeeValue((show.peoples_choice_fee || 1) + 1));
+    document.getElementById('s7-pc-award').addEventListener('change', e => {
+      show.peoples_choice_award_id = e.target.value || null;
+    });
+    document.getElementById('s7-pc-timing-cards').querySelectorAll('[data-value]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectCard(document.getElementById('s7-pc-timing-cards'), btn.dataset.value);
+        show.vote_open_mode = btn.dataset.value;
+      });
     });
     // Close judge picker dropdowns when clicking outside
     document.addEventListener('click', () => {

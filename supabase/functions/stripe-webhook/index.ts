@@ -32,18 +32,23 @@ async function sumConfirmedNet(
   supabase: ReturnType<typeof createClient>, showId: string, entryFee: number, currency: string,
 ): Promise<number> {
   const { data: entries } = await supabase
-    .from('show_entries').select('entry_net_amount').eq('show_id', showId).eq('status', 'confirmed');
-  let total = 0, missing = 0;
+    .from('show_entries')
+    .select('entry_net_amount, entry_gross_amount')
+    .eq('show_id', showId).eq('status', 'confirmed');
+  let total = 0;
+  const missingGrosses: number[] = [];
   for (const e of (entries || [])) {
     if (e.entry_net_amount != null) total += Number(e.entry_net_amount);
-    else missing++;
+    else missingGrosses.push(Number(e.entry_gross_amount) || entryFee || 0);
   }
-  if (missing > 0) {
+  if (missingGrosses.length > 0) {
     const { data: feeRows } = await supabase
       .from('platform_settings').select('key, value').or('key.like.service_fee_%,key.like.stripe_fee_%');
     const settings: Record<string, number> = {};
     for (const r of (feeRows || [])) settings[r.key] = parseFloat(r.value) || 0;
-    total += missing * (organiserNet(entryFee || 0, currency || 'AUD', settings) ?? 0);
+    for (const gross of missingGrosses) {
+      total += organiserNet(gross, currency || 'AUD', settings) ?? 0;
+    }
   }
   return total;
 }
@@ -82,8 +87,9 @@ async function checkAndCloseOnGoal(supabase: ReturnType<typeof createClient>, sh
 // checkout.session.completed fires (confirmed live: a charge came back
 // captured/paid/succeeded with balance_transaction: null) — retry with
 // backoff rather than treating a first-attempt miss as unavailable.
-async function fetchNetPerEntry(
-  stripe: Stripe, connectedAccountId: string, paymentIntentId: string, entryCount: number,
+// Returns the session's whole net; callers split it across entries.
+async function fetchNetTotal(
+  stripe: Stripe, connectedAccountId: string, paymentIntentId: string,
 ): Promise<number | null> {
   const delaysMs = [1000, 2000, 4000];
   for (let attempt = 0; attempt <= delaysMs.length; attempt++) {
@@ -95,13 +101,32 @@ async function fetchNetPerEntry(
         { stripeAccount: connectedAccountId },
       );
       const bt = pi.latest_charge?.balance_transaction;
-      if (bt?.net != null && entryCount > 0) return (bt.net / 100) / entryCount;
+      if (bt?.net != null) return bt.net / 100;
     } catch (err: any) {
       console.error('Failed to fetch balance transaction for net amount:', err.message);
       return null;
     }
   }
   return null;
+}
+
+// Per-entry share of a session amount. Entries can cost different amounts
+// (e.g. a People's Choice add-on on some rows), so split by each row's
+// entry_gross_amount when every row has one and they sum to the session
+// total — otherwise fall back to the legacy equal division.
+function grossShares(
+  rows: { id: string; entry_gross_amount: number | null }[], sessionTotal: number,
+): Map<string, number> {
+  const shares = new Map<string, number>();
+  if (!rows.length) return shares;
+  const grosses = rows.map(r => Number(r.entry_gross_amount));
+  const sumGross = grosses.reduce((a, b) => a + b, 0);
+  const usable = grosses.every(g => isFinite(g) && g > 0)
+    && Math.round(sumGross * 100) === Math.round(sessionTotal * 100);
+  for (let i = 0; i < rows.length; i++) {
+    shares.set(rows[i].id, usable ? grosses[i] / sumGross : 1 / rows.length);
+  }
+  return shares;
 }
 
 serve(async (req: Request) => {
@@ -155,19 +180,47 @@ serve(async (req: Request) => {
     // captured/paid/succeeded but with balance_transaction: null — a known
     // Stripe timing gap, not an error, especially on a brand-new connected
     // account's first transactions).
-    const { error } = await supabase
+    const { data: sessionRows } = await supabase
       .from('show_entries')
-      .update({ status: 'confirmed', entry_fee_paid: perEntry })
+      .select('id, entry_gross_amount')
       .eq('stripe_session_id', session.id);
+    const shares = grossShares(sessionRows || [], amountPaid);
+
+    let error: any = null;
+    if (shares.size) {
+      for (const [entryId, share] of shares) {
+        const { error: updErr } = await supabase
+          .from('show_entries')
+          .update({ status: 'confirmed', entry_fee_paid: amountPaid * share })
+          .eq('id', entryId);
+        if (updErr) error = updErr;
+      }
+    } else {
+      // Rows not visible (shouldn't happen — the session id is stamped before
+      // redirecting to Stripe); fall back to the legacy blanket update.
+      const { error: updErr } = await supabase
+        .from('show_entries')
+        .update({ status: 'confirmed', entry_fee_paid: perEntry })
+        .eq('stripe_session_id', session.id);
+      error = updErr;
+    }
 
     if (error) {
       console.error('Failed to confirm entries:', error.message);
     } else {
       if (connectedAccountId && session.payment_intent) {
-        const netPerEntry = await fetchNetPerEntry(stripe, connectedAccountId, session.payment_intent as string, entryCount);
-        if (netPerEntry != null) {
+        const netTotal = await fetchNetTotal(stripe, connectedAccountId, session.payment_intent as string);
+        if (netTotal != null && shares.size) {
+          for (const [entryId, share] of shares) {
+            const { error: netErr } = await supabase
+              .from('show_entries').update({ entry_net_amount: netTotal * share }).eq('id', entryId);
+            if (netErr) console.error('Failed to store net amount:', netErr.message);
+          }
+        } else if (netTotal != null) {
           const { error: netErr } = await supabase
-            .from('show_entries').update({ entry_net_amount: netPerEntry }).eq('stripe_session_id', session.id);
+            .from('show_entries')
+            .update({ entry_net_amount: entryCount > 0 ? netTotal / entryCount : netTotal })
+            .eq('stripe_session_id', session.id);
           if (netErr) console.error('Failed to store net amount:', netErr.message);
         } else {
           console.error(`Balance transaction net amount never became available for session ${session.id}`);

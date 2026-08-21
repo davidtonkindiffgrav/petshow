@@ -577,6 +577,57 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           <p class="text-[13px] font-semibold text-[#4a4357] mb-2">Which categories get which prize?</p>
           <div id="mgmt-assign-list" class="border border-[#efebf5] rounded-[13px] px-4"></div>
         </div>
+
+        <!-- People's Choice add-on: judged shows only -->
+        <div id="mgmt-pc-section" style="display:none" class="mt-6 pt-5 border-t border-[#efebf5]">
+          <div class="flex items-center justify-between mb-1">
+            <p class="text-[14px] font-extrabold text-[#1c1626]">🏅 People's Choice Award</p>
+            <button type="button" id="mgmt-pc-toggle" data-on="false"
+              class="w-11 h-6 rounded-full bg-[#c4bed0] transition-colors relative flex items-center px-0.5 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed">
+              <span class="w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
+            </button>
+          </div>
+          <p class="text-[12.5px] text-[#9b94a8] mb-4">Entrants can pay an optional add-on so their entry also competes for a People's Choice award in the same category, decided by free public vote. Your judge breaks any tie.</p>
+          <div id="mgmt-pc-form" style="display:none" class="space-y-4">
+            <div>
+              <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">Add-on Fee <span class="text-[#9b94a8] font-normal">, on top of the entry fee</span></label>
+              <div class="flex items-center gap-2">
+                <button type="button" id="mgmt-pc-fee-minus" aria-label="Decrease add-on fee"
+                  class="w-10 h-10 rounded-[11px] border border-[#b8e4e0] bg-white text-[20px] font-bold text-brand hover:bg-[#f0fafa] transition-colors leading-none disabled:opacity-40 disabled:cursor-not-allowed">−</button>
+                <div class="relative w-[110px]">
+                  <span id="mgmt-pc-symbol" class="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-[#9b94a8] font-semibold">A$</span>
+                  <input type="text" id="mgmt-pc-fee" readonly inputmode="numeric" value="5"
+                    class="w-full border border-[#b8e4e0] rounded-[11px] pl-10 pr-3 py-2.5 text-[15px] font-extrabold text-[#1c1626] text-center bg-white cursor-default" />
+                </div>
+                <button type="button" id="mgmt-pc-fee-plus" aria-label="Increase add-on fee"
+                  class="w-10 h-10 rounded-[11px] border border-[#b8e4e0] bg-white text-[20px] font-bold text-brand hover:bg-[#f0fafa] transition-colors leading-none disabled:opacity-40 disabled:cursor-not-allowed">+</button>
+              </div>
+            </div>
+            <div>
+              <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">People's Choice Prize</label>
+              <p class="text-[12px] text-[#9b94a8] mb-2">One prize for the whole show, awarded to each People's Choice winner. Add it as a physical prize above, then pick it here.</p>
+              <select id="mgmt-pc-award"
+                class="w-full border border-[#b8e4e0] rounded-[11px] px-3 py-2.5 text-[13px] text-[#1c1626] bg-white focus:outline-none focus:ring-2 focus:ring-brand transition-colors"></select>
+            </div>
+            <div>
+              <p class="text-[13px] font-semibold text-[#4a4357] mb-2">When does People's Choice voting open?</p>
+              <div class="grid grid-cols-2 gap-3 mb-2" id="mgmt-pc-timing-cards">
+                <button type="button" data-value="after_entries_close" class="sel-card flex flex-col items-center gap-1.5 rounded-[13px] border-2 border-[#b8e4e0] bg-white p-3 transition-all cursor-pointer">
+                  <span class="text-[12px] font-bold text-[#1c1626]">Once entries close</span>
+                </button>
+                <button type="button" data-value="on_entries_open" class="sel-card flex flex-col items-center gap-1.5 rounded-[13px] border-2 border-[#b8e4e0] bg-white p-3 transition-all cursor-pointer">
+                  <span class="text-[12px] font-bold text-[#1c1626]">As soon as entries open</span>
+                </button>
+              </div>
+              <p class="text-[11.5px] text-[#9b94a8]">Voting closes when the show starts. Voting itself is always free.</p>
+            </div>
+            <div>
+              <p class="text-[13px] font-semibold text-[#4a4357] mb-2">Which categories offer the add-on?</p>
+              <div id="mgmt-pc-cats" class="border border-[#efebf5] rounded-[13px] px-4"></div>
+            </div>
+          </div>
+          <p id="mgmt-pc-lock-notice" style="display:none" class="text-[11.5px] text-amber-brand mt-2">Entrants have already paid for People's Choice, so the fee can't change and it can't be turned off.</p>
+        </div>
         <p class="panel-error text-[12px] text-red-500 mt-4" style="display:none"></p>
         <div class="drawer-actions flex justify-end gap-3 mt-4 pb-2">
           <button class="cancel-btn text-[13px] font-semibold text-[#9b94a8] hover:text-[#1c1626] px-3 py-2 transition-colors">Cancel</button>
@@ -809,7 +860,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   let maxUploadMb    = 5;
   let mgmtClasses    = []; // { id, name, criteria, award_id }
   let mgmtAwards     = []; // { id, name, physical_description, image_url, sponsor_id } — physical prizes only
-  let mgmtAssignments = []; // { id, name, award_id } — Awards panel's own staged copy of category->award links
+  let mgmtAssignments = []; // { id, name, award_id, has_peoples_choice } — Awards panel's own staged copy of category->award links
+  let mgmtPc = { enabled: false, fee: 5, award_id: null, vote_open_mode: 'after_entries_close' }; // Awards panel staged People's Choice settings
+  let pcPaidCatIds = new Set(); // category ids with confirmed paid People's Choice opt-ins — can't be unticked
+  let pcPaidLock = false; // any paid opt-in exists — fee frozen, toggle can't turn off
   let loadedCategoryIds = new Set();
   let loadedAwardIds    = new Set();
   let pendingBranding = { logo: null, orgLogo: null, banner: null, sponsorLogo: null };
@@ -960,6 +1014,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       const { count } = await supabase.from('public_votes')
         .select('show_id', { count: 'exact', head: true }).eq('show_id', showId);
       judgingOrVotingStarted = (count || 0) > 0;
+    }
+    if (show.peoples_choice_fee != null) {
+      const { data: pcRows } = await supabase.from('show_entries')
+        .select('category_id').eq('show_id', showId).eq('status', 'confirmed')
+        .not('peoples_choice_fee_amount', 'is', null);
+      pcPaidCatIds = new Set((pcRows || []).map(r => r.category_id).filter(Boolean));
+      pcPaidLock = (pcRows || []).length > 0;
     }
     categories  = catsRes.data     || [];
     judges      = judgesRes.data   || [];
@@ -1266,6 +1327,17 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     } else if (!connectStatus?.stripe_charges_ready) {
       required.push({ label: 'Payments connected', detail: 'Connect a Stripe account before publishing a paid show.', panelId: 'payments' });
     }
+    if (show.peoples_choice_fee != null) {
+      if (show.is_judged !== true) {
+        required.push({ label: "People's Choice", detail: "People's Choice is only available on judged shows. Turn it off or switch to guest judging.", panelId: 'awards' });
+      } else if (!(Number(show.peoples_choice_fee) >= 1)) {
+        required.push({ label: "People's Choice", detail: 'Set the add-on fee (minimum 1).', panelId: 'awards' });
+      } else if (!show.peoples_choice_award_id) {
+        required.push({ label: "People's Choice", detail: "Pick the People's Choice prize.", panelId: 'awards' });
+      } else if (!categories.some(c => c.has_peoples_choice)) {
+        required.push({ label: "People's Choice", detail: 'Tick at least one category to offer the add-on, or turn it off.', panelId: 'awards' });
+      }
+    }
 
     const uploadedCount = [show.logo_url, show.org_logo_url, show.banner_url].filter(Boolean).length;
     if (uploadedCount < 3) {
@@ -1571,10 +1643,17 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     // simplifies to two states covering either one.
     const certCount     = categories.filter(c => c.has_certificate).length;
     const physicalCount = categories.filter(c => c.award_id).length;
-    if (certCount > 0 || physicalCount > 0) {
+    const pcCatCount    = categories.filter(c => c.has_peoples_choice).length;
+    const pcRow = show.is_judged === true
+      ? [["People's Choice", show.peoples_choice_fee != null
+          ? `${CURRENCY_SYMBOLS[show.currency] || ''}${Number(show.peoples_choice_fee).toFixed(2)} add-on · ${pcCatCount} categor${pcCatCount !== 1 ? 'ies' : 'y'}`
+          : 'Not offered']]
+      : [];
+    if (certCount > 0 || physicalCount > 0 || show.peoples_choice_fee != null) {
       setHeader('awards', '#22c55e', 'Configured', 'Awards & Prizes', [
         ['Certificates', `${certCount} of ${categories.length} categories`],
         ['Physical prizes', `${physicalCount} of ${categories.length} categories`],
+        ...pcRow,
       ], 'Edit');
     } else {
       setHeader('awards', '#fbbf24', 'Setup needed', 'Awards & Prizes', [
@@ -1961,6 +2040,23 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         id: crypto.randomUUID(), name: '', physical_description: '', image_url: null, sponsor_id: null,
       });
       renderAwardRows();
+      renderPcPanel();
+    });
+
+    // People's Choice section (Awards panel)
+    document.getElementById('mgmt-pc-toggle').addEventListener('click', () => {
+      if (pcPaidLock && mgmtPc.enabled) return;
+      mgmtPc.enabled = !mgmtPc.enabled;
+      renderPcPanel();
+    });
+    document.getElementById('mgmt-pc-fee-minus').addEventListener('click', () => { if (!pcPaidLock) setMgmtPcFee(mgmtPc.fee - 1); });
+    document.getElementById('mgmt-pc-fee-plus').addEventListener('click', () => { if (!pcPaidLock) setMgmtPcFee(mgmtPc.fee + 1); });
+    document.getElementById('mgmt-pc-award').addEventListener('change', e => { mgmtPc.award_id = e.target.value || null; });
+    document.getElementById('mgmt-pc-timing-cards').querySelectorAll('[data-value]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectCard(document.getElementById('mgmt-pc-timing-cards'), btn.dataset.value);
+        mgmtPc.vote_open_mode = btn.dataset.value;
+      });
     });
 
     // Fundraising
@@ -2269,7 +2365,15 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (removedIds.length) await supabase.from('show_categories').delete().in('id', removedIds);
     if (rows.length) {
       await supabase.from('show_categories').upsert(
-        rows.map(c => ({ id: c.id, show_id: showId, name: c.name.trim(), criteria: c.criteria || null, award_id: c.award_id || null, has_certificate: !!c.has_certificate })),
+        rows.map(c => ({
+          id: c.id, show_id: showId, name: c.name.trim(), criteria: c.criteria || null,
+          award_id: c.award_id || null, has_certificate: !!c.has_certificate,
+          // Not every caller stages this field (the Classes panel doesn't) —
+          // carry the current value through so saving there can't wipe it.
+          has_peoples_choice: c.has_peoples_choice !== undefined
+            ? !!c.has_peoples_choice
+            : !!categories.find(x => x.id === c.id)?.has_peoples_choice,
+        })),
         { onConflict: 'id' }
       );
     }
@@ -2379,8 +2483,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         renderMgmtJudgeDisplay();
       });
     } else {
+      if (pcPaidLock) return showPanelError('judging', "This show can't switch to public voting: entrants have already paid for the People's Choice add-on, which needs a judge.");
       const voteMode = getSelectedCard('mgmt-vote-timing-cards') || 'after_entries_close';
-      await saveSection('judging', { is_judged: false, vote_open_mode: voteMode }, async () => {
+      // Public-voting shows can't offer the paid People's Choice add-on.
+      await saveSection('judging', { is_judged: false, vote_open_mode: voteMode, peoples_choice_fee: null, peoples_choice_award_id: null }, async () => {
         await supabase.from('show_judges').delete().eq('show_id', showId);
         judges = [];
       });
@@ -2390,9 +2496,25 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   async function saveAwards() {
     const val = getYNValue('mgmt-awards-yn');
     if (!val) return showPanelError('awards', 'Please make a selection.');
+
+    // People's Choice show-level fields ride along with this panel's save.
+    const pcActive = show.is_judged === true && mgmtPc.enabled;
+    if (pcActive && show.status === 'published') {
+      if (!mgmtPc.award_id) return showPanelError('awards', "People's Choice needs a prize selected before saving on a published show.");
+      if (!mgmtAssignments.some(a => a.has_peoples_choice)) return showPanelError('awards', "People's Choice needs at least one category ticked, or turn it off.");
+    }
+    if (pcPaidLock && !mgmtPc.enabled) return showPanelError('awards', "People's Choice can't be turned off: entrants have already paid for it.");
+    const lockedUntick = [...pcPaidCatIds].find(id => !mgmtAssignments.find(a => a.id === id)?.has_peoples_choice);
+    if (mgmtPc.enabled && lockedUntick) return showPanelError('awards', "A category with paid People's Choice entries can't stop offering it.");
+    const pcPayload = {
+      peoples_choice_fee: pcActive ? mgmtPc.fee : null,
+      peoples_choice_award_id: pcActive ? mgmtPc.award_id : null,
+      ...(pcActive ? { vote_open_mode: mgmtPc.vote_open_mode } : {}),
+    };
+
     if (val === 'yes') {
       const validAwards = mgmtAwards.filter(a => a.name.trim());
-      await saveSection('awards', {}, async () => {
+      await saveSection('awards', pcPayload, async () => {
         const currentAwardIds = new Set(validAwards.map(a => a.id));
         const removedAwardIds = [...loadedAwardIds].filter(id => !currentAwardIds.has(id));
         if (removedAwardIds.length) await supabase.from('awards').delete().in('id', removedAwardIds);
@@ -2411,16 +2533,26 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         // carry the current value through unchanged rather than defaulting it.
         const catRows = mgmtAssignments.map(a => {
           const src = categories.find(c => c.id === a.id);
-          return { id: a.id, name: src?.name || a.name, criteria: src?.criteria || null, award_id: a.award_id, has_certificate: !!src?.has_certificate };
+          return {
+            id: a.id, name: src?.name || a.name, criteria: src?.criteria || null,
+            award_id: a.award_id, has_certificate: !!src?.has_certificate,
+            has_peoples_choice: pcActive && !!a.has_peoples_choice,
+          };
         });
         await upsertCategories(catRows);
       });
     } else {
-      await saveSection('awards', {}, async () => {
+      // Deleting all physical prizes also removes the People's Choice prize
+      // link (the FK nulls it); fee/enabled state is kept if active.
+      await saveSection('awards', { ...pcPayload, peoples_choice_award_id: null }, async () => {
         await supabase.from('awards').delete().eq('show_id', showId);
         awards = [];
         loadedAwardIds = new Set();
-        const catRows = categories.map(c => ({ id: c.id, name: c.name, criteria: c.criteria, award_id: null, has_certificate: !!c.has_certificate }));
+        const catRows = categories.map(c => ({
+          id: c.id, name: c.name, criteria: c.criteria, award_id: null,
+          has_certificate: !!c.has_certificate,
+          has_peoples_choice: pcActive && !!(mgmtAssignments.find(a => a.id === c.id)?.has_peoples_choice),
+        }));
         await upsertCategories(catRows);
       });
     }
@@ -2838,8 +2970,80 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   // own mgmtClasses scratch state (these are independently-opened panels).
   function initAwardsPanel() {
     mgmtAwards      = awards.map(a => ({ ...a }));
-    mgmtAssignments = categories.map(c => ({ id: c.id, name: c.name, award_id: c.award_id || null }));
+    mgmtAssignments = categories.map(c => ({
+      id: c.id, name: c.name, award_id: c.award_id || null,
+      // When PC was never configured, default the ticks on so enabling the
+      // toggle starts with every category offered.
+      has_peoples_choice: show.peoples_choice_fee != null ? !!c.has_peoples_choice : true,
+    }));
+    mgmtPc = {
+      enabled: show.peoples_choice_fee != null,
+      fee: show.peoples_choice_fee != null ? Number(show.peoples_choice_fee) : 5,
+      award_id: show.peoples_choice_award_id || null,
+      vote_open_mode: show.vote_open_mode || 'after_entries_close',
+    };
     renderAwardRows();
+    renderPcPanel();
+  }
+
+  // People's Choice section of the Awards panel (judged shows only).
+  function renderPcPanel() {
+    const section = document.getElementById('mgmt-pc-section');
+    if (!section) return;
+    if (show.is_judged !== true) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+
+    const toggle = document.getElementById('mgmt-pc-toggle');
+    toggle.dataset.on = String(mgmtPc.enabled);
+    toggle.style.background = mgmtPc.enabled ? '#1ba89a' : '#c4bed0';
+    toggle.querySelector('span').style.transform = mgmtPc.enabled ? 'translateX(20px)' : 'translateX(0)';
+    toggle.disabled = pcPaidLock && mgmtPc.enabled;
+    document.getElementById('mgmt-pc-lock-notice').style.display = pcPaidLock ? 'block' : 'none';
+    document.getElementById('mgmt-pc-form').style.display = mgmtPc.enabled ? 'block' : 'none';
+    if (!mgmtPc.enabled) return;
+
+    setMgmtPcFee(mgmtPc.fee);
+    document.getElementById('mgmt-pc-symbol').textContent = CURRENCY_SYMBOLS[show.currency] || show.currency || 'A$';
+
+    const sel = document.getElementById('mgmt-pc-award');
+    const validAwards = mgmtAwards.filter(a => a.name.trim());
+    if (mgmtPc.award_id && !validAwards.some(a => a.id === mgmtPc.award_id)) mgmtPc.award_id = null;
+    sel.innerHTML = ['<option value="">No prize selected yet</option>']
+      .concat(validAwards.map(a => `<option value="${a.id}" ${mgmtPc.award_id === a.id ? 'selected' : ''}>${esc(a.name)}</option>`))
+      .join('');
+
+    selectCard(document.getElementById('mgmt-pc-timing-cards'), mgmtPc.vote_open_mode);
+
+    const wrap = document.getElementById('mgmt-pc-cats');
+    if (!mgmtAssignments.length) {
+      wrap.innerHTML = `<p class="text-[12.5px] text-[#9b94a8] py-3">Add categories in the Categories panel first.</p>`;
+      return;
+    }
+    wrap.innerHTML = mgmtAssignments.map((cls, i) => {
+      const locked = pcPaidCatIds.has(cls.id) && cls.has_peoples_choice;
+      return `
+        <label class="flex items-center justify-between gap-3 py-2.5 border-b border-[#f5f3f8] last:border-0 ${locked ? '' : 'cursor-pointer'} select-none">
+          <span class="text-[13px] text-[#1c1626] font-medium">${esc(cls.name)}${locked ? ' <span class="text-[11px] text-[#9b94a8] font-normal">(has paid opt-ins)</span>' : ''}</span>
+          <input type="checkbox" data-idx="${i}" class="mgmt-pc-cat-checkbox w-4 h-4 accent-brand" ${cls.has_peoples_choice ? 'checked' : ''} ${locked ? 'disabled' : ''} />
+        </label>`;
+    }).join('');
+    wrap.querySelectorAll('.mgmt-pc-cat-checkbox').forEach(cb => {
+      cb.addEventListener('change', e => {
+        const i = parseInt(e.target.dataset.idx, 10);
+        mgmtAssignments[i].has_peoples_choice = e.target.checked;
+      });
+    });
+  }
+
+  function setMgmtPcFee(v) {
+    const val = Math.max(1, Math.round(v) || 1);
+    mgmtPc.fee = val;
+    const input = document.getElementById('mgmt-pc-fee');
+    if (input) input.value = String(val);
+    const minus = document.getElementById('mgmt-pc-fee-minus');
+    const plus  = document.getElementById('mgmt-pc-fee-plus');
+    if (minus) minus.disabled = pcPaidLock || val <= 1;
+    if (plus)  plus.disabled  = pcPaidLock;
   }
 
   function renderAwardRows() {
@@ -2900,11 +3104,14 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         mgmtAssignments.forEach(a => { if (!a.award_id) a.award_id = award.id; });
       }
       renderAwardAssignments();
+      renderPcPanel();
     });
     row.querySelector('.award-remove').addEventListener('click', () => {
       mgmtAssignments.forEach(a => { if (a.award_id === award.id) a.award_id = null; });
+      if (mgmtPc.award_id === award.id) mgmtPc.award_id = null;
       mgmtAwards.splice(idx, 1);
       renderAwardRows();
+      renderPcPanel();
     });
     row.querySelector('.award-desc-input').addEventListener('input', e => { award.physical_description = e.target.value; });
     const sponsorSelect = row.querySelector('.award-sponsor-select');

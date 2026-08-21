@@ -19,7 +19,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 <script>
   import { getAuth } from '../../lib/auth.js';
   import { supabase } from '../../lib/supabase.js';
-  import { zonedDateTime } from '../../lib/voteWindow.js';
+  import { zonedDateTime, isVotingOpen } from '../../lib/voteWindow.js';
   import { renderCertificate, CERT_DEFAULTS } from '../../lib/cert-renderer.js';
 
   const { session, profile, base } = await getAuth();
@@ -48,14 +48,14 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
   const { data: entry, error } = await supabase
     .from('show_entries')
-    .select('id, show_id, category_id, status, photo_url, animal_name, breed, result_place, entry_number, entry_fee_paid, cert_jpg_url, exhibitor_name, created_at')
+    .select('id, show_id, category_id, status, photo_url, animal_name, breed, result_place, entry_number, entry_fee_paid, cert_jpg_url, exhibitor_name, created_at, peoples_choice_fee_amount, peoples_choice_result_place, pc_cert_jpg_url')
     .eq('id', entryId)
     .eq('user_id', session.user.id)
     .single();
 
   if (!error && entry) {
     const [showRes, catRes, judgeRes] = await Promise.all([
-      entry.show_id     ? supabase.from('shows').select('id, title, host_org, show_date, entry_close_date, entry_close_time, timezone, currency, results_published_at, cert_design_json, logo_url, org_logo_url, is_judged').eq('id', entry.show_id).single() : { data: null },
+      entry.show_id     ? supabase.from('shows').select('id, title, host_org, show_date, show_time, entry_open_date, entry_open_time, entry_close_date, entry_close_time, timezone, currency, results_published_at, cert_design_json, logo_url, org_logo_url, is_judged, vote_open_mode, peoples_choice_fee').eq('id', entry.show_id).single() : { data: null },
       entry.category_id ? supabase.from('show_categories').select('id, name').eq('id', entry.category_id).single() : { data: null },
       entry.show_id     ? supabase.from('show_judges').select('first_name, last_name').eq('show_id', entry.show_id).limit(1).maybeSingle() : { data: null },
     ]);
@@ -85,7 +85,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   const currSymbols = { AUD:'$', NZD:'$', USD:'$', GBP:'£', EUR:'€', CAD:'$', ZAR:'R', SGD:'$' };
 
   function entryKind(e) {
-    if (e.shows?.results_published_at) return e.result_place ? 'won' : 'noplace';
+    if (e.shows?.results_published_at) return (e.result_place || e.peoples_choice_result_place === 1) ? 'won' : 'noplace';
     const now = new Date();
     const closeAt = e.shows && zonedDateTime(e.shows.entry_close_date, e.shows.entry_close_time, e.shows.timezone);
     if (closeAt && closeAt > now) return 'open';
@@ -153,6 +153,35 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 
   const paidAmount = entry.entry_fee_paid ? `${sym}${Number(entry.entry_fee_paid).toFixed(2)}` : '—';
 
+  // People's Choice: opted-in entries get a share block while the public vote
+  // is open (or opening later), so the entrant can rally votes.
+  const pcOptedIn     = entry.peoples_choice_fee_amount != null && show.is_judged === true && show.peoples_choice_fee != null;
+  const pcVoteOpenNow = pcOptedIn && isVotingOpen(show);
+  const pcVoteClosed  = show.show_date ? new Date() >= (zonedDateTime(show.show_date, show.show_time, show.timezone) || 0) : false;
+  const publicEntryUrl = window.location.origin + base + 'entry?id=' + encodeURIComponent(entry.id);
+  const pcShareBlock = pcOptedIn && !pcVoteClosed && !show.results_published_at ? `
+  <div style="background:linear-gradient(115deg,#f6f2ff,#efe9ff);border:1.5px solid #cdbcf5;border-radius:18px;padding:20px 22px;margin-top:16px;box-shadow:0 6px 18px rgba(10,31,68,0.04);">
+    <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;">
+      <div style="width:44px;height:44px;border-radius:13px;background:#efe9ff;border:1.5px solid #cdbcf5;display:flex;align-items:center;justify-content:center;flex:none;font-size:22px;">🏅</div>
+      <div style="flex:1;min-width:180px;">
+        <div style="font-size:16px;font-weight:800;color:#0a1f44;margin-bottom:3px;">${esc(entry.animal_name || 'Your pet')} is in the People's Choice!</div>
+        <div style="font-size:13px;color:#6b7c89;">${pcVoteOpenNow
+          ? 'Public voting is open now. Share your entry page and rally votes, every vote counts.'
+          : 'Public voting opens soon. Share your entry page so friends are ready to vote.'}</div>
+        <div style="display:flex;gap:9px;margin-top:13px;flex-wrap:wrap;">
+          <button id="pc-share-copy"
+            style="display:inline-flex;align-items:center;gap:7px;background:#5B43C4;color:#fff;font-weight:700;font-size:13.5px;padding:10px 16px;border-radius:11px;border:none;cursor:pointer;font-family:inherit;">
+            🔗 Copy Entry Link
+          </button>
+          <button id="pc-share-native"
+            style="display:inline-flex;align-items:center;gap:7px;background:#fff;color:#0a1f44;font-weight:700;font-size:13.5px;padding:10px 16px;border-radius:11px;border:1.5px solid #cdbcf5;cursor:pointer;font-family:inherit;">
+            📣 Share
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>` : '';
+
   root.innerHTML = `
   <a href="${base}participant" style="display:inline-flex;align-items:center;gap:7px;background:none;border:none;color:#48586a;font-size:14px;font-weight:600;cursor:pointer;padding:0;margin-bottom:18px;text-decoration:none;">
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="#48586a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -207,7 +236,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
           </div>
           <div>
             <div style="font-size:15px;font-weight:800;color:#0a1f44;">Paid · ${esc(paidAmount)}</div>
-            <div style="font-size:12.5px;color:#6b7c89;">Entry fee</div>
+            <div style="font-size:12.5px;color:#6b7c89;">Entry fee${entry.peoples_choice_fee_amount != null ? " incl. 🏅 People's Choice add-on" : ''}</div>
           </div>
         </div>
       </div>
@@ -246,7 +275,50 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   </div>
   ` : ''}
 
+  ${kind === 'won' && entry.peoples_choice_result_place === 1 && entry.pc_cert_jpg_url ? `
+  <!-- People's Choice certificate download -->
+  <div style="background:linear-gradient(115deg,#f6f2ff,#efe9ff);border:1.5px solid #cdbcf5;border-radius:18px;padding:20px 22px;margin-top:16px;box-shadow:0 6px 18px rgba(10,31,68,0.04);">
+    <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;">
+      <div style="width:44px;height:44px;border-radius:13px;background:#efe9ff;border:1.5px solid #cdbcf5;display:flex;align-items:center;justify-content:center;flex:none;font-size:22px;">🏅</div>
+      <div style="flex:1;min-width:180px;">
+        <div style="font-size:16px;font-weight:800;color:#0a1f44;margin-bottom:3px;">People's Choice Winner</div>
+        <div style="font-size:13px;color:#6b7c89;">${esc(entry.animal_name || 'Your pet')} won the <strong style="color:#5B43C4;">People's Choice award</strong>${cat ? ' in ' + esc(cat) : ''}, decided by public vote. Download the certificate below.</div>
+        <div style="display:flex;gap:9px;margin-top:13px;flex-wrap:wrap;">
+          <a href="${esc(entry.pc_cert_jpg_url)}" download="peoples-choice-${esc(entry.animal_name || 'award')}.jpg"
+            style="display:inline-flex;align-items:center;gap:7px;background:#5B43C4;color:#fff;font-weight:700;font-size:13.5px;padding:10px 16px;border-radius:11px;text-decoration:none;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 3v13M7 12l5 5 5-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+            Download JPG
+          </a>
+          <button id="cert-dl-pdf-pc"
+            style="display:inline-flex;align-items:center;gap:7px;background:#fff;color:#0a1f44;font-weight:700;font-size:13.5px;padding:10px 16px;border-radius:11px;border:1.5px solid #cdbcf5;cursor:pointer;font-family:inherit;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 3v13M7 12l5 5 5-5" stroke="#0a1f44" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" stroke="#0a1f44" stroke-width="2" stroke-linecap="round"/></svg>
+            Download PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  ` : ''}
+
+  ${pcShareBlock}
+
 `;
+  // People's Choice share buttons
+  document.getElementById('pc-share-copy')?.addEventListener('click', () => {
+    navigator.clipboard.writeText(publicEntryUrl).then(() => {
+      const b = document.getElementById('pc-share-copy');
+      if (b) { b.textContent = '✓ Link copied!'; setTimeout(() => { b.textContent = '🔗 Copy Entry Link'; }, 2000); }
+    }).catch(() => {});
+  });
+  document.getElementById('pc-share-native')?.addEventListener('click', () => {
+    const text = `Vote for ${entry.animal_name || 'my pet'} in the People's Choice award at ${show.title || 'our pet show'}!`;
+    if (navigator.share) {
+      navigator.share({ title: text, text, url: publicEntryUrl }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(`${text} ${publicEntryUrl}`).catch(() => {});
+    }
+  });
+
   // PDF download for winners
   const pdfBtn = document.getElementById('cert-dl-pdf');
   if (pdfBtn) {
@@ -274,6 +346,36 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       } finally {
         pdfBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 3v13M7 12l5 5 5-5" stroke="#0a1f44" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" stroke="#0a1f44" stroke-width="2" stroke-linecap="round"/></svg> Download PDF';
         pdfBtn.disabled = false;
+      }
+    });
+  }
+
+  // PDF download for the People's Choice certificate
+  const pdfBtnPc = document.getElementById('cert-dl-pdf-pc');
+  if (pdfBtnPc) {
+    pdfBtnPc.addEventListener('click', async () => {
+      pdfBtnPc.textContent = 'Generating…';
+      pdfBtnPc.disabled = true;
+      try {
+        const canvas = document.createElement('canvas');
+        const design = { ...CERT_DEFAULTS, ...(show.cert_design_json ? JSON.parse(show.cert_design_json) : {}) };
+        await renderCertificate(canvas, { show, entry, category: entry.show_categories, sponsors: [], design, placeLabel: "People's Choice Winner" });
+        const PAGE_PT = { a4: [842, 595], letter: [792, 612] };
+        const [W, H] = PAGE_PT[design.page_size || 'a4'];
+        const pdfBytes = await buildPdf(canvas, W, H);
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const url  = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `peoples-choice-${entry.animal_name || 'award'}.pdf`;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+      } catch (err) {
+        console.error(err);
+        alert('PDF generation failed. Please use the JPG download instead.');
+      } finally {
+        pdfBtnPc.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 3v13M7 12l5 5 5-5" stroke="#0a1f44" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" stroke="#0a1f44" stroke-width="2" stroke-linecap="round"/></svg> Download PDF';
+        pdfBtnPc.disabled = false;
       }
     });
   }

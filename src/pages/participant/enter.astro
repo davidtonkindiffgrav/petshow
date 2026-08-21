@@ -157,9 +157,9 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
   // ── Load show data ────────────────────────────────────────────────────────────
   const [showRes, catsRes, awardsRes, uploadSettingRes] = await Promise.all([
     supabase.from('shows')
-      .select('id,title,host_org,entry_fee,currency,animal_type,breed_scope,breed_filter,entry_close_date,entry_close_time,show_date,show_time,timezone,logo_url,status,suspended_at,fundraising_goal,fundraising_goal_type,close_entries_on_goal,entries_closed_at,entries_closed_reason')
+      .select('id,title,host_org,entry_fee,currency,animal_type,breed_scope,breed_filter,entry_close_date,entry_close_time,show_date,show_time,timezone,logo_url,status,suspended_at,fundraising_goal,fundraising_goal_type,close_entries_on_goal,entries_closed_at,entries_closed_reason,is_judged,peoples_choice_fee,peoples_choice_award_id')
       .eq('id', showId).single(),
-    supabase.from('show_categories').select('id,name,criteria,award_id,has_certificate').eq('show_id', showId),
+    supabase.from('show_categories').select('id,name,criteria,award_id,has_certificate,has_peoples_choice').eq('show_id', showId),
     supabase.from('awards').select('*').eq('show_id', showId),
     supabase.from('platform_settings').select('value').eq('key', 'max_upload_mb').maybeSingle(),
   ]);
@@ -224,6 +224,9 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
   const sym = SYMS[show.currency] || '£';
   // All-in pricing: entry_fee is the total the entrant pays — nothing added.
   const totalFee = Number(show.entry_fee) || 0;
+  // People's Choice add-on: judged shows only, per-category opt-in.
+  const pcFee: number | null = show.is_judged === true && Number(show.peoples_choice_fee) >= 1
+    ? Number(show.peoples_choice_fee) : null;
 
   // ── Breed list ────────────────────────────────────────────────────────────────
   // ── Form state ────────────────────────────────────────────────────────────────
@@ -239,8 +242,9 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
   const DOG_GROUPS = ['Toy Dogs','Terriers','Gundogs','Hounds','Working Dogs','Utility Dogs','Non-Sporting'];
   const PET_TYPES  = ['Dog','Cat','Bird','Rabbit','Guinea Pig','Horse','Reptile','Fish','Other'];
 
-  interface EntryDraft { animalName: string; breed: string; categoryId: string | null; photoPreview: string | null; photoUrl: string | null; exhibitorName: string; }
+  interface EntryDraft { animalName: string; breed: string; categoryId: string | null; photoPreview: string | null; photoUrl: string | null; exhibitorName: string; peoplesChoice: boolean; }
   let pendingEntries: EntryDraft[] = [];
+  let peoplesChoice = false;
 
   const fullName = profile?.first_name ? `${profile.first_name}${profile.last_name ? ' ' + profile.last_name : ''}` : '';
   let exhibitorName = profile?.display_name || fullName || session.user.email || '';
@@ -251,6 +255,7 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
   function resetEntryState() {
     animalName = ''; categoryId = categories.length === 1 ? categories[0].id : null;
     photoFile = null; photoPreview = null; photoUrl = null; photoRejected = false;
+    peoplesChoice = false;
     breed = show.breed_scope === 'breed_specific' ? (show.breed_filter || '')
           : show.breed_scope === 'group_specific' ? (show.group_filter || '') : '';
   }
@@ -456,6 +461,24 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
     return criteriaLine + infoLine;
   }
 
+  function pcOptInHtml(catId: string | null) {
+    if (!pcFee) return '';
+    const cat = categories.find((c: any) => c.id === catId);
+    if (!cat?.has_peoples_choice) return '';
+    const award = show.peoples_choice_award_id ? awardsById[show.peoples_choice_award_id] : null;
+    return `
+      <div style="margin-top:14px;border:1.5px solid #b8e4e0;background:#f0faf9;border-radius:12px;padding:14px;">
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
+          <input id="f-pc-optin-check" type="checkbox" ${peoplesChoice ? 'checked' : ''} style="margin-top:2px;width:16px;height:16px;accent-color:#1ba89a;flex-shrink:0;" />
+          <span style="font-size:13px;color:#4a4357;line-height:1.5;">
+            <strong style="color:#1c1626;">🏅 Also enter the People's Choice award (+${sym}${pcFee.toFixed(2)})</strong><br/>
+            Same photo, extra prize, decided by free public vote. The judge breaks any tie. You can share your entry page to gather votes.
+            ${award ? `<span style="display:block;margin-top:4px;color:#1ba89a;font-weight:600;">🎁 Prize: ${esc(award.name)}${award.physical_description ? ', ' + esc(award.physical_description) : ''}</span>` : ''}
+          </span>
+        </label>
+      </div>`;
+  }
+
   function renderStep2() {
     if (!categories.length) {
       return `
@@ -480,6 +503,7 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
             ${opts}
           </select>
           <div id="f-category-award-info">${awardInfoHtml(categoryId)}</div>
+          <div id="f-pc-optin">${pcOptInHtml(categoryId)}</div>
         </div>
 
         ${errorEl()}
@@ -543,6 +567,7 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
           </div>
           ${e.breed ? `<p style="font-size:12px;color:#6b7c89;margin:0 0 4px;">${esc(e.breed)}</p>` : ''}
           ${cat ? `<span style="font-size:11px;font-weight:700;color:#1ba89a;background:#e3f5f2;padding:2px 8px;border-radius:99px;">${esc(cat.name)}</span>` : ''}
+          ${e.peoplesChoice && pcFee ? `<span style="font-size:11px;font-weight:700;color:#b45309;background:#fef3c7;padding:2px 8px;border-radius:99px;margin-left:4px;">🏅 People's Choice +${sym}${pcFee.toFixed(2)}</span>` : ''}
         </div>
       </div>`;
   }
@@ -550,7 +575,8 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
   function renderStep4() {
     const selectedCat  = categories.find((c: any) => c.id === categoryId);
     const totalEntries = pendingEntries.length + 1;
-    const grandTotal   = totalFee * totalEntries;
+    const pcCount      = pendingEntries.filter(e => e.peoplesChoice).length + (peoplesChoice ? 1 : 0);
+    const grandTotal   = totalFee * totalEntries + (pcFee ? pcFee * pcCount : 0);
     const currentLabel = `Entry ${totalEntries}`;
 
     const pendingSummary = pendingEntries.length > 0 ? `
@@ -566,7 +592,7 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
 
         ${pendingSummary}
 
-        ${renderEntryCard({ animalName, breed, categoryId, photoPreview, photoUrl, exhibitorName }, currentLabel)}
+        ${renderEntryCard({ animalName, breed, categoryId, photoPreview, photoUrl, exhibitorName, peoplesChoice }, currentLabel)}
 
         ${exhibitorName ? `<p style="font-size:13px;color:#6b7c89;margin:0 0 16px;">Exhibitor: <strong style="color:#1c1626;">${esc(exhibitorName)}</strong></p>` : ''}
 
@@ -575,6 +601,11 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
             <span style="font-size:14px;color:#6b7c89;">${totalEntries > 1 ? `${totalEntries} × entry fee` : 'Entry fee'}</span>
             <span style="font-size:14px;color:#1c1626;font-weight:600;">${sym}${totalFee.toFixed(2)}${totalEntries > 1 ? ' each' : ''}</span>
           </div>
+          ${pcFee && pcCount > 0 ? `
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
+            <span style="font-size:14px;color:#6b7c89;">🏅 People's Choice add-on${pcCount > 1 ? ` (${pcCount} × ${sym}${pcFee.toFixed(2)})` : ''}</span>
+            <span style="font-size:14px;color:#1c1626;font-weight:600;">${sym}${(pcFee * pcCount).toFixed(2)}</span>
+          </div>` : ''}
           <div style="display:flex;justify-content:space-between;border-top:1px solid #e7eef0;padding-top:12px;">
             <span style="font-size:15px;font-weight:800;color:#1c1626;">Total</span>
             <span style="font-size:15px;font-weight:800;color:#1ba89a;">${sym}${grandTotal.toFixed(2)}</span>
@@ -657,6 +688,15 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
         categoryId = catSelect.value || null;
         const infoEl = document.getElementById('f-category-award-info');
         if (infoEl) infoEl.innerHTML = awardInfoHtml(categoryId);
+        const cat = categories.find((c: any) => c.id === categoryId);
+        if (!cat?.has_peoples_choice) peoplesChoice = false;
+        const pcEl = document.getElementById('f-pc-optin');
+        if (pcEl) pcEl.innerHTML = pcOptInHtml(categoryId);
+      });
+      // Delegated so it survives the innerHTML swap on category change.
+      document.getElementById('f-pc-optin')?.addEventListener('change', ev => {
+        const t = ev.target as HTMLInputElement;
+        if (t?.id === 'f-pc-optin-check') peoplesChoice = t.checked;
       });
       document.getElementById('btn-next')?.addEventListener('click', () => {
         categoryId = catSelect?.value || null;
@@ -720,7 +760,7 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
     // Step 4: add another entry
     if (step === 4) {
       document.getElementById('btn-add-another')?.addEventListener('click', () => {
-        pendingEntries.push({ animalName, breed, categoryId, photoPreview, photoUrl, exhibitorName });
+        pendingEntries.push({ animalName, breed, categoryId, photoPreview, photoUrl, exhibitorName, peoplesChoice });
         resetEntryState();
         step = 1; render();
       });
@@ -754,8 +794,8 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
 
         try {
           const allEntries = [
-            ...pendingEntries.map(e => ({ category_id: e.categoryId, animal_name: e.animalName, breed: e.breed || null, photo_url: e.photoUrl || null, exhibitor_name: e.exhibitorName || null })),
-            { category_id: categoryId, animal_name: animalName, breed: breed || null, photo_url: photoUrl || null, exhibitor_name: exhibitorName || null },
+            ...pendingEntries.map(e => ({ category_id: e.categoryId, animal_name: e.animalName, breed: e.breed || null, photo_url: e.photoUrl || null, exhibitor_name: e.exhibitorName || null, peoples_choice: !!e.peoplesChoice })),
+            { category_id: categoryId, animal_name: animalName, breed: breed || null, photo_url: photoUrl || null, exhibitor_name: exhibitorName || null, peoples_choice: !!peoplesChoice },
           ];
           const resp = await fetch(`${import.meta.env.PUBLIC_SUPABASE_URL}/functions/v1/create-checkout-session`, {
             method: 'POST',
@@ -770,7 +810,9 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
           submitting = false;
           showErr(err.message);
           const totalEntries2 = pendingEntries.length + 1;
-          if (btn) { btn.textContent = `Pay ${sym}${(totalFee * totalEntries2).toFixed(2)} →`; btn.disabled = false; }
+          const pcCount2 = pendingEntries.filter(e => e.peoplesChoice).length + (peoplesChoice ? 1 : 0);
+          const total2 = totalFee * totalEntries2 + (pcFee ? pcFee * pcCount2 : 0);
+          if (btn) { btn.textContent = `Pay ${sym}${total2.toFixed(2)} →`; btn.disabled = false; }
         }
       });
     }

@@ -38,18 +38,26 @@ serve(async (_req: Request) => {
       .not('stripe_session_id', 'is', null);
     if (fetchErr) throw new Error('Failed to load stragglers: ' + fetchErr.message);
 
-    // Group by session — one checkout session can cover multiple entries,
-    // and the net splits evenly across them, same as stripe-webhook does.
-    const bySession = new Map<string, { accountId: string; entryIds: string[] }>();
+    // Group by session — one checkout session can cover multiple entries.
+    // Entries can cost different amounts (People's Choice add-on), so the
+    // net splits by each row's entry_gross_amount share, same as
+    // stripe-webhook does; equal split only for legacy rows without gross.
+    const bySession = new Map<string, string>();
     for (const r of (rows || [])) {
-      const key = r.stripe_session_id as string;
-      if (!bySession.has(key)) bySession.set(key, { accountId: r.stripe_account_id, entryIds: [] });
-      bySession.get(key)!.entryIds.push(r.id);
+      bySession.set(r.stripe_session_id as string, r.stripe_account_id as string);
     }
 
     let fixed = 0, stillMissing = 0;
-    for (const [sessionId, { accountId, entryIds }] of bySession) {
+    for (const [sessionId, accountId] of bySession) {
       try {
+        // Recompute across ALL rows of the session, not just the stragglers,
+        // so every row's share stays consistent with the same gross total.
+        const { data: sessionRows, error: rowsErr } = await supabase
+          .from('show_entries')
+          .select('id, entry_gross_amount')
+          .eq('stripe_session_id', sessionId);
+        if (rowsErr || !sessionRows?.length) { stillMissing++; continue; }
+
         const session: any = await stripe.checkout.sessions.retrieve(
           sessionId, {}, { stripeAccount: accountId },
         );
@@ -59,11 +67,23 @@ serve(async (_req: Request) => {
         const bt = pi.latest_charge?.balance_transaction;
         if (bt?.net == null) { stillMissing++; continue; }
 
-        const netPerEntry = (bt.net / 100) / entryIds.length;
-        const { error: updErr } = await supabase
-          .from('show_entries').update({ entry_net_amount: netPerEntry }).in('id', entryIds);
-        if (updErr) { console.error(`Failed to backfill session ${sessionId}:`, updErr.message); continue; }
-        fixed += entryIds.length;
+        const netTotal = bt.net / 100;
+        const sessionTotal = (session.amount_total || 0) / 100;
+        const grosses = sessionRows.map((r: any) => Number(r.entry_gross_amount));
+        const sumGross = grosses.reduce((a: number, b: number) => a + b, 0);
+        const usable = grosses.every((g: number) => isFinite(g) && g > 0)
+          && Math.round(sumGross * 100) === Math.round(sessionTotal * 100);
+
+        let ok = true;
+        for (let i = 0; i < sessionRows.length; i++) {
+          const share = usable ? grosses[i] / sumGross : 1 / sessionRows.length;
+          const { error: updErr } = await supabase
+            .from('show_entries')
+            .update({ entry_net_amount: netTotal * share })
+            .eq('id', sessionRows[i].id);
+          if (updErr) { console.error(`Failed to backfill session ${sessionId}:`, updErr.message); ok = false; break; }
+        }
+        if (ok) fixed += sessionRows.length;
       } catch (err: any) {
         console.error(`Failed to backfill session ${sessionId}:`, err.message);
         stillMissing++;

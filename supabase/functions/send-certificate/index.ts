@@ -75,10 +75,13 @@ serve(async (req: Request) => {
     const { data: { user }, error: authErr } = await adminClient.auth.getUser(token);
     if (authErr || !user) throw new Error('Unauthorized');
 
-    // 2. Parse body
-    const { show_id, entry_id, cert_jpg_url } = await req.json();
+    // 2. Parse body. peoples_choice = this is the People's Choice winner's
+    // certificate; it gets its own PDF path and pc_cert_* columns so a dual
+    // winner keeps both certificates.
+    const { show_id, entry_id, cert_jpg_url, peoples_choice } = await req.json();
     if (!show_id || !entry_id) throw new Error('Missing required fields');
     if (!cert_jpg_url) throw new Error('cert_jpg_url is required');
+    const isPc = peoples_choice === true;
 
     // 3. Fetch show (verify ownership)
     const { data: show, error: showErr } = await adminClient
@@ -93,7 +96,7 @@ serve(async (req: Request) => {
     // 4. Fetch entry
     const { data: entry, error: entryErr } = await adminClient
       .from('show_entries')
-      .select('id, animal_name, exhibitor_name, exhibitor_email, result_place, category_id')
+      .select('id, animal_name, exhibitor_name, exhibitor_email, result_place, peoples_choice_result_place, category_id')
       .eq('id', entry_id)
       .eq('show_id', show_id)
       .single();
@@ -115,7 +118,7 @@ serve(async (req: Request) => {
     const pdfBytes = await buildPdf(cert_jpg_url, design);
 
     // 8. Upload PDF to storage
-    const pdfPath = `certs/${show_id}/${entry_id}.pdf`;
+    const pdfPath = `certs/${show_id}/${entry_id}${isPc ? '_pc' : ''}.pdf`;
     const { error: uploadErr } = await adminClient.storage
       .from('show-assets')
       .upload(pdfPath, pdfBytes, { contentType: 'application/pdf', upsert: true });
@@ -132,9 +135,9 @@ serve(async (req: Request) => {
     const fromAddr  = Deno.env.get('RESEND_FROM') || 'Fur to Feathers <noreply@furtofeathers.com>';
     const siteUrl   = Deno.env.get('SITE_URL') || 'https://furtofeathers.com';
 
-    const placeStr  = PLACE_LABEL[entry.result_place] ?? `#${entry.result_place}`;
+    const placeStr  = isPc ? "People's Choice Winner" : (PLACE_LABEL[entry.result_place] ?? `#${entry.result_place}`);
     const catName   = category?.name ?? 'Best in Show';
-    const icon      = PLACE_ICON[entry.result_place] ?? '🏆';
+    const icon      = isPc ? '🏅' : (PLACE_ICON[entry.result_place] ?? '🏆');
     const firstName = entry.exhibitor_name?.split(' ')[0] || 'there';
 
     const jpgLink = `<a href="${cert_jpg_url}" style="display:inline-block;padding:10px 20px;background:#1ba89a;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;margin-right:8px">Download JPG</a>`;
@@ -150,8 +153,9 @@ serve(async (req: Request) => {
         html: `
           <div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;color:#1c1626">
             <p style="font-size:16px">Hi ${firstName},</p>
-            <p>Congratulations! <strong>${entry.animal_name}</strong> was awarded
-               <strong>${placeStr}</strong> in the <strong>${catName}</strong> category
+            <p>Congratulations! <strong>${entry.animal_name}</strong> ${isPc
+              ? `won the <strong>People's Choice award</strong> in the <strong>${catName}</strong> category, decided by public vote,`
+              : `was awarded <strong>${placeStr}</strong> in the <strong>${catName}</strong> category`}
                at <strong>${show.title}</strong>. ${icon}</p>
             <p>Get your award certificate here:</p>
             <p style="margin:24px 0">${jpgLink}${pdfLink}</p>
@@ -172,7 +176,9 @@ serve(async (req: Request) => {
     const now = new Date().toISOString();
     await adminClient
       .from('show_entries')
-      .update({ cert_email_sent_at: now, cert_pdf_url, cert_jpg_url })
+      .update(isPc
+        ? { pc_cert_email_sent_at: now, pc_cert_pdf_url: cert_pdf_url, pc_cert_jpg_url: cert_jpg_url }
+        : { cert_email_sent_at: now, cert_pdf_url, cert_jpg_url })
       .eq('id', entry_id);
 
     return new Response(

@@ -40,7 +40,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   // Fetch entries, then related shows and categories separately
   const { data: rawEntries } = await supabase
     .from('show_entries')
-    .select('id, show_id, category_id, animal_name, breed, photo_url, status, result_place, created_at')
+    .select('id, show_id, category_id, animal_name, breed, photo_url, status, result_place, peoples_choice_fee_amount, peoples_choice_result_place, created_at')
     .eq('user_id', session.user.id)
     .eq('status', 'confirmed')
     .order('created_at', { ascending: false });
@@ -49,7 +49,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   const catIds     = [...new Set((rawEntries ?? []).map(e => e.category_id).filter(Boolean))];
 
   const [showsRes, catsRes] = await Promise.all([
-    showIds.length ? supabase.from('shows').select('id, title, host_org, show_date, show_time, timezone, vote_open_mode, entry_open_date, entry_open_time, entry_close_date, entry_close_time, currency, results_published_at, is_judged').in('id', showIds) : { data: [] },
+    showIds.length ? supabase.from('shows').select('id, title, host_org, show_date, show_time, timezone, vote_open_mode, entry_open_date, entry_open_time, entry_close_date, entry_close_time, currency, results_published_at, is_judged, peoples_choice_fee').in('id', showIds) : { data: [] },
     catIds.length  ? supabase.from('show_categories').select('id, name').in('id', catIds) : { data: [] },
   ]);
 
@@ -75,7 +75,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   ];
 
   function entryKind(entry) {
-    if (entry.shows?.results_published_at) return entry.result_place ? 'won' : 'noplace';
+    if (entry.shows?.results_published_at) return (entry.result_place || entry.peoples_choice_result_place === 1) ? 'won' : 'noplace';
     const now = new Date();
     const closeAt = entry.shows && zonedDateTime(entry.shows.entry_close_date, entry.shows.entry_close_time, entry.shows.timezone);
     if (closeAt && closeAt > now) return 'open';
@@ -183,7 +183,10 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     const init   = (entry.animal_name || '?')[0].toUpperCase();
     const detailParts = [entry.breed, cat].filter(Boolean).join(' · ');
     const isNZ   = entry.shows?.currency === 'NZD';
-    const badge  = placeBadge(entry.result_place, isNZ);
+    const pcBadge = entry.peoples_choice_result_place === 1 && entry.shows?.results_published_at
+      ? `<div title="People's Choice Winner" style="width:26px;height:26px;border-radius:50%;background:#5B43C4;display:flex;align-items:center;justify-content:center;flex:none;font-size:13px;">🏅</div>`
+      : '';
+    const badge  = placeBadge(entry.result_place, isNZ) + pcBadge;
 
     return `
     <div class="entry-row" data-entry-id="${esc(entry.id)}"
