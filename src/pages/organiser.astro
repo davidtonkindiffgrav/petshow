@@ -386,6 +386,20 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   function renderEntriesByCategory() {
     const el = document.getElementById('dash-categories');
 
+    // A donut with zero or one slice is just a full circle — it shows no
+    // actual breakdown, so it's not worth the space. Show the plain total instead.
+    if (categories.length < 2) {
+      const entryNoun = entryCount === 1 ? 'entry' : 'entries';
+      const subLabel  = categories.length === 1 ? `${entryNoun} in ${esc(categories[0].name)}` : entryNoun;
+      el.innerHTML = `
+        ${sectionLabel('Entries', 14)}
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px 0;">
+          <p style="font-size:40px;font-weight:800;color:#1c1626;line-height:1;">${entryCount}</p>
+          <p style="font-size:13px;color:#6f6880;margin-top:6px;">${subLabel}</p>
+        </div>`;
+      return;
+    }
+
     const isEmpty = entryCount === 0;
     const hasCategories = categories.length > 0;
 
