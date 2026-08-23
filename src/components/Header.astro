@@ -262,12 +262,12 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     const { isVotingOpen, zonedDateTime } = await import('../lib/voteWindow.js');
     const { data, error } = await supabase
       .from('shows')
-      .select('id, title, host_org, logo_url, banner_url, show_date, show_time, timezone, entry_open_date, entry_open_time, entry_close_date, entry_close_time, entry_fee, currency, status, description, is_judged, vote_open_mode, results_published_at, peoples_choice_fee')
+      .select('id, title, host_org, logo_url, banner_url, show_date, show_time, timezone, entry_open_date, entry_open_time, entry_close_date, entry_close_time, entry_fee, currency, status, unlisted, description, is_judged, vote_open_mode, results_published_at, peoples_choice_fee')
       .order('show_date', { ascending: true });
     if (error) { console.error('[Events panel]', error); eventsList!.innerHTML = `<p style="padding:20px;color:red;">Error: ${error.message}</p>`; return; }
     const now2 = Date.now();
     showsCache = (data || []).filter(s => {
-      if (s.status === 'draft') return false;
+      if (s.status === 'draft' || s.unlisted) return false;
       const openAt  = zonedDateTime(s.entry_open_date,  s.entry_open_time,  s.timezone);
       const closeAt = zonedDateTime(s.entry_close_date, s.entry_close_time, s.timezone);
       const openOk  = !openAt  || openAt.getTime()  <= now2;

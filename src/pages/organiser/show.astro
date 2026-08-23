@@ -18,6 +18,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         <div class="flex items-center gap-3 mb-1 flex-wrap">
           <h2 id="show-title-display" class="text-[24px] font-extrabold text-[#1c1626] tracking-[-0.02em]">—</h2>
           <span id="show-status-badge" class="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold">—</span>
+          <span id="show-unlisted-badge" style="display:none;background:#f5f3fa;color:#6f6880" class="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold" title="Hidden from the public events list. Only people with the direct link can find this show.">Unlisted</span>
         </div>
         <p id="show-meta" class="text-[14px] text-[#6f6880]">—</p>
       </div>
@@ -355,6 +356,18 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
               class="w-full border border-[#b8e4e0] rounded-[11px] px-4 py-2.5 text-[14px] text-[#1c1626] placeholder-[#c4bed0] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors" />
           </div>
         </div>
+        <details id="mgmt-advanced" class="pt-1">
+          <summary class="text-[12px] font-semibold text-[#9b94a8] cursor-pointer select-none hover:text-[#6f6880] transition-colors list-none inline-flex items-center gap-1">
+            <span class="mgmt-advanced-chevron text-[10px]">▸</span> Advanced
+          </summary>
+          <label class="flex items-start gap-2.5 mt-3 cursor-pointer">
+            <input type="checkbox" id="mgmt-unlisted" class="mt-0.5 accent-[#1ba89a]" />
+            <span class="text-[12.5px] text-[#6f6880] leading-relaxed">
+              <span class="font-semibold text-[#4a4357]">Unlisted show.</span>
+              Hides this show from the public events list. Anyone with the direct link can still view and enter it. Leave this off for normal shows.
+            </span>
+          </label>
+        </details>
         <p class="panel-error text-[12px] text-red-500" style="display:none"></p>
         <div class="drawer-actions flex justify-end gap-3 pt-2 pb-2">
           <button class="cancel-btn text-[13px] font-semibold text-[#9b94a8] hover:text-[#1c1626] px-3 py-2 transition-colors">Cancel</button>
@@ -1101,6 +1114,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     badge.textContent     = st.label;
     badge.style.background = st.bg;
     badge.style.color      = st.color;
+    updateUnlistedBadge();
 
     const sym     = CURRENCY_SYMBOLS[show.currency] || 'A$';
     const feeText = show.entry_fee > 0 ? ` · ${sym}${Number(show.entry_fee).toFixed(2)} entry fee` : ' · Fee not set';
@@ -1172,6 +1186,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         archiveBtn.style.display = 'none';
       }
     }
+  }
+
+  function updateUnlistedBadge() {
+    document.getElementById('show-unlisted-badge').style.display = show.unlisted ? '' : 'none';
   }
 
   function showStatus() {
@@ -1811,6 +1829,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     setField('mgmt-about',            show.about || '');
     setField('mgmt-contact-email',    show.contact_email || '');
     setField('mgmt-contact-phone',    show.contact_phone || '');
+    {
+      // Buried on purpose: only auto-expand Advanced when unlisted is already on,
+      // so an active setting is never hidden from the organiser
+      const unlistedBox = document.getElementById('mgmt-unlisted') as HTMLInputElement;
+      unlistedBox.checked = !!show.unlisted;
+      (document.getElementById('mgmt-advanced') as HTMLDetailsElement).open = !!show.unlisted;
+    }
     setField('branding-website-url',  show.website_url || '');
     if (show.org_type) {
       selectCard(document.getElementById('mgmt-org-type-cards'), show.org_type);
@@ -1954,6 +1979,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       fn();
     };
     document.querySelector('#panel-basics .save-btn').addEventListener('click', confirmIfPublished(saveBasics));
+    const advDetails = document.getElementById('mgmt-advanced') as HTMLDetailsElement;
+    advDetails.addEventListener('toggle', () => {
+      advDetails.querySelector('.mgmt-advanced-chevron').textContent = advDetails.open ? '▾' : '▸';
+    });
     document.querySelector('#panel-showtype .save-btn').addEventListener('click', confirmIfPublished(saveShowType));
     document.querySelector('#panel-breed .save-btn').addEventListener('click', confirmIfPublished(saveBreed));
     document.querySelector('#panel-classes .save-btn').addEventListener('click', confirmIfPublished(saveClasses));
@@ -2296,8 +2325,10 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       show_date:         document.getElementById('mgmt-show-date').value          || null,
       show_time:         document.getElementById('mgmt-show-time').value          || null,
       timezone:          document.getElementById('mgmt-timezone').value           || null,
+      unlisted:          (document.getElementById('mgmt-unlisted') as HTMLInputElement).checked,
     });
     document.getElementById('show-title-display').textContent = title || 'Untitled Show';
+    updateUnlistedBadge();
     updateCloseStatusUI();
   }
 

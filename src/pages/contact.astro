@@ -92,6 +92,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '1x0000000
       .from('shows')
       .select('id, title, show_date')
       .eq('status', 'published')
+      .eq('unlisted', false)
       .is('archived_at', null)
       .order('show_date', { ascending: true });
 
