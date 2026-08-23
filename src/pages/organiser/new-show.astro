@@ -1251,6 +1251,25 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
   // ─── Supabase save ───────────────────────────────────────────────────────────
   async function saveShow(completedStep) {
+    // Awards must be written before the shows payload below: shows.peoples_choice_award_id
+    // FK-references awards.id, and a newly added prize only has a client-generated UUID
+    // until this upsert runs, so it has to land before that reference is saved.
+    if (completedStep === 7 && show.id) {
+      const validAwards = show.awards.filter(a => a.name.trim());
+      const currentAwardIds = new Set(validAwards.map(a => a.id));
+      const removedAwardIds = [...loadedAwardIds].filter(id => !currentAwardIds.has(id));
+      if (removedAwardIds.length) await supabase.from('awards').delete().in('id', removedAwardIds);
+      if (validAwards.length) {
+        const { error: awardsErr } = await supabase.from('awards').upsert(validAwards.map(a => ({
+          id: a.id, show_id: show.id, name: a.name.trim(),
+          physical_description: a.physical_description || null,
+          image_url: a.image_url || null, sponsor_id: a.sponsor_id || null,
+        })), { onConflict: 'id' });
+        if (awardsErr) { showError(awardsErr.message); return false; }
+      }
+      loadedAwardIds = currentAwardIds;
+    }
+
     const payload = {
       title: show.title, host_org: show.host_org || null, org_type: show.org_type,
       contact_email: show.contact_email, contact_phone: show.contact_phone || null,
@@ -1358,20 +1377,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       }
     }
 
-    // Save awards for step 7 (and persist any award_id links set on categories)
+    // Persist the award_id links set on categories now that awards exist (see top of function)
     if (completedStep === 7 && show.id) {
-      const validAwards = show.awards.filter(a => a.name.trim());
-      const currentAwardIds = new Set(validAwards.map(a => a.id));
-      const removedAwardIds = [...loadedAwardIds].filter(id => !currentAwardIds.has(id));
-      if (removedAwardIds.length) await supabase.from('awards').delete().in('id', removedAwardIds);
-      if (validAwards.length) {
-        await supabase.from('awards').upsert(validAwards.map(a => ({
-          id: a.id, show_id: show.id, name: a.name.trim(),
-          physical_description: a.physical_description || null,
-          image_url: a.image_url || null, sponsor_id: a.sponsor_id || null,
-        })), { onConflict: 'id' });
-      }
-      loadedAwardIds = currentAwardIds;
       await saveCategoriesToDb();
     }
   }

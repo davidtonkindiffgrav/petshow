@@ -2543,21 +2543,27 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     };
 
     if (val === 'yes') {
+      // Awards must exist in the DB before we can save (a) shows.peoples_choice_award_id
+      // and (b) categories.award_id, both of which FK-reference awards.id — a newly
+      // added prize only has a client-generated UUID until this upsert runs, so it must
+      // happen before saveSection's shows update, not inside its postSave callback.
       const validAwards = mgmtAwards.filter(a => a.name.trim());
+      const currentAwardIds = new Set(validAwards.map(a => a.id));
+      const removedAwardIds = [...loadedAwardIds].filter(id => !currentAwardIds.has(id));
+      if (removedAwardIds.length) await supabase.from('awards').delete().in('id', removedAwardIds);
+      if (validAwards.length) {
+        const { error: awardsErr } = await supabase.from('awards').upsert(validAwards.map(a => ({
+          id: a.id, show_id: showId, name: a.name.trim(),
+          physical_description: a.physical_description || null,
+          image_url: a.image_url || null, sponsor_id: a.sponsor_id || null,
+        })), { onConflict: 'id' });
+        if (awardsErr) return showPanelError('awards', awardsErr.message);
+      }
+      const { data } = await supabase.from('awards').select('*').eq('show_id', showId);
+      awards = data || [];
+      loadedAwardIds = currentAwardIds;
+
       await saveSection('awards', pcPayload, async () => {
-        const currentAwardIds = new Set(validAwards.map(a => a.id));
-        const removedAwardIds = [...loadedAwardIds].filter(id => !currentAwardIds.has(id));
-        if (removedAwardIds.length) await supabase.from('awards').delete().in('id', removedAwardIds);
-        if (validAwards.length) {
-          await supabase.from('awards').upsert(validAwards.map(a => ({
-            id: a.id, show_id: showId, name: a.name.trim(),
-            physical_description: a.physical_description || null,
-            image_url: a.image_url || null, sponsor_id: a.sponsor_id || null,
-          })), { onConflict: 'id' });
-        }
-        const { data } = await supabase.from('awards').select('*').eq('show_id', showId);
-        awards = data || [];
-        loadedAwardIds = currentAwardIds;
         // Persist the category -> award_id assignments staged in mgmtAssignments.
         // has_certificate isn't editable from this panel (that's Classes' job) —
         // carry the current value through unchanged rather than defaulting it.
