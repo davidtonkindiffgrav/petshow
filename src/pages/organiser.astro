@@ -165,7 +165,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
 <script>
   import { getAuth } from '../lib/auth.js';
   import { supabase } from '../lib/supabase.js';
-  import { zonedDateTime } from '../lib/voteWindow.js';
+  import { zonedDateTime, getGoalProgress } from '../lib/voteWindow.js';
   import { organiserNet } from '../lib/fees.js';
   import { barLineSvg, donutSvg } from '../lib/charts.js';
 
@@ -387,8 +387,31 @@ const base = raw.endsWith('/') ? raw : raw + '/';
     const el = document.getElementById('dash-categories');
 
     // A donut with zero or one slice is just a full circle — it shows no
-    // actual breakdown, so it's not worth the space. Show the plain total instead.
+    // actual breakdown, so it's not worth the space. Prefer fundraising goal
+    // progress (not shown anywhere else on this dashboard); fall back to the
+    // plain total when there's no goal set.
     if (categories.length < 2) {
+      if (show.fundraising_goal > 0) {
+        const isEntries = show.fundraising_goal_type === 'entries';
+        const current   = isEntries ? entryCount : totalRaised;
+        const progress  = getGoalProgress(show, current);
+        const pct       = progress?.pct || 0;
+        const currentLabel = isEntries ? `${entryCount} ${entryCount === 1 ? 'entry' : 'entries'}` : fmtMoney(totalRaised);
+        const goalLabel    = isEntries ? `${progress.target} ${progress.target === 1 ? 'entry' : 'entries'}` : fmtMoney(progress.target);
+        el.innerHTML = `
+          ${sectionLabel('Fundraising Goal', 14)}
+          <div style="padding:6px 0;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+              <p style="font-size:26px;font-weight:800;color:#1c1626;line-height:1;">${currentLabel}</p>
+              <span style="font-size:12px;color:#6f6880;">of ${goalLabel}</span>
+            </div>
+            <div style="height:10px;border-radius:999px;background:#efebf5;overflow:hidden;">
+              <div style="height:100%;border-radius:999px;width:${Math.min(pct, 100)}%;background:linear-gradient(to right,#a6d84a,#5fb23e);"></div>
+            </div>
+            <p style="font-size:12px;font-weight:700;color:#5fb23e;margin:6px 0 0;text-align:right;">${pct}%</p>
+          </div>`;
+        return;
+      }
       const entryNoun = entryCount === 1 ? 'entry' : 'entries';
       const subLabel  = categories.length === 1 ? `${entryNoun} in ${esc(categories[0].name)}` : entryNoun;
       el.innerHTML = `
