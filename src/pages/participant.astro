@@ -83,7 +83,12 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   }
 
   function isVotingNow(entry) {
-    return !!entry.shows && isVotingOpen(entry.shows);
+    if (!entry.shows || !isVotingOpen(entry.shows)) return false;
+    // On a judged show, the vote is the People's Choice add-on — only entries
+    // that opted in are actually on the ballot. Fully public-voted shows
+    // (is_judged === false) have no opt-in; every confirmed entry is votable.
+    const pcShow = entry.shows.is_judged === true && entry.shows.peoples_choice_fee != null;
+    return !pcShow || entry.peoples_choice_fee_amount != null;
   }
 
   function copyEntryLink(entryId) {
