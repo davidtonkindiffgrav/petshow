@@ -116,6 +116,16 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     </div>
   </div>
 
+  <!-- Vote ballot modal (voting grid + submit) -->
+  <div id="vote-ballot-modal" style="display:none;position:fixed;inset:0;z-index:105;background:rgba(14,42,42,0.55);backdrop-filter:blur(3px)" role="dialog" aria-modal="true" aria-label="Vote for your favourites">
+    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border-radius:20px;width:min(900px,94vw);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(14,42,42,0.22)">
+      <button id="close-vote-ballot-modal" aria-label="Close" style="position:absolute;top:14px;right:14px;z-index:2;background:none;border:none;cursor:pointer;color:#9BB4AF;padding:6px;display:flex;align-items:center;justify-content:center">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <div id="vote-ballot-modal-body" style="overflow-y:auto;padding:28px 28px 24px"></div>
+    </div>
+  </div>
+
   <!-- Entry image viewer (voting grid lightbox) -->
   <div id="image-modal" style="display:none;position:fixed;inset:0;z-index:120;background:rgba(14,42,42,0.82);backdrop-filter:blur(4px)" role="dialog" aria-modal="true" aria-label="Entry photo">
     <button id="close-image-modal" aria-label="Close" style="position:absolute;top:16px;right:16px;z-index:2;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.12);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:white">
@@ -136,7 +146,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   </div>
 
   <!-- Vote email confirmation modal -->
-  <div id="vote-email-modal" style="display:none;position:fixed;inset:0;z-index:100;background:rgba(14,42,42,0.55);backdrop-filter:blur(3px)" role="dialog" aria-modal="true" aria-labelledby="vote-modal-title">
+  <div id="vote-email-modal" style="display:none;position:fixed;inset:0;z-index:110;background:rgba(14,42,42,0.55);backdrop-filter:blur(3px)" role="dialog" aria-modal="true" aria-labelledby="vote-modal-title">
     <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border-radius:20px;width:min(440px,92vw);box-shadow:0 24px 64px rgba(14,42,42,0.22);overflow:hidden">
       <div style="padding:22px 24px 16px;border-bottom:1px solid #E6EEEC;display:flex;align-items:center;justify-content:space-between">
         <h2 id="vote-modal-title" style="font-size:17px;font-weight:800;color:#143A37;margin:0">Confirm your votes</h2>
@@ -300,7 +310,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     renderBody();
     wireButtons();
     renderStickyCTA();
-    if (votingActive) postRenderVoting();
+    // Auto-open the ballot for shared "go vote" links: an explicit ?vote=1,
+    // or a deep link to a specific entry/category (e.g. from an entry's
+    // share page), so the linked-to content is actually visible on load.
+    if (votingActive && (params.get('vote') === '1' || focusCategoryId || focusEntryId)) {
+      openVoteBallotModal();
+    }
     if (isPreview) document.getElementById('sticky-cta').style.display = 'none';
   }
 
@@ -413,9 +428,13 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               ? `<p style="font-size:13px;color:rgba(255,255,255,0.7);margin:0;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${esc(show.description)}</p>`
               : ''}
           </div>
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <span style="background:${statusPills.bg};color:white;font-size:11px;font-weight:800;padding:6px 14px;border-radius:999px;letter-spacing:0.04em">${statusPills.label}</span>
             ${datePill}
+            ${votingActive ? `
+            <button id="hero-vote-btn" style="display:inline-flex;align-items:center;gap:7px;background:white;color:#143A37;font-weight:800;font-size:13.5px;padding:9px 18px;border-radius:10px;border:none;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,0.18)">
+              🗳️ Vote Now
+            </button>` : ''}
           </div>
         </div>
       </div>`;
@@ -425,22 +444,17 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
   function renderBody() {
     const el = document.getElementById('show-body');
+    // The voting ballot itself now lives in a modal (opened via the "Vote
+    // Now" hero CTA) rather than inline in the body, so this only chooses
+    // which informational layout to show around it.
     if (showState === 'archived') {
       el.innerHTML = archivedBody();
     } else if (showState === 'results') {
       el.innerHTML = resultsBody();
-    } else if (pcVotingActive && showState === 'entries_open') {
-      el.innerHTML = state1Body() + `<div style="margin-top:28px">${votingBody()}</div>`;
-    } else if (pcVotingActive) {
-      el.innerHTML = interimBody() + `<div style="margin-top:28px">${votingBody()}</div>`;
-    } else if (showState === 'judging' || showState === 'show_day' || showState === 'vote_closed') {
-      el.innerHTML = interimBody();
-    } else if (showState === 'voting') {
-      el.innerHTML = votingBody();
-    } else if (earlyVoting) {
-      el.innerHTML = state1Body() + `<div style="margin-top:28px">${votingBody()}</div>`;
-    } else {
+    } else if (showState === 'entries_open' || showState === 'upcoming') {
       el.innerHTML = state1Body();
+    } else {
+      el.innerHTML = interimBody();
     }
   }
 
@@ -475,11 +489,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   }
 
   function interimBody() {
-    const isVoteClosed = showState === 'vote_closed';
-    const title = isVoteClosed ? 'Voting Closed' : 'Judging Underway';
-    const statusMsg = isVoteClosed
-      ? 'Voting has closed. Results are being finalised and will be published soon.'
-      : 'Entries are closed and judging is underway. Results coming soon.';
+    const title = showState === 'vote_closed' ? 'Voting Closed'
+                : showState === 'voting'      ? 'Voting Is Open'
+                : 'Judging Underway';
+    const statusMsg = showState === 'vote_closed' ? 'Voting has closed. Results are being finalised and will be published soon.'
+                     : showState === 'voting'      ? 'Use the Vote Now button above to cast your votes. Voting closes when the show starts.'
+                     : 'Entries are closed and judging is underway. Results coming soon.';
     return threeColBody(card(`
       <h3 style="font-size:15px;font-weight:700;color:#143A37;margin:0 0 8px">${title}</h3>
       <p style="font-size:13px;color:#6B7C79;margin:0">${statusMsg}</p>
@@ -741,9 +756,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   function meetEntrantsCard() {
     const shown = entries.slice(0, 10);
     const header = `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px;flex-wrap:wrap">
         <h3 style="font-size:15px;font-weight:700;color:#143A37;margin:0">Meet Our Entrants</h3>
-        <a href="#" id="btn-view-all-entries" style="font-size:12px;color:#1E8E7E;font-weight:600;text-decoration:none">View all entries →</a>
+        <div style="display:flex;align-items:center;gap:14px">
+          ${votingActive ? `<a href="#" id="btn-vote-now-link" style="font-size:12px;color:#5B43C4;font-weight:700;text-decoration:none">🗳️ Vote Now →</a>` : ''}
+          <a href="#" id="btn-view-all-entries" style="font-size:12px;color:#1E8E7E;font-weight:600;text-decoration:none">View all entries →</a>
+        </div>
       </div>`;
 
     if (!shown.length) {
@@ -971,9 +989,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       </div>`).join('');
 
     return card(`
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px;flex-wrap:wrap">
         <h3 style="font-size:15px;font-weight:700;color:#143A37;margin:0">Meet Our Entrants</h3>
-        <a href="#" id="btn-view-all-entries" style="font-size:12px;color:#1E8E7E;font-weight:600;text-decoration:none">View All Entries →</a>
+        <div style="display:flex;align-items:center;gap:14px">
+          ${votingActive ? `<a href="#" id="btn-vote-now-link" style="font-size:12px;color:#5B43C4;font-weight:700;text-decoration:none">🗳️ Vote Now →</a>` : ''}
+          <a href="#" id="btn-view-all-entries" style="font-size:12px;color:#1E8E7E;font-weight:600;text-decoration:none">View All Entries →</a>
+        </div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:8px">${thumbs}</div>`);
   }
@@ -1165,6 +1186,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   }
 
   function wireButtons() {
+    document.getElementById('hero-vote-btn')?.addEventListener('click', openVoteBallotModal);
     document.getElementById('btn-enter-now')?.addEventListener('click', handleEnterNow);
     document.getElementById('btn-view-classes')?.addEventListener('click', openClassesModal);
     document.getElementById('close-classes-modal').addEventListener('click', closeClassesModal);
@@ -1180,6 +1202,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       if (e.target === e.currentTarget) closeAwardInfoModal();
     });
     document.getElementById('btn-view-all-entries')?.addEventListener('click', e => { e.preventDefault(); openEntriesModal(); });
+    document.getElementById('btn-vote-now-link')?.addEventListener('click', e => { e.preventDefault(); openVoteBallotModal(); });
     document.getElementById('close-entries-modal').addEventListener('click', closeEntriesModal);
     document.getElementById('entries-modal').addEventListener('click', e => {
       if (e.target === e.currentTarget) closeEntriesModal();
@@ -1199,8 +1222,22 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       if (e.target === e.currentTarget) closeVoteModal();
     });
     document.getElementById('vote-modal-cancel').addEventListener('click', closeVoteModal);
-    document.getElementById('basket-submit-btn')?.addEventListener('click', openVoteModal);
     document.getElementById('vote-modal-submit').addEventListener('click', submitVotes);
+    document.getElementById('close-vote-ballot-modal').addEventListener('click', closeVoteBallotModal);
+    document.getElementById('vote-ballot-modal').addEventListener('click', e => {
+      if (e.target === e.currentTarget) closeVoteBallotModal();
+    });
+    // Delegated so it survives votingBody() re-rendering into the modal body on every open
+    document.getElementById('vote-ballot-modal-body').addEventListener('click', e => {
+      const shareBtn = e.target.closest('.share-entry-btn');
+      if (shareBtn) { e.stopPropagation(); copyEntryLink(shareBtn.dataset.entryId); return; }
+      const voteBtn = e.target.closest('.vote-entry-btn');
+      if (voteBtn) { selectEntry(voteBtn.closest('.vote-card')); return; }
+      const card = e.target.closest('.vote-card');
+      if (card) openImageModal(card.dataset.entryId);
+      const basketBtn = e.target.closest('#basket-submit-btn');
+      if (basketBtn && !(basketBtn as HTMLButtonElement).disabled) openVoteModal();
+    });
     document.getElementById('close-image-modal').addEventListener('click', closeImageModal);
     document.getElementById('image-modal-backdrop').addEventListener('click', e => {
       if (e.target === e.currentTarget) closeImageModal();
@@ -1285,7 +1322,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     return `
       ${banner}
-      ${pcMode ? '' : `<div style="max-width:min(640px,92vw);margin:0 0 20px">${aboutCard()}</div>`}
       <div style="margin-bottom:20px">
         <h2 style="font-size:18px;font-weight:800;color:#143A37;margin:0 0 4px">${pcMode ? "🏅 People's Choice: Vote for Your Favourites" : 'Vote for Your Favourites'}</h2>
         <p style="font-size:13px;color:#6B7C79;margin:0">${pcMode ? "These entrants are competing for the People's Choice award, decided by public vote. Voting is free. " : ''}Pick your favourite pet in each category, then submit your votes to receive a confirmation email.${show.show_date ? ` Voting closes ${fmt(show.show_date)}${show.show_time ? ' at ' + show.show_time : ''}.` : ''}</p>
@@ -1301,6 +1337,19 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       </div>` : ''}`;
   }
 
+  function openVoteBallotModal() {
+    if (!votingActive) return;
+    document.getElementById('vote-ballot-modal-body').innerHTML = votingBody();
+    document.getElementById('vote-ballot-modal').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+    postRenderVoting();
+  }
+
+  function closeVoteBallotModal() {
+    document.getElementById('vote-ballot-modal').style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
   // Which categories/entries the public can vote on. Vote shows: everything
   // confirmed. People's Choice shows: only enabled categories and entries
   // whose exhibitor paid the add-on.
@@ -1314,16 +1363,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
   function postRenderVoting() {
     updateVoteBasket();
-
-    // Wire card interactions: Vote button selects, photo/card opens the viewer
-    document.getElementById('show-body').addEventListener('click', e => {
-      const shareBtn = e.target.closest('.share-entry-btn');
-      if (shareBtn) { e.stopPropagation(); copyEntryLink(shareBtn.dataset.entryId); return; }
-      const voteBtn = e.target.closest('.vote-entry-btn');
-      if (voteBtn) { selectEntry(voteBtn.closest('.vote-card')); return; }
-      const card = e.target.closest('.vote-card');
-      if (card) openImageModal(card.dataset.entryId);
-    });
 
     // Scroll to focused category
     if (focusCategoryId) {
