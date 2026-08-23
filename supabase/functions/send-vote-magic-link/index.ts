@@ -63,8 +63,18 @@ serve(async (req: Request) => {
       throw new Error('Missing required fields');
     }
 
-    const email = voter_email.trim().toLowerCase();
+    let email = voter_email.trim().toLowerCase();
     if (!email.includes('@')) throw new Error('Invalid email address');
+
+    // Strip Gmail/Outlook/iCloud-style "+tag" sub-addressing before dedup —
+    // user+vote1@gmail.com and user+vote2@gmail.com both deliver to the same
+    // inbox, so treating them as distinct voters is exactly the loophole this
+    // exists to close. Mail still gets there either way, so it's also safe to
+    // send to the normalised address rather than the literal typed one.
+    {
+      const [local, domain] = email.split('@');
+      if (domain) email = `${local.split('+')[0]}@${domain}`;
+    }
 
     const adminClient = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -131,6 +141,35 @@ serve(async (req: Request) => {
           || entry.peoples_choice_fee_amount == null) {
           throw new Error("One of your picks isn't part of the People's Choice award");
         }
+      }
+    }
+
+    // Device-level check: the browser_fingerprint is just a random id the
+    // client persists in localStorage, not a real hardware fingerprint, so
+    // it's beatable by clearing storage or switching browsers — but it stops
+    // the casual version of vote-stacking (submitting several emails from
+    // the same session/tab without realising the device is already tracked).
+    // Only rows under a *different* email matter here — same-email retries
+    // are handled by the existing-vote lookup below.
+    if (browser_fingerprint) {
+      const { data: deviceVotes } = await adminClient
+        .from('public_votes')
+        .select('confirmed_at, token_expires_at, voter_email')
+        .eq('show_id', show_id)
+        .eq('browser_fingerprint', browser_fingerprint)
+        .neq('voter_email', email);
+
+      if ((deviceVotes || []).some((v: any) => v.confirmed_at)) {
+        return new Response(
+          JSON.stringify({ error: 'already_voted' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
+        );
+      }
+      if ((deviceVotes || []).some((v: any) => !v.confirmed_at && new Date(v.token_expires_at) > now)) {
+        return new Response(
+          JSON.stringify({ error: 'already_submitted' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
+        );
       }
     }
 
