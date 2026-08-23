@@ -274,6 +274,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   let catsByShow    = {};
   let rankingsByShow    = {};  // [show_id][category_id] = Set of judge emails that submitted
   let entryCountsByShow = {}; // [show_id][category_id] = number of confirmed entries
+  let entryNameById     = {}; // [entry_id] = animal_name, for labelling vote tally bars
   let voteCountsByShow  = {}; // [show_id][category_id][entry_id] = { confirmed, pending }
   let pcTallyByShow     = {}; // [show_id] = get_pc_tally rows (People's Choice shows only)
   let currentEditJudge = null;
@@ -873,13 +874,16 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
                   <p class="text-[11px]" style="color:#9b94a8">No votes yet</p>
                 </div>`;
               }
-              const bars = catEntries.slice(0, 5).map(({ confirmed }) => {
+              const bars = catEntries.slice(0, 5).map(({ eid, confirmed }) => {
                 const pct = maxVotes > 0 ? Math.round((confirmed / maxVotes) * 100) : 0;
-                return `<div class="flex items-center gap-2 mb-1">
-                  <div class="flex-1 h-2 rounded-full overflow-hidden" style="background:#ede9fe">
+                return `<div class="mb-1.5">
+                  <div class="flex justify-between items-baseline gap-2 mb-0.5">
+                    <span class="text-[11px] font-medium truncate" style="color:#4a4357">${esc(entryNameById[eid] || 'Unknown entry')}</span>
+                    <span class="text-[11px] font-bold shrink-0" style="color:#7c3aed">${confirmed}</span>
+                  </div>
+                  <div class="h-2 rounded-full overflow-hidden" style="background:#ede9fe">
                     <div class="h-full rounded-full" style="width:${pct}%;background:#8b5cf6"></div>
                   </div>
-                  <span class="text-[11px] font-bold w-5 text-right shrink-0" style="color:#7c3aed">${confirmed}</span>
                 </div>`;
               }).join('');
               return `
@@ -997,11 +1001,14 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
             const bars = catEntries.slice(0, 5).map(({ eid, confirmed }) => {
               const pct = maxVotes > 0 ? Math.round((confirmed / maxVotes) * 100) : 0;
-              return `<div class="flex items-center gap-2 mb-1">
-                <div class="flex-1 h-2 rounded-full overflow-hidden" style="background:#ede9fe">
+              return `<div class="mb-1.5">
+                <div class="flex justify-between items-baseline gap-2 mb-0.5">
+                  <span class="text-[11px] font-medium truncate" style="color:#4a4357">${esc(entryNameById[eid] || 'Unknown entry')}</span>
+                  <span class="text-[11px] font-bold shrink-0" style="color:#7c3aed">${confirmed}</span>
+                </div>
+                <div class="h-2 rounded-full overflow-hidden" style="background:#ede9fe">
                   <div class="h-full rounded-full" style="width:${pct}%;background:#8b5cf6"></div>
                 </div>
-                <span class="text-[11px] font-bold w-5 text-right shrink-0" style="color:#7c3aed">${confirmed}</span>
               </div>`;
             }).join('');
 
@@ -1485,7 +1492,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         supabase.from('show_judges').select('*').in('show_id', showIds),
         supabase.from('show_categories').select('*').in('show_id', showIds),
         supabase.from('judge_rankings').select('show_id,category_id,judge_email').in('show_id', showIds),
-        supabase.from('show_entries').select('show_id,category_id').eq('status','confirmed').in('show_id', showIds),
+        supabase.from('show_entries').select('id,show_id,category_id,animal_name').eq('status','confirmed').in('show_id', showIds),
       ]);
       for (const j of (judgesRes.data || [])) {
         if (!judgesByShow[j.show_id]) judgesByShow[j.show_id] = [];
@@ -1503,6 +1510,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       for (const e of (entriesRes.data || [])) {
         if (!entryCountsByShow[e.show_id]) entryCountsByShow[e.show_id] = {};
         entryCountsByShow[e.show_id][e.category_id] = (entryCountsByShow[e.show_id][e.category_id] || 0) + 1;
+        entryNameById[e.id] = e.animal_name || 'Unnamed';
       }
 
       // Load vote counts for public vote shows and judged shows running a

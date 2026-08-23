@@ -178,6 +178,7 @@ const base = raw.endsWith('/') ? raw : raw + '/';
   let recentEntries = [];
   let trendData     = [];
   let judge         = null;
+  let voteTotal     = null; // null = show has no public voting; number = confirmed vote count
   let chartMode     = 'bar';    // 'bar' | 'line'
   let chartMetric   = 'entries'; // 'entries' | 'revenue'
   let base          = '';
@@ -304,10 +305,14 @@ const base = raw.endsWith('/') ? raw : raw + '/';
         <p style="font-size:20px;font-weight:800;color:#1c1626;line-height:1.2;">—</p>
       </div>`;
     }
+    const voteCard = voteTotal != null
+      ? card(show.is_judged === true ? "People's Choice Votes" : 'Public Votes', String(voteTotal), 'flex:1;min-width:0;')
+      : '';
     el.innerHTML = `
       <div style="display:flex;gap:12px;margin-bottom:12px;">
         ${card('Total Entries', String(entryCount), 'flex:1;min-width:0;')}
         ${card('Total Raised',  fmtMoney(totalRaised), 'flex:1;min-width:0;')}
+        ${voteCard}
       </div>
       ${judgeCard}`;
   }
@@ -735,6 +740,17 @@ const base = raw.endsWith('/') ? raw : raw + '/';
       categories    = categories.map(c => ({ ...c, count: catCounts[c.id] || 0 }));
       recentEntries = recentRes.data  || [];
       trendData     = trendRes.data   || [];
+
+      // Public vote count: plain public-vote shows, or judged shows running
+      // the People's Choice add-on. Hidden entirely (voteTotal stays null)
+      // for anything else, matching the Judge card row's optional-tile pattern.
+      const isVotable = show.is_judged === false || (show.is_judged === true && show.peoples_choice_fee != null);
+      if (isVotable) {
+        const { data: voteRows } = await supabase.rpc('get_vote_counts', { p_show_id: show.id });
+        voteTotal = (voteRows || []).reduce((s, r) => s + (Number(r.confirmed_count) || 0), 0);
+      } else {
+        voteTotal = null;
+      }
 
       document.getElementById('state-dashboard').style.display = 'block';
       renderHeader();
