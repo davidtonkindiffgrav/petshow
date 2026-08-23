@@ -361,9 +361,16 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
     }
 
     // scope === 'all' or unset — searchable combobox
+    const helpText = show.animal_type === 'cat'
+      ? "Don't stress about the exact breed! If your cat isn't a pedigree, just search for “Domestic Shorthair” or “Domestic Longhair” — that covers moggies, strays and mixed breeds too."
+      : "Don't stress about the exact breed! If you're not sure, just type “Mixed Breed” or “Crossbreed” — no need to guess.";
     return `
       <div style="margin-bottom:24px;position:relative;">
-        <label style="display:block;font-size:13px;font-weight:700;color:#4a4357;margin-bottom:6px;">Breed ${labelSuffix}</label>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
+          <label style="display:block;font-size:13px;font-weight:700;color:#4a4357;">Breed ${labelSuffix}</label>
+          <button type="button" id="breed-help-toggle" style="background:none;border:none;padding:0;font-size:12px;font-weight:600;color:#1ba89a;cursor:pointer;text-decoration:underline;white-space:nowrap;">Can't find your breed?</button>
+        </div>
+        <p id="breed-help-hint" style="display:none;font-size:12.5px;color:#4a4357;background:#f0faf9;border:1px solid #b8e4e0;border-radius:10px;padding:10px 12px;margin:0 0 8px;">${helpText}</p>
         <input id="f-breed" type="text" value="${esc(breed)}" placeholder="Search breeds…" autocomplete="off"
           style="${inputStyle}" />
         <ul id="breed-listbox" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1.5px solid #b8e4e0;border-radius:11px;z-index:50;max-height:220px;overflow-y:auto;box-shadow:0 4px 16px rgba(10,31,68,0.10);margin:0;padding:6px 0;list-style:none;"></ul>
@@ -374,6 +381,13 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
     const input   = document.getElementById('f-breed') as HTMLInputElement | null;
     const listbox = document.getElementById('breed-listbox');
     if (!input || !listbox) return;
+
+    const helpToggle = document.getElementById('breed-help-toggle');
+    const helpHint   = document.getElementById('breed-help-hint');
+    helpToggle?.addEventListener('click', () => {
+      if (!helpHint) return;
+      helpHint.style.display = helpHint.style.display === 'none' ? 'block' : 'none';
+    });
 
     let activeIdx = -1;
 
