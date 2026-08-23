@@ -472,8 +472,10 @@ import ParticipantLayout from '../../layouts/ParticipantLayout.astro';
           <input id="f-pc-optin-check" type="checkbox" ${peoplesChoice ? 'checked' : ''} style="margin-top:2px;width:16px;height:16px;accent-color:#1ba89a;flex-shrink:0;" />
           <span style="font-size:13px;color:#4a4357;line-height:1.5;">
             <strong style="color:#1c1626;">🏅 Also enter the People's Choice award (+${sym}${pcFee.toFixed(2)})</strong><br/>
-            Same photo, extra prize, decided by free public vote. The judge breaks any tie. You can share your entry page to gather votes.
-            ${award ? `<span style="display:block;margin-top:4px;color:#1ba89a;font-weight:600;">🎁 Prize: ${esc(award.name)}${award.physical_description ? ', ' + esc(award.physical_description) : ''}</span>` : ''}
+            Same photo, extra award, decided by free public vote. The judge breaks any tie. You can share your entry page to gather votes.
+            ${award
+              ? `<span style="display:block;margin-top:4px;color:#1ba89a;font-weight:600;">🎁 Prize: ${esc(award.name)}${award.physical_description ? ', ' + esc(award.physical_description) : ''}</span>`
+              : `<span style="display:block;margin-top:4px;color:#1ba89a;font-weight:600;">🎓 The winner receives a People's Choice certificate</span>`}
           </span>
         </label>
       </div>`;

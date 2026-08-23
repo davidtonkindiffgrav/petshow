@@ -432,8 +432,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
           </div>
 
           <div class="mb-6">
-            <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">People's Choice Prize</label>
-            <p class="text-[12px] text-[#9b94a8] mb-2">One prize for the whole show, awarded to each People's Choice winner. Add prizes above, then pick one here.</p>
+            <label class="block text-[13px] font-semibold text-[#4a4357] mb-1.5">People's Choice Prize <span class="text-[#9b94a8] font-normal">(optional)</span></label>
+            <p class="text-[12px] text-[#9b94a8] mb-2">Winners always receive a People's Choice certificate. To award a physical prize too, add prizes above, then pick one here. One prize for the whole show, awarded to each People's Choice winner.</p>
             <select id="s7-pc-award"
               class="w-full max-w-[340px] border border-[#b8e4e0] rounded-[11px] px-3 py-2.5 text-[13px] text-[#1c1626] bg-white focus:outline-none focus:ring-2 focus:ring-brand transition-colors"></select>
           </div>
@@ -1837,7 +1837,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     // Prize select from the show's physical prizes
     const sel = document.getElementById('s7-pc-award');
     const validAwards = show.awards.filter(a => a.name.trim());
-    sel.innerHTML = ['<option value="">No prize selected yet</option>']
+    sel.innerHTML = ['<option value="">No physical prize, certificate only</option>']
       .concat(validAwards.map(a => `<option value="${a.id}" ${show.peoples_choice_award_id === a.id ? 'selected' : ''}>${esc(a.name)}</option>`))
       .join('');
     if (show.peoples_choice_award_id && !validAwards.some(a => a.id === show.peoples_choice_award_id)) {
@@ -1964,11 +1964,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (!show.id) return;
     if (status === 'published' && show.is_judged === true && show.pc_enabled) {
       const tickedCats = show.classes.filter(c => c.enabled && c.name.trim() && c.has_peoples_choice).length;
-      const problem = !show.peoples_choice_award_id
-        ? "People's Choice is enabled but has no prize selected. Pick one in Awards & Prizes, or turn People's Choice off."
-        : !tickedCats
-          ? "People's Choice is enabled but no categories offer it. Tick at least one in Awards & Prizes, or turn People's Choice off."
-          : null;
+      const problem = !tickedCats
+        ? "People's Choice is enabled but no categories offer it. Tick at least one in Awards & Prizes, or turn People's Choice off."
+        : null;
       if (problem) {
         showError(problem);
         document.getElementById('btn-publish').innerHTML =
