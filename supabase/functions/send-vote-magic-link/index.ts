@@ -33,6 +33,15 @@ function wallClockUtc(ts: number, timeZone: string): number {
   return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second);
 }
 
+// Collapses Gmail/Outlook/iCloud-style "+tag" sub-addressing to a comparison
+// key ONLY — never used as a send-to or stored address. The confirmation
+// email always goes to exactly what the voter typed; this is purely to spot
+// "is this the same inbox under a different tag" for the duplicate-vote check.
+function voteIdentityKey(addr: string): string {
+  const [local, domain] = addr.split('@');
+  return domain ? `${local.split('+')[0]}@${domain}` : addr;
+}
+
 // Persists Resend's used-quota headers so the admin Email Monitoring page
 // can read them without a synthetic probe request — GET requests to
 // /domains and /emails don't carry x-resend-daily-quota/-monthly-quota,
@@ -63,18 +72,12 @@ serve(async (req: Request) => {
       throw new Error('Missing required fields');
     }
 
-    let email = voter_email.trim().toLowerCase();
+    // Always send to and store exactly what the voter typed — never a
+    // normalised/guessed address. See voteIdentityKey() below for the
+    // "+tag" dedup handling; that's a comparison-only concern.
+    const email = voter_email.trim().toLowerCase();
     if (!email.includes('@')) throw new Error('Invalid email address');
-
-    // Strip Gmail/Outlook/iCloud-style "+tag" sub-addressing before dedup —
-    // user+vote1@gmail.com and user+vote2@gmail.com both deliver to the same
-    // inbox, so treating them as distinct voters is exactly the loophole this
-    // exists to close. Mail still gets there either way, so it's also safe to
-    // send to the normalised address rather than the literal typed one.
-    {
-      const [local, domain] = email.split('@');
-      if (domain) email = `${local.split('+')[0]}@${domain}`;
-    }
+    const identityKey = voteIdentityKey(email);
 
     const adminClient = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -144,28 +147,36 @@ serve(async (req: Request) => {
       }
     }
 
+    // Pull every vote already cast for this show once, and check both
+    // duplicate signals against it: same underlying inbox (voteIdentityKey,
+    // which folds "+tag" variants together) and same browser (fingerprint).
+    // Fetching once and comparing in JS avoids a second round trip and keeps
+    // the two checks consistent with each other.
+    const { data: showVotes } = await adminClient
+      .from('public_votes')
+      .select('id, voter_email, confirmed_at, token_expires_at, browser_fingerprint')
+      .eq('show_id', show_id);
+
+    const votes = showVotes || [];
+
     // Device-level check: the browser_fingerprint is just a random id the
     // client persists in localStorage, not a real hardware fingerprint, so
     // it's beatable by clearing storage or switching browsers — but it stops
     // the casual version of vote-stacking (submitting several emails from
     // the same session/tab without realising the device is already tracked).
-    // Only rows under a *different* email matter here — same-email retries
-    // are handled by the existing-vote lookup below.
+    // Only rows under a *different* identity matter here — same-identity
+    // retries are handled by the existing-vote check below.
     if (browser_fingerprint) {
-      const { data: deviceVotes } = await adminClient
-        .from('public_votes')
-        .select('confirmed_at, token_expires_at, voter_email')
-        .eq('show_id', show_id)
-        .eq('browser_fingerprint', browser_fingerprint)
-        .neq('voter_email', email);
+      const deviceVotes = votes.filter((v: any) =>
+        v.browser_fingerprint === browser_fingerprint && voteIdentityKey(v.voter_email) !== identityKey);
 
-      if ((deviceVotes || []).some((v: any) => v.confirmed_at)) {
+      if (deviceVotes.some((v: any) => v.confirmed_at)) {
         return new Response(
           JSON.stringify({ error: 'already_voted' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
         );
       }
-      if ((deviceVotes || []).some((v: any) => !v.confirmed_at && new Date(v.token_expires_at) > now)) {
+      if (deviceVotes.some((v: any) => !v.confirmed_at && new Date(v.token_expires_at) > now)) {
         return new Response(
           JSON.stringify({ error: 'already_submitted' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
@@ -173,13 +184,8 @@ serve(async (req: Request) => {
       }
     }
 
-    // Check for existing vote for this email in this show
-    const { data: existing } = await adminClient
-      .from('public_votes')
-      .select('id, confirmed_at, token_expires_at')
-      .eq('show_id', show_id)
-      .eq('voter_email', email)
-      .maybeSingle();
+    // Check for an existing vote under the same inbox (any "+tag" variant included)
+    const existing = votes.find((v: any) => voteIdentityKey(v.voter_email) === identityKey);
 
     if (existing) {
       if (existing.confirmed_at) {
