@@ -57,7 +57,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
       </div>
       <div class="section-card bg-white rounded-card border border-[#b8e4e0] relative overflow-hidden" id="card-showtype">
         <div class="card-header p-5" id="hdr-showtype"></div>
-        <span class="absolute bottom-1 right-2 pointer-events-none leading-none" style="font-size:clamp(28px, 6vw, 66px)">🐕</span>
+        <span id="showtype-icon" class="absolute bottom-1 right-2 pointer-events-none leading-none" style="font-size:clamp(28px, 6vw, 66px)">🐕</span>
       </div>
       <div class="section-card bg-white rounded-card border border-[#b8e4e0]" id="card-breed">
         <div class="card-header p-5" id="hdr-breed"></div>
@@ -1587,6 +1587,8 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     setHeader('showtype', '#22c55e', 'Configured', 'Animal Type', [
       ['Animal', show.animal_type ? show.animal_type.charAt(0).toUpperCase() + show.animal_type.slice(1) : 'Dog'],
     ], 'Edit');
+    document.getElementById('showtype-icon').textContent =
+      { open: '🐾', dog: '🐕', cat: '🐱' }[show.animal_type] || '🐕';
 
     if (show.animal_type === 'open') {
       setHeader('breed', '#22c55e', 'Configured', 'Breed & Eligibility', [
