@@ -262,7 +262,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
   import { supabase }    from '../../lib/supabase.js';
   import { uploadImage } from '../../lib/storage.js';
   import { showUploadOverlay, hideUploadOverlay } from '../../lib/uploadOverlay.js';
-  import { isVotingOpen, getVoteWindow, zonedDateTime } from '../../lib/voteWindow.js';
+  import { isVotingOpen, getVoteWindow, zonedDateTime, getEntriesCloseInfo } from '../../lib/voteWindow.js';
   import { CERT_DEFAULTS } from '../../lib/cert-renderer.js';
   import { sendCertificateToEntry } from '../../lib/certSender.js';
 
@@ -307,13 +307,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (show.status !== 'published') return { label: 'Draft', color: '#6f6880', bg: '#f5f3fa' };
     const now       = Date.now();
     const openAt    = zonedDateTime(show.entry_open_date,  show.entry_open_time,  show.timezone);
-    const closeAt   = zonedDateTime(show.entry_close_date, show.entry_close_time, show.timezone);
     const showAt    = zonedDateTime(show.show_date,        show.show_time,        show.timezone);
     const openTime  = openAt  ? openAt.getTime()  : null;
-    const closeTime = closeAt ? closeAt.getTime() : null;
     const showTime  = showAt  ? showAt.getTime()  : null;
     if (openTime && openTime > now)     return { label: 'Scheduled',        color: '#2563eb', bg: '#eff6ff' };
-    if (!closeTime || closeTime >= now) return { label: 'Open for Entries', color: '#16a34a', bg: '#f0fdf4' };
+    // Shared check so a show with no close date still closes on show day,
+    // on a manual close, or on goal (stamped by the webhook).
+    if (getEntriesCloseInfo(show, null).isOpen) return { label: 'Open for Entries', color: '#16a34a', bg: '#f0fdf4' };
     if (showTime && showTime >= now)    return { label: 'Entries Closed',   color: '#d97706', bg: '#fffbeb' };
     return                                     { label: 'Ended',            color: '#6b7280', bg: '#f9fafb' };
   }

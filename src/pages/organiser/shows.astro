@@ -320,8 +320,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
   function archiveBlockedReason(show) {
     if (show.status !== 'published')                                   return 'Show must be published before archiving.';
-    if (!show.results_published_at)                                    return 'Results must be published before archiving.';
-    if (!show.show_date || new Date(show.show_date) > new Date())      return 'The show date must have passed before archiving.';
+    // Unpublished results don't block archiving (see organiser/show.astro).
+    const showAt = zonedDateTime(show.show_date, show.show_time, show.timezone);
+    if (!showAt || showAt > new Date())                                return 'The show date must have passed before archiving.';
     return null;
   }
 
@@ -522,10 +523,13 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const toKeep   = pendingArchiveEntries.filter(e =>  e.result_place && e.photo_url).length;
 
     if (summaryEl) {
-      summaryEl.innerHTML = toDelete > 0
+      summaryEl.innerHTML = (toDelete > 0
         ? `<p style="font-size:13px;color:#92400e;margin:0 0 4px"><strong>${toDelete}</strong> non-placing photo${toDelete !== 1 ? 's' : ''} will be permanently deleted.</p>
            <p style="font-size:13px;color:#92400e;margin:0"><strong>${toKeep}</strong> winner photo${toKeep !== 1 ? 's' : ''} will be kept.</p>`
-        : `<p style="font-size:13px;color:#92400e;margin:0">No entry photos to delete.</p>`;
+        : `<p style="font-size:13px;color:#92400e;margin:0">No entry photos to delete.</p>`)
+        + (!show.results_published_at
+          ? `<p style="font-size:13px;color:#92400e;margin:8px 0 0">Results have not been published. Archiving means they never will be, and no certificates will be sent to entrants.</p>`
+          : '');
     }
   }
 

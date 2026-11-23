@@ -1207,8 +1207,11 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 
   function archiveBlockedReason() {
     if (show.status !== 'published')       return 'The show must be published before archiving.';
-    if (!show.results_published_at)        return 'Results must be published before archiving.';
-    if (!show.show_date || new Date(show.show_date) > new Date()) return 'The show date must have passed before archiving.';
+    // Unpublished results don't block archiving, otherwise a show whose judge
+    // dropped out (or that got no votes) could never be archived. The modal
+    // warns instead.
+    const showAt = zonedDateTime(show.show_date, show.show_time, show.timezone);
+    if (!showAt || showAt > new Date())    return 'The show date must have passed before archiving.';
     return null;
   }
 
@@ -1235,6 +1238,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         </p>
         <p class="text-[#92400e]"><strong>${toDelete.length}</strong> non-placing photo${toDelete.length !== 1 ? 's' : ''} will be permanently deleted.</p>
         <p class="text-[#92400e]"><strong>${toKeep.length}</strong> winner / runner-up photo${toKeep.length !== 1 ? 's' : ''} will be kept.</p>
+        ${!show.results_published_at ? `<p class="text-[#92400e]">Results have not been published. Archiving means they never will be, and no certificates will be sent to entrants.</p>` : ''}
       </div>`;
 
     document.getElementById('archive-confirm').onclick = () => archiveShow(entries);
