@@ -1479,7 +1479,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (goShowsLink) goShowsLink.href = base + 'organiser/shows';
 
     const [showsRes, savedRes] = await Promise.all([
-      supabase.from('shows').select('*').eq('created_by', uid).order('created_at', { ascending: false }),
+      supabase.from('shows').select('*').eq('created_by', uid).is('archived_at', null).order('created_at', { ascending: false }),
       supabase.from('saved_judges').select('*').eq('organiser_id', uid).order('last_name'),
     ]);
 
