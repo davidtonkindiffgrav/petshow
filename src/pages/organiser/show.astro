@@ -1285,7 +1285,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     const btn = document.getElementById('btn-publish');
     if (show.status !== 'published') {
       const { data: existing } = await supabase
-        .from('shows').select('id, title').eq('created_by', uid).eq('status', 'published').neq('id', showId).maybeSingle();
+        .from('shows').select('id, title').eq('created_by', uid).eq('status', 'published').is('archived_at', null).neq('id', showId).maybeSingle();
       if (existing) {
         showPageError(`"${existing.title || 'Another show'}" is already published. Unpublish it before publishing this show.`);
         return;
