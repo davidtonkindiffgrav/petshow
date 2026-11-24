@@ -36,7 +36,7 @@ function stripeFeeEstimate(total: number, currency: string, settings: Record<str
 // platformFee/stripeFeeEstimate above).
 async function copyStorageImage(supabase: any, oldUrl: string | null, newPath: string): Promise<string | null> {
   if (!oldUrl) return null;
-  const oldPath = oldUrl.match(/\/show-assets\/(.+)/)?.[1];
+  const oldPath = oldUrl.match(/\/show-assets\/([^?#]+)/)?.[1];
   if (!oldPath) return oldUrl;
   const ext = oldPath.split('.').pop();
   const fullNewPath = `${newPath}.${ext}`;
@@ -1207,7 +1207,7 @@ function stripExt(name: string): string {
 // copyStorageImage() uses (line ~39) to turn a stored URL back into a bare
 // storage path for suffix matching.
 function urlPath(url: string | null | undefined): string | null {
-  return url ? url.match(/\/show-assets\/(.+)/)?.[1] || null : null;
+  return url ? url.match(/\/show-assets\/([^?#]+)/)?.[1] || null : null;
 }
 
 type ClassifiedPath = { type: string; showId?: string; userId?: string; entryId?: string; awardId?: string; savedJudgeId?: string };

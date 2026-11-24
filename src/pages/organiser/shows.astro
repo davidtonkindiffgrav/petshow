@@ -545,7 +545,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
     if (confirmBtn) { confirmBtn.textContent = 'Archiving…'; confirmBtn.disabled = true; }
 
     const toDelete    = entries.filter(e => !e.result_place && e.photo_url);
-    const paths       = toDelete.map(e => e.photo_url.match(/\/show-assets\/(.+)/)?.[1]).filter(Boolean);
+    const paths       = toDelete.map(e => e.photo_url.match(/\/show-assets\/([^?#]+)/)?.[1]).filter(Boolean);
     if (paths.length) await supabase.storage.from('show-assets').remove(paths);
 
     const toDeleteIds = toDelete.map(e => e.id);
@@ -596,7 +596,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
         show.logo_url, show.banner_url, show.org_logo_url,
       ].filter(Boolean);
 
-      const paths = photoUrls.map(u => u.match(/\/show-assets\/(.+)/)?.[1]).filter(Boolean);
+      const paths = photoUrls.map(u => u.match(/\/show-assets\/([^?#]+)/)?.[1]).filter(Boolean);
       if (paths.length) await supabase.storage.from('show-assets').remove(paths);
 
       // Scores and rankings first (reference entries/categories)
